@@ -18,6 +18,14 @@
   --color-icon-subdued: #6c7688;
   --color-icon-action: #675dff;
   --color-brand-25: #f7f5fd;
+  /* Badge / feedback — success & attention (Figma 4:11902) */
+  --color-feedback-success-subdued: #eafcdd;
+  --color-feedback-success-on: #217005;
+  --color-feedback-attention-subdued: #fdf8c9;
+  --color-feedback-attention-on: #b13600;
+  /* Restricted badge (Figma 1967:27563 — background/feedback/critical/subdued, text/onFeedback/critical, icon/onFeedback/critical) */
+  --color-feedback-critical-subdued: #fef4f6;
+  --color-feedback-critical-on: #c0123c;
   --color-icon-feedback-critical: #e61947;
 
   /* Spacing (Figma) */
@@ -37,7 +45,11 @@
   --radius-small: 6px;
   --radius-form: 6px;
   --radius-action: 6px;
+  --radius-xlarge: 16px;
   --radius-rounded: 9999px;
+
+  /* Shadow: _top-shadow/neutral/light/default (Figma) */
+  --shadow-button: 0 1px 1px rgba(33, 37, 44, 0.16);
 }
 
 *,
@@ -53,8 +65,8 @@ body {
   font-size: 14px;
   line-height: 20px;
   letter-spacing: -0.15px;
-  color: var(--color-text-default);
-  background-color: var(--color-background-surface);
+  color: var(--color-default);
+  background-color: var(--color-surface);
 }
 
 /* Figma typography: Label/Medium (14px Regular, 20 line-height, -0.15 letter-spacing) */
@@ -75,6 +87,23 @@ body {
   letter-spacing: -0.15px;
 }
 
+/* Figma: Label/Small (Regular 12, 16 line-height) */
+.font-label-small {
+  font-family: inherit;
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+/* Figma: Label/Small emphasized (Semibold 12, 16 line-height, -0.2 letter-spacing) */
+.font-label-small-emphasized {
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+}
+
 /* Figma: Heading/XSmall subdued (12px Regular, 20 line-height, 0 letter-spacing) */
 .font-heading-xsmall-subdued {
   font-family: inherit;
@@ -82,4 +111,24 @@ body {
   font-size: 12px;
   line-height: 20px;
   letter-spacing: 0;
+}
+
+/* Figma: Heading/Large subdued (24px Regular, 32px line-height) — metrics values */
+.font-heading-large-subdued {
+  font-family: inherit;
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 32px;
+  letter-spacing: 0.3px;
+  color: var(--color-default);
+}
+
+/* Figma: Heading/XLarge (28px Bold, 36px line-height, 0.38px letter-spacing) */
+.font-heading-xlarge {
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 36px;
+  letter-spacing: 0.38px;
+  color: var(--color-default);
 }

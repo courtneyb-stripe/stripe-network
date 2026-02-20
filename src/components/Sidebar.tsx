@@ -4,6 +4,7 @@
  * Logo from Figma AccountIcon (234:14311).
  */
 
+import { Link, useLocation } from 'react-router-dom'
 import { Icon } from '../icons/SailIcons'
 
 const ACCOUNT_NAME = 'Cactus Practice'
@@ -11,10 +12,10 @@ const ACCOUNT_NAME = 'Cactus Practice'
 const ACCOUNT_LOGO_URL = 'https://www.figma.com/api/mcp/asset/548f58e9-33ce-4e7b-b059-71df5c1aae9f'
 
 const topLevelNav = [
-  { label: 'Home', icon: 'home' as const },
+  { label: 'Home', icon: 'home' as const, to: '/' },
   { label: 'Balances', icon: 'balance' as const },
   { label: 'Transactions', icon: 'arrowsLoop' as const },
-  { label: 'Network', icon: 'person' as const, active: true },
+  { label: 'Network', icon: 'person' as const, to: '/network' },
   { label: 'Product catalog', icon: 'product' as const },
 ]
 
@@ -30,13 +31,15 @@ function NavItem({
   label,
   icon,
   active = false,
+  to,
 }: {
   label: string
   icon: string
   active?: boolean
+  to?: string
 }) {
-  return (
-    <div className="relative flex h-[30px] w-full shrink-0 items-center gap-[length:var(--spacing-small)] isolate">
+  const content = (
+    <>
       <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[length:var(--radius-small)] z-[3]">
         <Icon name={icon as never} size={16} fill={active ? 'var(--color-icon-action)' : 'var(--color-icon-default)'} />
       </div>
@@ -49,8 +52,21 @@ function NavItem({
       <div className="absolute inset-[-1px_-4px] -z-[1] flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
         <div className="h-full w-full flex-1 min-w-px min-h-px rounded-[length:var(--radius-action)] bg-offset" />
       </div>
-    </div>
+    </>
   )
+
+  const className =
+    'relative flex h-[30px] w-full shrink-0 items-center gap-[length:var(--spacing-small)] isolate'
+
+  if (to) {
+    return (
+      <Link to={to} className={className}>
+        {content}
+      </Link>
+    )
+  }
+
+  return <div className={className}>{content}</div>
 }
 
 function SectionHeading({ label }: { label: string }) {
@@ -78,6 +94,9 @@ function ProductGroup({ label, icon }: { label: string; icon: string }) {
 }
 
 export default function Sidebar() {
+  const location = useLocation()
+  const pathname = location.pathname
+
   return (
     <aside
       className="fixed left-0 top-0 z-10 flex h-[1000px] w-[240px] flex-col items-start border-r border-neutral-50 bg-surface rounded-l-[20px]"
@@ -113,7 +132,13 @@ export default function Sidebar() {
       >
         <div className="flex w-[188px] flex-col items-start shrink-0 gap-0">
           {topLevelNav.map((item) => (
-            <NavItem key={item.label} label={item.label} icon={item.icon} active={item.active} />
+            <NavItem
+              key={item.label}
+              label={item.label}
+              icon={item.icon}
+              to={'to' in item ? item.to : undefined}
+              active={item.to ? pathname === item.to : false}
+            />
           ))}
         </div>
 
