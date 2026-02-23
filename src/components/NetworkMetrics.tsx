@@ -1,12 +1,13 @@
 /**
  * NetworkMetrics — Two metric cards (Financial, Accounts) with dropdowns.
- * Values depend on current list view (tab + status + search).
+ * Uses shared MetricCard and MetricDropdown; values depend on list view (tab + status + search).
  */
 
 import { useEffect, useState } from 'react'
-import { Icon } from '../icons/SailIcons'
 import { getFilteredRows, parseLtv, type SavedViewId, type CustomerViewId } from './NetworkTable'
 import type { NetworkTabId } from './NetworkPageHeader'
+import MetricCard from './metrics/MetricCard'
+import { TIME_RANGE_OPTIONS, type TimeRange } from './metrics/constants'
 
 function formatLtv(total: number): string {
   if (total >= 1e6) return `$${(total / 1e6).toFixed(2)}M`
@@ -21,11 +22,9 @@ function countNewInPeriod(rows: { dateAdded: string }[]): number {
 
 const FINANCIAL_OPTIONS = ['Lifetime value', 'All funds in', 'All funds out'] as const
 const ACCOUNTS_OPTIONS = ['Total accounts', 'New accounts', 'Churned accounts'] as const
-const TIME_RANGE_OPTIONS = ['Last 7 days', 'Last 30 days', 'Last 90 days', 'Last 12 months', 'All time'] as const
 
 type FinancialMetric = (typeof FINANCIAL_OPTIONS)[number]
 type AccountsMetric = (typeof ACCOUNTS_OPTIONS)[number]
-type TimeRange = (typeof TIME_RANGE_OPTIONS)[number]
 
 /** Simulated load delay (ms) before showing metric values. */
 const LOAD_DELAY_MS = 1800
@@ -81,70 +80,6 @@ function getAccountsDisplay(
   return { value: String(churned), change: `${changeNum}%` }
 }
 
-function DropdownButton<T extends string>({
-  value,
-  options,
-  onChange,
-  ariaLabel,
-  emphasized = false,
-}: {
-  value: T
-  options: readonly T[]
-  onChange: (v: T) => void
-  ariaLabel: string
-  emphasized?: boolean
-}) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        onBlur={() => setOpen(false)}
-        className={`inline-flex items-center gap-1 rounded-[length:var(--radius-xsmall)] text-subdued transition-colors hover:text-default focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary ${emphasized ? 'font-label-medium-emphasized' : 'font-label-medium'}`}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-label={ariaLabel}
-      >
-        <span>{value}</span>
-        <Icon name="chevronDown" size={8} fill="var(--color-icon-subdued)" />
-      </button>
-      {open && (
-        <ul
-          className="absolute top-full left-0 z-10 mt-1 min-w-[140px] rounded-[length:var(--radius-small)] border border-neutral-50 bg-surface py-1 shadow-lg"
-          role="listbox"
-        >
-          {options.map((opt) => (
-            <li key={opt} role="option" aria-selected={opt === value}>
-              <button
-                type="button"
-                className="w-full px-3 py-1.5 text-left font-label-medium text-default hover:bg-offset focus:bg-offset focus:outline-none"
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  onChange(opt)
-                  setOpen(false)
-                }}
-              >
-                {opt}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
-
-function MetricValueSkeleton() {
-  return (
-    <div className="flex items-baseline gap-2" aria-hidden>
-      <div className="h-8 w-24 rounded-[3px] bg-neutral-50 animate-pulse" />
-      <div className="h-4 w-10 rounded-[3px] bg-neutral-50 animate-pulse" />
-    </div>
-  )
-}
-
 export default function NetworkMetrics({
   activeTab = 'all',
   statusViewId = '1',
@@ -191,87 +126,36 @@ export default function NetworkMetrics({
   const financial = getFinancialDisplay(financialMetric, financialTime, ltvTotal)
   const accounts = getAccountsDisplay(accountsMetric, accountsTime, totalAccounts, newInPeriod)
 
-  const isPositiveChange = (s: string) => s.startsWith('+')
-
   return (
     <div
       className="grid w-full shrink-0 grid-cols-2 gap-2 px-[40px] py-2"
       data-name="Metrics row"
       data-node-id="5:5052"
     >
-      {/* Card 1 — Financial */}
-      <div
-        className="flex min-w-0 flex-col gap-3 rounded-[12px] border border-neutral-50 bg-surface p-4"
-        data-name="Financial metric card"
-      >
-        <div className="flex w-full items-start justify-between gap-2">
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <DropdownButton
-              value={financialMetric}
-              options={FINANCIAL_OPTIONS}
-              onChange={setFinancialMetric}
-              ariaLabel="Financial metric"
-              emphasized
-            />
-            {financialLoading ? (
-              <MetricValueSkeleton />
-            ) : (
-              <div className="flex items-baseline gap-1">
-                <span className="font-heading-large-subdued tabular-nums">{financial.value}</span>
-                <span
-                  className="font-label-small-emphasized"
-                  style={{ color: isPositiveChange(financial.change) ? 'var(--color-feedback-success-on)' : 'var(--color-subdued)' }}
-                >
-                  {financial.change}
-                </span>
-              </div>
-            )}
-          </div>
-          <DropdownButton
-            value={financialTime}
-            options={TIME_RANGE_OPTIONS}
-            onChange={setFinancialTime}
-            ariaLabel="Time range"
-          />
-        </div>
-      </div>
-
-      {/* Card 2 — Accounts */}
-      <div
-        className="flex min-w-0 flex-col gap-3 rounded-[12px] border border-neutral-50 bg-surface p-4"
-        data-name="Accounts metric card"
-      >
-        <div className="flex w-full items-start justify-between gap-2">
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <DropdownButton
-              value={accountsMetric}
-              options={ACCOUNTS_OPTIONS}
-              onChange={setAccountsMetric}
-              ariaLabel="Accounts metric"
-              emphasized
-            />
-            {accountsLoading ? (
-              <MetricValueSkeleton />
-            ) : (
-              <div className="flex items-baseline gap-1">
-                <span className="font-heading-large-subdued tabular-nums">{accounts.value}</span>
-                <span
-                  className="font-label-small-emphasized"
-                  style={{ color: isPositiveChange(accounts.change) ? 'var(--color-feedback-success-on)' : 'var(--color-subdued)' }}
-                >
-                  {accounts.change}
-                </span>
-              </div>
-            )}
-          </div>
-          <DropdownButton
-            value={accountsTime}
-            options={TIME_RANGE_OPTIONS}
-            onChange={setAccountsTime}
-            ariaLabel="Time range"
-          />
-        </div>
-      </div>
+      <MetricCard
+        variant="compact"
+        metricValue={financial.value}
+        metricOptions={FINANCIAL_OPTIONS}
+        metricValueCurrent={financialMetric}
+        onMetricChange={setFinancialMetric}
+        timeOptions={TIME_RANGE_OPTIONS}
+        timeValue={financialTime}
+        onTimeChange={setFinancialTime}
+        change={financial.change}
+        loading={financialLoading}
+      />
+      <MetricCard
+        variant="compact"
+        metricValue={accounts.value}
+        metricOptions={ACCOUNTS_OPTIONS}
+        metricValueCurrent={accountsMetric}
+        onMetricChange={setAccountsMetric}
+        timeOptions={TIME_RANGE_OPTIONS}
+        timeValue={accountsTime}
+        onTimeChange={setAccountsTime}
+        change={accounts.change}
+        loading={accountsLoading}
+      />
     </div>
   )
 }

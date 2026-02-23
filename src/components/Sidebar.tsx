@@ -5,6 +5,7 @@
  */
 
 import { Link, useLocation } from 'react-router-dom'
+import ChevronDownIcon from '../icons/ChevronDownIcon'
 import { Icon } from '../icons/SailIcons'
 
 const ACCOUNT_NAME = 'Cactus Practice'
@@ -14,7 +15,7 @@ const ACCOUNT_LOGO_URL = 'https://www.figma.com/api/mcp/asset/548f58e9-33ce-4e7b
 const topLevelNav = [
   { label: 'Home', icon: 'home' as const, to: '/' },
   { label: 'Balances', icon: 'balance' as const },
-  { label: 'Transactions', icon: 'arrowsLoop' as const },
+  { label: 'Transactions', icon: 'arrowsLoop' as const, to: '/transactions' },
   { label: 'Network', icon: 'person' as const, to: '/network' },
   { label: 'Product catalog', icon: 'product' as const },
 ]
@@ -86,7 +87,7 @@ function ProductGroup({ label, icon }: { label: string; icon: string }) {
         </div>
         <div className="min-w-0 flex-1 font-label-medium text-default truncate">{label}</div>
         <div className="absolute right-0 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-[length:var(--radius-small)]">
-          <Icon name="chevronDown" size={8} fill="var(--color-icon-subdued)" />
+          <ChevronDownIcon size={8} fill="var(--color-icon-subdued)" />
         </div>
       </div>
     </div>
@@ -99,7 +100,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="fixed left-0 top-0 z-10 flex h-[1000px] w-[240px] flex-col items-start border-r border-neutral-50 bg-surface rounded-l-[20px]"
+      className="flex h-full w-[240px] shrink-0 flex-col items-start border-r border-neutral-50 bg-surface rounded-l-[20px]"
       data-name="Sidebar"
     >
       {/* Account — sticky, left-aligned with nav (Figma 1982:16466) */}
@@ -158,11 +159,6 @@ export default function Sidebar() {
         data-name="Wrapper"
       >
         <div className="relative flex h-[30px] w-full items-center gap-[length:var(--spacing-small)] shrink-0">
-          <div
-            className="absolute right-[185px] top-[15px] h-[240px] w-px border-l border-neutral-100 z-[4]"
-            data-name="Divider"
-            aria-hidden
-          />
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[length:var(--radius-small)] z-[3]">
             <Icon name="api" size={16} fill="var(--color-icon-default)" />
           </div>

@@ -4,7 +4,7 @@
  */
 
 import { Icon } from '../icons/SailIcons'
-
+import SearchBar from './SearchBar'
 import type { SavedViewId, CustomerViewId } from './NetworkTable'
 
 const VIEW_CHIPS: { id: SavedViewId; label: string }[] = [
@@ -27,22 +27,35 @@ const CUSTOMER_VIEW_CHIPS: { id: CustomerViewId; label: string }[] = [
   { id: 'c7', label: 'Last 30 days' },
 ]
 
-function ViewChip({
+export type ViewChipSize = 'default' | 'compact'
+
+const VIEW_CHIP_SIZE_CLASSES: Record<ViewChipSize, string> = {
+  default: 'h-9 min-h-9 rounded-[10px] px-3 py-2',
+  compact: 'h-8 min-h-8 rounded-[8px] px-2 py-1.5',
+}
+
+export function ViewChip({
   label,
   count,
   active,
   onClick,
+  showMoreIcon = false,
+  size = 'default',
 }: {
   label: string
-  count: number
+  count?: number
   active: boolean
   onClick: () => void
+  /** When true and active, show more icon (e.g. billing chips). Figma 20:10301. */
+  showMoreIcon?: boolean
+  /** default = 36px tall, 12px l-r / 8px t-b; compact = 32px tall, 8px l-r / 6px t-b. Same label size. */
+  size?: ViewChipSize
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex h-fit shrink-0 items-baseline gap-1 overflow-clip rounded-[10px] border border-solid px-3 py-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-action-primary ${
+      className={`flex shrink-0 items-center gap-2 overflow-clip border border-solid transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-action-primary ${VIEW_CHIP_SIZE_CLASSES[size]} ${
         active
           ? 'border-default bg-default text-neutral-0'
           : 'border-neutral-100 bg-surface text-subdued hover:border-neutral-100 hover:bg-offset'
@@ -50,28 +63,13 @@ function ViewChip({
       data-name="View Chip 2.0"
       data-node-id="6:5122"
     >
-      <span className="shrink-0 truncate font-label-medium-emphasized leading-5">{label}</span>
-      <span className="shrink-0 font-label-small leading-4 tabular-nums">{count.toLocaleString()}</span>
-    </button>
-  )
-}
-
-function FilterBarButton({
-  'aria-label': ariaLabel,
-  children,
-  className = '',
-}: {
-  'aria-label': string
-  children: React.ReactNode
-  className?: string
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={ariaLabel}
-      className={`flex h-7 min-h-7 w-7 shrink-0 items-center justify-center rounded-[length:var(--radius-action)] border border-neutral-50 bg-surface font-label-medium-emphasized transition-colors hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-action-primary ${className}`}
-    >
-      {children}
+      <span className="shrink-0 truncate text-[14px] leading-5 tracking-[-0.15px] font-[500]">{label}</span>
+      {showMoreIcon && active && (
+        <Icon name="more" size={16} fill="currentColor" className="shrink-0" />
+      )}
+      {count !== undefined && (
+        <span className="shrink-0 font-label-small leading-4 tabular-nums">{count.toLocaleString()}</span>
+      )}
     </button>
   )
 }
@@ -146,33 +144,12 @@ export default function NetworkFilterGroup({
         </button>
       </div>
 
-      {/* M0 Bar: Filter + Search + Table controls — focus border on this container when search is active */}
-      <div
-        className="flex w-full shrink-0 flex-col rounded-[length:var(--radius-xlarge)] border-[1.5px] border-neutral-50 p-[4px] transition-[border-color] focus-within:border-neutral-100"
-        data-name="M0 Bar"
-      >
-        <div className="flex w-full items-center gap-[10px] rounded-[length:var(--radius-rounded)] p-[6px]">
-          <FilterBarButton aria-label="Filter">
-            <Icon name="filter" size={16} fill="var(--color-icon-default)" />
-          </FilterBarButton>
-          <div className="flex min-h-px min-w-0 flex-1 items-center" data-name="Search">
-            <label className="flex w-full min-w-0 items-center gap-[8px]">
-              <Icon name="search" size={16} fill="var(--color-icon-subdued)" className="shrink-0" aria-hidden />
-              <input
-                type="search"
-                placeholder="Search by name, email or description"
-                value={searchQuery}
-                onChange={(e) => onSearchChange?.(e.target.value)}
-                className="min-w-0 flex-1 border-0 bg-transparent font-label-medium text-default placeholder:text-icon-subdued focus:outline-none focus:ring-0"
-                aria-label="Search by name, email or description"
-              />
-            </label>
-          </div>
-          <FilterBarButton aria-label="Table options">
-            <Icon name="settings" size={16} fill="var(--color-icon-default)" />
-          </FilterBarButton>
-        </div>
-      </div>
+      <SearchBar
+        value={searchQuery}
+        onSearchChange={(v) => onSearchChange?.(v)}
+        placeholder="Search by name, email or description"
+        searchAriaLabel="Search by name, email or description"
+      />
     </div>
   )
 }

@@ -1,0 +1,34 @@
+/**
+ * Chevron down from Figma (NextIcon xxsmall — NextIcon__xxsmall--chevronDown.svg).
+ * 8×8 viewBox, used at xsmall (8px) across the app.
+ */
+
+const PATH =
+  'M0.606072 2.33351C0.307015 2.62011 0.296913 3.09487 0.58351 3.39393L3.45851 6.39393C3.59989 6.54146 3.79535 6.62492 3.99969 6.625C4.20403 6.62509 4.39955 6.54179 4.54106 6.39438L7.41606 3.39938C7.70291 3.10056 7.6932 2.62579 7.39438 2.33894C7.09556 2.0521 6.62079 2.0618 6.33394 2.36062L4.00045 4.79151L1.66649 2.35607C1.3799 2.05701 0.905129 2.04691 0.606072 2.33351Z'
+
+export default function ChevronDownIcon({
+  size = 8,
+  fill = 'var(--color-icon-default)',
+  className,
+  ...props
+}: {
+  size?: number
+  fill?: string
+  className?: string
+} & React.SVGAttributes<SVGSVGElement>) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 8 8"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      style={{ display: 'inline-block', verticalAlign: 'middle' }}
+      aria-hidden
+      {...props}
+    >
+      <path fillRule="evenodd" clipRule="evenodd" d={PATH} fill={fill} />
+    </svg>
+  )
+}

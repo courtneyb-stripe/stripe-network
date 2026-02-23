@@ -3,11 +3,13 @@
  * Merchants are also customers, so they appear in both Merchants and Customers tabs.
  */
 
-export type StatusKind = 'enabled' | 'restricted_soon' | 'restricted' | 'radar_rule_matches' | null
+export type StatusKind = 'enabled' | 'restricted_soon' | 'restricted' | null
 
 export type NetworkRow = {
   id: string
   status: StatusKind
+  /** When true, account appears in Radar rule matches view and Risk column shows High. */
+  isRadarRuleMatch: boolean
   account: string
   email: string
   configurations: string
@@ -50,7 +52,8 @@ function formatDate(month: string, day: number, year?: number): string {
   return `${month} ${day}${y}`
 }
 
-/** ~70% merchants (840), ~30% customer-only (360) = 1200 total. */
+/** ~70% merchants (840), ~30% customer-only (360) = 1200 total.
+ * Only merchants get a status; customer-only accounts always have status null and are never radar rule matches. */
 export function generateNetworkRows(): NetworkRow[] {
   const rows: NetworkRow[] = []
   const MERCHANT_COUNT = 840
@@ -60,11 +63,12 @@ export function generateNetworkRows(): NetworkRow[] {
   for (let i = 0; i < TOTAL; i++) {
     const isMerchant = i < MERCHANT_COUNT
     const config = isMerchant ? 'Merchant, Customer' : 'Customer'
-    // Weighted: enabled ~45%, restricted ~28%, restricted_soon ~5%, radar_rule_matches ~10%, null ~12%
+    // Merchants only: weighted status; customer-only always null. ~10% of merchants are radar rule matches.
     const r = i % 20
     const status: StatusKind = isMerchant
-      ? (r <= 8 ? 'enabled' : r <= 13 ? 'restricted' : r === 14 ? 'restricted_soon' : r <= 16 ? 'radar_rule_matches' : r <= 18 ? null : 'enabled')
+      ? (r <= 8 ? 'enabled' : r <= 13 ? 'restricted' : r === 14 ? 'restricted_soon' : r <= 18 ? null : 'enabled')
       : null
+    const isRadarRuleMatch = isMerchant && (r >= 15 && r <= 16)
 
     let account: string
     let email: string
@@ -105,6 +109,7 @@ export function generateNetworkRows(): NetworkRow[] {
     rows.push({
       id,
       status,
+      isRadarRuleMatch,
       account,
       email,
       configurations: config,

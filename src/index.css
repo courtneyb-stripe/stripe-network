@@ -10,14 +10,17 @@
   --color-neutral-0: #ffffff;
   --color-neutral-50: #ebeef1;
   --color-neutral-100: #d8dee4;
+  --color-neutral-300: #99a5b8;
   --color-neutral-700: #474e5a;
   --color-default: #353a44;
   --color-subdued: #596171;
   --color-action-primary: #533afd;
+  --color-action-primary-hover: #4230d4;
   --color-icon-default: #474e5a;
   --color-icon-subdued: #6c7688;
   --color-icon-action: #675dff;
   --color-brand-25: #f7f5fd;
+  --color-brand-50: #ede9fc;
   /* Badge / feedback — success & attention (Figma 4:11902) */
   --color-feedback-success-subdued: #eafcdd;
   --color-feedback-success-on: #217005;
@@ -50,6 +53,9 @@
 
   /* Shadow: _top-shadow/neutral/light/default (Figma) */
   --shadow-button: 0 1px 1px rgba(33, 37, 44, 0.16);
+
+  /* Overlay — modal/drawer backdrop */
+  --color-overlay-backdrop: rgba(0, 0, 0, 0.5);
 }
 
 *,
@@ -113,13 +119,13 @@ body {
   letter-spacing: 0;
 }
 
-/* Figma: Heading/Large subdued (24px Regular, 32px line-height) — metrics values */
+/* Figma: Heading/Large subdued (24px Regular, 32px line-height, SF Pro Display) — metrics values */
 .font-heading-large-subdued {
-  font-family: inherit;
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 400;
   font-size: 24px;
   line-height: 32px;
-  letter-spacing: 0.3px;
+  letter-spacing: 0;
   color: var(--color-default);
 }
 

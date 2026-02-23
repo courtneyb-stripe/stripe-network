@@ -1,0 +1,85 @@
+/**
+ * ListItem — Sail-style list row with icon, title, description, trailing content.
+ * Rich content variant: pass children to render below description (e.g. body copy + Link).
+ * API aligned with Sail ListItem for easy migration to @sail/ui.
+ */
+
+import { useListAction } from './List'
+
+type ListItemProps = {
+  id: string | number
+  /** Left-aligned icon (e.g. payment, transfer). */
+  icon: React.ReactNode
+  /** Main line; can be string or ReactNode (e.g. title + Tooltip). */
+  title: React.ReactNode
+  /** Sub line (e.g. email, date • status). */
+  description?: string
+  /** Right-aligned content (e.g. amount, badge). */
+  trailingContent?: React.ReactNode
+  /** Rich content below description (e.g. body text + Link). */
+  children?: React.ReactNode
+}
+
+export function ListItem({
+  id,
+  icon,
+  title,
+  description,
+  trailingContent,
+  children,
+}: ListItemProps) {
+  const onAction = useListAction()
+  const content = (
+    <>
+      <span
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[length:var(--radius-small)] bg-offset text-icon-subdued"
+        aria-hidden
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="font-label-medium text-[14px] leading-5 text-default truncate">
+          {title}
+        </div>
+        {description != null && (
+          <div className="font-label-small text-[12px] leading-4 text-subdued mt-0.5">
+            {description}
+          </div>
+        )}
+        {children != null && (
+          <div className="font-label-medium text-[14px] leading-5 text-subdued mt-1">
+            {children}
+          </div>
+        )}
+      </div>
+      {trailingContent != null && (
+        <div className="shrink-0 flex items-center gap-1.5 self-center pl-2">
+          {trailingContent}
+        </div>
+      )}
+    </>
+  )
+
+  const rowClass =
+    'flex items-start gap-3 py-2 min-h-[52px] min-w-0 text-left w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary focus-visible:ring-inset rounded-[8px]'
+
+  if (onAction != null) {
+    return (
+      <li className="-mx-2" role="listitem" data-name="ListItem">
+        <button
+          type="button"
+          onClick={() => onAction(id)}
+          className={`${rowClass} group/row cursor-pointer hover:bg-offset transition-colors w-full px-2`}
+        >
+          {content}
+        </button>
+      </li>
+    )
+  }
+
+  return (
+    <li className={`-mx-2 px-2 ${rowClass}`} role="listitem" data-name="ListItem">
+      {content}
+    </li>
+  )
+}

@@ -3,15 +3,18 @@
  * Data table with header, data rows, and skeleton loading rows.
  */
 
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { generateNetworkRows } from '../data/networkDummyData'
+import { MOCK_ACCOUNTS } from '../data/mockAccounts'
 import type { NetworkTabId } from './NetworkPageHeader'
 import { Icon } from '../icons/SailIcons'
+import { PillBadge, RestrictedIcon } from './PillBadge'
 
 const COLUMNS = [
   { key: 'account', label: 'Account', align: 'left', width: 'w-[184px]' },
   { key: 'status', label: 'Status', align: 'left', width: 'w-[100px]' },
+  { key: 'risk', label: 'Risk', align: 'left', width: 'w-[72px]' },
   { key: 'email', label: 'Email', align: 'left', width: 'w-[260px]' },
   { key: 'configurations', label: 'Configurations', align: 'left', width: 'w-[240px]' },
   { key: 'lastTransaction', label: 'Last transaction', align: 'left', width: 'w-[120px]' },
@@ -20,12 +23,34 @@ const COLUMNS = [
 ] as const
 
 import type { NetworkRow, StatusKind } from '../data/networkDummyData'
+import { ROW_HEIGHT } from '../constants/table'
 
 type Row = NetworkRow
 
-const DATA_ROWS: Row[] = generateNetworkRows()
+/** Only merchant configs (Merchant or Merchant, Customer) get a status and can be radar rule matches. */
+const hasMerchantConfig = (config: string) => config.includes('Merchant')
 
-const ROW_HEIGHT = 52
+const MOCK_ROWS: Row[] = MOCK_ACCOUNTS.map((a) => ({
+  id: a.id,
+  status: hasMerchantConfig(a.configurations) ? a.status : null,
+  isRadarRuleMatch: hasMerchantConfig(a.configurations) && !!a.isRadarRuleMatch,
+  account: a.name,
+  email: a.email,
+  configurations: a.configurations,
+  lastTransaction: 'Jan 15, 2025',
+  lifetimeValue: '$12,500',
+  dateAdded: 'Jul 10, 2021',
+  isTopSpender: false,
+  isSubscriber: false,
+  isInternational: false,
+  highRefunds: false,
+  highDisputes: false,
+  last30Days: true,
+}))
+
+const GENERATED_ROWS = generateNetworkRows()
+const DATA_ROWS: Row[] = [...MOCK_ROWS, ...GENERATED_ROWS.slice(MOCK_ACCOUNTS.length)]
+
 const SKELETON_ROW_COUNT = 7
 
 export type SavedViewId = '1' | '2' | '3' | '4' | '5' | '6' | '7'
@@ -46,7 +71,7 @@ function filterRowsByStatusView(rows: Row[], viewId: SavedViewId): Row[] {
   if (viewId === '3') return rows.filter((row) => row.status === 'restricted_soon')
   if (viewId === '4' || viewId === '5') return [] // In review, Rejected — no data yet
   if (viewId === '6') return rows.filter((row) => row.status === 'enabled')
-  if (viewId === '7') return rows.filter((row) => row.status === 'radar_rule_matches')
+  if (viewId === '7') return rows.filter((row) => row.isRadarRuleMatch)
   return rows
 }
 
@@ -91,11 +116,11 @@ function filterRows(rows: Row[], query: string): Row[] {
           ? 'restricted soon'
           : row.status === 'restricted'
             ? 'restricted'
-            : row.status === 'radar_rule_matches'
-              ? 'radar rule matches'
-              : ''
+            : ''
+    const riskText = row.isRadarRuleMatch ? 'high risk' : ''
     const searchable = [
       statusText,
+      riskText,
       row.account,
       row.email,
       row.configurations,
@@ -124,78 +149,32 @@ export function getFilteredRows(
 
 export { parseLtv }
 
-function RestrictedIcon() {
-  return (
-    <span className="ml-1 inline-flex shrink-0" aria-hidden>
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="6" cy="6" r="6" fill="var(--color-icon-feedback-critical)" />
-        <path
-          d="M4 4l4 4M8 4l-4 4"
-          stroke="white"
-          strokeWidth="1.25"
-          strokeLinecap="round"
-        />
-      </svg>
-    </span>
-  )
-}
-
 function StatusBadge({ kind }: { kind: StatusKind }) {
   if (kind === null) {
     return <span className="font-label-medium text-subdued">–</span>
   }
   if (kind === 'enabled') {
-    return (
-      <span
-        className="inline-flex items-center justify-center rounded-[length:var(--radius-xsmall)] px-[6px] py-[2px] font-label-small"
-        style={{
-          backgroundColor: 'var(--color-feedback-success-subdued)',
-          color: 'var(--color-feedback-success-on)',
-        }}
-      >
-        Enabled
-      </span>
-    )
+    return <PillBadge label="Enabled" variant="success" />
   }
   if (kind === 'restricted_soon') {
-    return (
-      <span
-        className="inline-flex items-center justify-center rounded-[length:var(--radius-xsmall)] px-[6px] py-[2px] font-label-small"
-        style={{
-          backgroundColor: 'var(--color-feedback-attention-subdued)',
-          color: 'var(--color-feedback-attention-on)',
-        }}
-      >
-        Restricted soon
-      </span>
-    )
+    return <PillBadge label="Restricted soon" variant="attention" />
   }
   if (kind === 'restricted') {
-    return (
-      <span
-        className="inline-flex items-center rounded-[length:var(--radius-xsmall)] px-[6px] py-[2px] font-label-small"
-        style={{
-          backgroundColor: 'var(--color-feedback-critical-subdued)',
-          color: 'var(--color-feedback-critical-on)',
-        }}
-      >
-        Restricted
-        <RestrictedIcon />
-      </span>
-    )
-  }
-  if (kind === 'radar_rule_matches') {
-    return <span className="font-label-medium text-subdued">–</span>
+    return <PillBadge label="Restricted" variant="critical" icon={<RestrictedIcon />} />
   }
   return null
 }
 
 type LtvSortDirection = 'asc' | 'desc' | null
 
+type Col = (typeof COLUMNS)[number]
+
 function TableHeader({
+  columns,
   ltvSortDirection,
   onLtvSortClick,
 }: {
+  columns: readonly Col[]
   ltvSortDirection: LtvSortDirection
   onLtvSortClick: () => void
 }) {
@@ -215,7 +194,7 @@ function TableHeader({
         />
       </div>
       <div className="flex min-w-0 flex-1 items-center gap-6">
-        {COLUMNS.map((col) => {
+        {columns.map((col) => {
           const isLtv = col.key === 'lifetimeValue'
           return (
             <div
@@ -261,14 +240,34 @@ function TableHeader({
 
 function TableRow({
   row,
+  columns,
   isAlternate,
 }: {
   row: Row
+  columns: readonly Col[]
   isAlternate: boolean
 }) {
+  const cellByKey: Record<string, ReactNode> = {
+    account: <span className="truncate font-label-medium-emphasized text-default">{row.account}</span>,
+    status: <StatusBadge kind={row.status} />,
+    risk: row.isRadarRuleMatch ? (
+      <PillBadge label="High" variant="critical" />
+    ) : (
+      <span className="font-label-medium text-subdued">–</span>
+    ),
+    email: <span className="truncate font-label-medium text-default">{row.email}</span>,
+    configurations: <span className="truncate font-label-medium text-default">{row.configurations}</span>,
+    lastTransaction: <span className="truncate font-label-medium text-default">{row.lastTransaction}</span>,
+    lifetimeValue: <span className="truncate font-label-medium text-default">{row.lifetimeValue}</span>,
+    dateAdded: <span className="truncate font-label-medium text-default">{row.dateAdded}</span>,
+  }
   return (
     <Link
-      to={`/account/${row.id}`}
+      to={`/network/${row.id}`}
+      state={{
+        status: row.status,
+        accountName: row.account,
+      }}
       className={`group flex w-full shrink-0 cursor-pointer items-center rounded-[length:var(--radius-action)] pr-2 transition-colors ${
         isAlternate ? 'bg-[#fafbfb] hover:bg-offset' : 'bg-surface hover:bg-offset'
       }`}
@@ -282,33 +281,20 @@ function TableRow({
         <div className="h-3.5 w-3.5 shrink-0 rounded-[length:var(--radius-xsmall)] border border-neutral-100 bg-surface" />
       </div>
       <div className="flex min-w-0 flex-1 items-center gap-6">
-        <div className={`flex min-w-0 shrink-0 items-center overflow-hidden ${COLUMNS[0].width}`}>
-          <span className="truncate font-label-medium-emphasized text-default">{row.account}</span>
-        </div>
-        <div className={`flex min-w-0 shrink-0 items-center overflow-hidden ${COLUMNS[1].width}`}>
-          <StatusBadge kind={row.status} />
-        </div>
-        <div className={`flex min-w-0 shrink-0 items-center overflow-hidden ${COLUMNS[2].width}`}>
-          <span className="truncate font-label-medium text-default">{row.email}</span>
-        </div>
-        <div className={`flex min-w-0 shrink-0 items-center overflow-hidden ${COLUMNS[3].width}`}>
-          <span className="truncate font-label-medium text-default">{row.configurations}</span>
-        </div>
-        <div className={`flex min-w-0 shrink-0 items-center overflow-hidden ${COLUMNS[4].width}`}>
-          <span className="truncate font-label-medium text-default">{row.lastTransaction}</span>
-        </div>
-        <div className={`flex min-w-0 shrink-0 items-center justify-end overflow-hidden ${COLUMNS[5].width}`}>
-          <span className="truncate font-label-medium text-default">{row.lifetimeValue}</span>
-        </div>
-        <div className={`flex min-w-0 flex-1 items-center overflow-hidden ${COLUMNS[6].width}`}>
-          <span className="truncate font-label-medium text-default">{row.dateAdded}</span>
-        </div>
+        {columns.map((col) => (
+          <div
+            key={col.key}
+            className={`flex min-w-0 shrink-0 items-center overflow-hidden ${col.width} ${col.key === 'lifetimeValue' ? 'justify-end' : ''}`}
+          >
+            {cellByKey[col.key]}
+          </div>
+        ))}
       </div>
     </Link>
   )
 }
 
-function SkeletonRow({ isAlternate }: { isAlternate: boolean }) {
+function SkeletonRow({ columns, isAlternate }: { columns: readonly Col[]; isAlternate: boolean }) {
   return (
     <div
       className={`group flex w-full shrink-0 items-center rounded-[length:var(--radius-action)] pr-2 transition-colors ${
@@ -325,7 +311,7 @@ function SkeletonRow({ isAlternate }: { isAlternate: boolean }) {
         <div className="h-3.5 w-3.5 shrink-0 rounded-[length:var(--radius-xsmall)] border border-neutral-100 bg-surface" />
       </div>
       <div className="flex min-w-0 flex-1 items-center gap-6">
-        {COLUMNS.map((col) => (
+        {columns.map((col) => (
           <div
             key={col.key}
             className={`flex min-w-0 shrink-0 items-center overflow-hidden ${col.width} ${col.align === 'right' ? 'justify-end' : ''}`}
@@ -350,6 +336,9 @@ export default function NetworkTable({
   searchQuery?: string
 }) {
   const [ltvSortDirection, setLtvSortDirection] = useState<LtvSortDirection>(null)
+  /** Risk column only on Radar rule matches view (7). */
+  const visibleColumns =
+    statusViewId === '7' ? COLUMNS : COLUMNS.filter((c): c is Col => c.key !== 'risk')
   const rowsForTab = filterRowsByTab(DATA_ROWS, activeTab)
   const rowsForView =
     activeTab === 'customers'
@@ -374,15 +363,20 @@ export default function NetworkTable({
       data-name="Table 2.0"
       data-node-id="2:10689"
     >
-      <TableHeader ltvSortDirection={ltvSortDirection} onLtvSortClick={handleLtvSortClick} />
+      <TableHeader
+        columns={visibleColumns}
+        ltvSortDirection={ltvSortDirection}
+        onLtvSortClick={handleLtvSortClick}
+      />
       <div className="flex flex-col">
         {filteredRows.map((row, i) => (
-          <TableRow key={i} row={row} isAlternate={i % 2 === 0} />
+          <TableRow key={i} row={row} columns={visibleColumns} isAlternate={i % 2 === 0} />
         ))}
         {showSkeletons &&
           Array.from({ length: SKELETON_ROW_COUNT }, (_, i) => (
             <SkeletonRow
               key={`skeleton-${i}`}
+              columns={visibleColumns}
               isAlternate={(filteredRows.length + i) % 2 === 0}
             />
           ))}
