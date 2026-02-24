@@ -6,6 +6,7 @@
 
 import { Link } from 'react-router-dom'
 import FraudScoreIndicator from './FraudScoreIndicator'
+import { PageActionButton } from './PageActionButton'
 
 type RadarHighRiskCardProps = {
   accountId: string | undefined
@@ -16,7 +17,7 @@ type RadarHighRiskCardProps = {
 export default function RadarHighRiskCard({ accountId, fraudScore = 85 }: RadarHighRiskCardProps) {
   return (
     <div
-      className="flex w-full flex-col gap-5 rounded-[8px] border border-neutral-100 bg-surface p-4 sm:flex-row sm:items-center sm:justify-between"
+      className="flex w-full flex-col gap-5 rounded-[12px] border border-neutral-100 bg-surface p-4 sm:flex-row sm:items-center sm:justify-between"
       data-name="Radar/AI/06"
       data-node-id="1966:24778"
     >
@@ -30,17 +31,13 @@ export default function RadarHighRiskCard({ accountId, fraudScore = 85 }: RadarH
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <button
-            type="button"
-            className="inline-flex h-7 min-h-7 items-center justify-center rounded-[length:var(--radius-action)] border border-neutral-100 bg-surface px-2 py-1 font-label-medium-emphasized text-default shadow-[var(--shadow-button)] transition-colors hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary focus-visible:ring-offset-2"
-            style={{ boxShadow: '0px 1px 1px 0px rgba(26,27,37,0.16), 0px 0px 0px 1px #d5dbe1' }}
-          >
+          <PageActionButton>
             Reject account
-          </button>
+          </PageActionButton>
           {accountId && (
             <Link
               to={`/network/${accountId}/risk-analysis`}
-              className="font-label-medium text-action-primary underline hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary focus-visible:ring-offset-2 rounded-[length:var(--radius-xsmall)]"
+              className="font-label-medium text-subdued underline hover:text-default hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary focus-visible:ring-offset-2 rounded-[length:var(--radius-xsmall)]"
             >
               View risk analysis
             </Link>

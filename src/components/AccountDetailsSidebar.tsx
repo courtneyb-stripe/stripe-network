@@ -144,7 +144,7 @@ export default function AccountDetailsSidebar({
                   </p>
                   <Link
                     to={`/network/${accountId}/risk-analysis`}
-                    className="font-label-medium text-action-primary underline hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[length:var(--radius-xsmall)] w-fit"
+                    className="font-label-medium text-subdued underline hover:text-default hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[length:var(--radius-xsmall)] w-fit"
                   >
                     View risk analysis
                   </Link>
