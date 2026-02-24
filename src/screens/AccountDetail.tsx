@@ -14,6 +14,7 @@ import AccountDetailsSidebar, { type AccountStatusKind } from '../components/Acc
 import SettingsModal from '../components/SettingsModal'
 import TabBar from '../components/TabBar'
 import { SECTION_COMPONENTS, BillingSidebar } from '../components/sections'
+import RadarHighRiskCard from '../components/RadarHighRiskCard'
 import ThirdPartyActivityToggle from '../components/ThirdPartyActivityToggle'
 import { usePrototypeOptional } from '../context/PrototypeContext'
 import { configTemplates, SECTION_LABELS, type ConfigType } from '../data/accountConfigs'
@@ -147,20 +148,25 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
       <div className="min-h-0 flex-1 overflow-auto pb-6 pt-[24px] pl-[40px] pr-[40px]">
         {effectiveSectionId === 'overview' && (
           <div className="flex w-full items-stretch gap-10">
-            {(() => {
-              const OverviewSection = SECTION_COMPONENTS.overview
-              return (
-                <OverviewSection
-                  config={config}
-                  accountId={id}
-                  accountName={accountName}
-                  onPaymentRowClick={() => setPaymentDrawerOpen(true)}
-                  onOpenMoneyMovement={() => setActiveSectionId('moneyMovement')}
-                />
-              )
-            })()}
+            <div className="flex min-w-0 flex-1 flex-col gap-6">
+              {mockAccount?.isRadarRuleMatch && (
+                <RadarHighRiskCard accountId={id} />
+              )}
+              {(() => {
+                const OverviewSection = SECTION_COMPONENTS.overview
+                return (
+                  <OverviewSection
+                    config={config}
+                    accountId={id}
+                    accountName={accountName}
+                    onPaymentRowClick={() => setPaymentDrawerOpen(true)}
+                    onOpenMoneyMovement={() => setActiveSectionId('moneyMovement')}
+                  />
+                )
+              })()}
+            </div>
             <div className="min-w-[320px] w-[30%] shrink-0">
-              <AccountDetailsSidebar
+                <AccountDetailsSidebar
                 status={status}
                 accountDrawerOpen={accountDrawerOpen}
                 onOpenAccountDrawer={() => setAccountDrawerOpen(true)}
@@ -175,7 +181,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                 }}
                 showAccountRisk={mockAccount?.isRadarRuleMatch ?? false}
                 accountId={id}
-              />
+                />
             </div>
           </div>
         )}

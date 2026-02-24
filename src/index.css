@@ -138,3 +138,19 @@ body {
   letter-spacing: 0.38px;
   color: var(--color-default);
 }
+
+/* Prototype Hub — gentle pulse on radial gradient background */
+@keyframes hub-gradient-pulse {
+  0%,
+  100% {
+    opacity: 0.88;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.hub-gradient-pulse {
+  animation: hub-gradient-pulse 5s ease-in-out infinite;
+}
+
