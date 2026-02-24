@@ -13,7 +13,9 @@ import AccountDrawer from '../components/AccountDrawer'
 import AccountDetailsSidebar, { type AccountStatusKind } from '../components/AccountDetailsSidebar'
 import SettingsModal from '../components/SettingsModal'
 import TabBar from '../components/TabBar'
-import { SECTION_COMPONENTS } from '../components/sections'
+import { SECTION_COMPONENTS, BillingSidebar } from '../components/sections'
+import ThirdPartyActivityToggle from '../components/ThirdPartyActivityToggle'
+import { usePrototypeOptional } from '../context/PrototypeContext'
 import { configTemplates, SECTION_LABELS, type ConfigType } from '../data/accountConfigs'
 import { getAccountById } from '../data/mockAccounts'
 import { slugToDisplayName } from '../utils/string'
@@ -37,6 +39,8 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
   const [settingsSectionId, setSettingsSectionId] = useState<string | undefined>(undefined)
   const [paymentDrawerOpen, setPaymentDrawerOpen] = useState(false)
+  const prototype = usePrototypeOptional()
+  const activityFilter = prototype?.activityFilter ?? 'viewChip'
 
   const mockAccount = getAccountById(id)
   const routeState = location.state as { status?: RouteStateStatus; accountName?: string } | null
@@ -73,6 +77,15 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
 
   const breadcrumbs = [{ label: 'Network', href: '/network' }]
 
+  const LTV_METRIC_OPTIONS = [
+    { id: 'volume', label: 'Lifetime volume' },
+    { id: 'value', label: 'Lifetime value' },
+  ] as const
+  const [ltvMetric, setLtvMetric] = useState<'volume' | 'value'>('volume')
+  const ltvDisplay = ltvMetric === 'volume'
+    ? { value: '$9.88K', changePercent: '+2.4%' }
+    : { value: '$24.6K', changePercent: '-0.8%' }
+
   return (
     <div className="flex h-full w-full flex-col" data-name="AccountDetail">
       {/* Header + action bar + LTV card grouped; top-aligned so header position is stable across detail and nested pages. */}
@@ -101,16 +114,22 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
             />
           </div>
         </div>
-        <div className="flex h-[160px] w-[160px] shrink-0 items-center justify-center">
+        <div className="flex h-[120px] w-[200px] shrink-0 items-center justify-center">
           <MetricCard
             variant="labelValueSparkline"
             label="Lifetime volume"
-            value="$9.88K"
+            value={ltvDisplay.value}
+            changePercent={ltvDisplay.changePercent}
+            changeTooltipLabel="Change over last 30 days"
+            metricOptions={[...LTV_METRIC_OPTIONS]}
+            metricValue={ltvMetric}
+            onMetricChange={(id) => setLtvMetric(id as 'volume' | 'value')}
             className="h-full w-full"
           />
         </div>
       </div>
-      <div className="flex w-full shrink-0 flex-col px-10 pt-0 -mt-6" data-name="Tabs">
+      {/* Tab row: full-width tab bar; toggle floats above on the right so tab bottom border extends beneath it. */}
+      <div className="relative w-full shrink-0 pl-10 pr-10 pt-2" data-name="Tabs">
         <TabBar
           tabs={sectionTabs}
           activeId={effectiveSectionId}
@@ -118,6 +137,11 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
           variant="primary"
           gap={12}
         />
+        {activityFilter === 'universalToggle' && (
+          <div className="absolute right-10 top-0 z-10 flex h-full items-center">
+            <ThirdPartyActivityToggle />
+          </div>
+        )}
       </div>
       {/* Content: 24px below tab bar; all section first headings align to this */}
       <div className="min-h-0 flex-1 overflow-auto pb-6 pt-[24px] pl-[40px] pr-[40px]">
@@ -155,7 +179,18 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
             </div>
           </div>
         )}
-        {effectiveSectionId !== 'overview' && (() => {
+        {effectiveSectionId === 'billing' && (
+          <div className="flex w-full items-stretch gap-10">
+            {(() => {
+              const BillingSection = SECTION_COMPONENTS.billing
+              return <BillingSection />
+            })()}
+            <div className="min-w-[320px] w-[30%] shrink-0">
+              <BillingSidebar />
+            </div>
+          </div>
+        )}
+        {effectiveSectionId !== 'overview' && effectiveSectionId !== 'billing' && (() => {
           const SectionComponent = SECTION_COMPONENTS[effectiveSectionId]
           if (!SectionComponent) return null
           if (effectiveSectionId === 'moneyMovement') {

@@ -345,7 +345,8 @@ export default function AccountDetailActionBar({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [moveMoneyOpen])
 
-  const bothGhost = v.showPayouts && v.showPayments && !isRestricted
+  /** Consistent 8px gap between all action buttons. Only ghost variant should be grouped with gap-0 (no padding between). */
+  const bothPayoutsPaymentsEnabled = v.showPayouts && v.showPayments && !isRestricted
 
   return (
     <div
@@ -353,17 +354,17 @@ export default function AccountDetailActionBar({
       data-name="Home actions"
       data-node-id="2:6375"
     >
-      {bothGhost ? (
-        <div className="flex items-center gap-0">
-          <ActionButton label="Payouts are enabled for this account." tooltipId="payouts-tooltip" variant="ghost" labelDottedTooltip>
+      {bothPayoutsPaymentsEnabled ? (
+        <>
+          <ActionButton label="Payouts are enabled for this account." tooltipId="payouts-tooltip" variant="outline">
             <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />
             Payouts
           </ActionButton>
-          <ActionButton label="Payments are enabled for this account." tooltipId="payments-tooltip" variant="ghost" labelDottedTooltip>
+          <ActionButton label="Payments are enabled for this account." tooltipId="payments-tooltip" variant="outline">
             <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />
             Payments
           </ActionButton>
-        </div>
+        </>
       ) : (
         <>
           {v.showPayouts && (isRestricted ? (
@@ -379,7 +380,7 @@ export default function AccountDetailActionBar({
               wrapperRef={payoutsDropdownRef}
             />
           ) : (
-            <ActionButton label="Payouts are enabled for this account." tooltipId="payouts-tooltip" variant="ghost" labelDottedTooltip>
+            <ActionButton label="Payouts are enabled for this account." tooltipId="payouts-tooltip" variant="outline">
               <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />
               Payouts
             </ActionButton>
@@ -397,7 +398,7 @@ export default function AccountDetailActionBar({
               wrapperRef={paymentsDropdownRef}
             />
           ) : (
-            <ActionButton label="Payments are enabled for this account." tooltipId="payments-tooltip" variant="ghost" labelDottedTooltip>
+            <ActionButton label="Payments are enabled for this account." tooltipId="payments-tooltip" variant="outline">
               <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />
               Payments
             </ActionButton>

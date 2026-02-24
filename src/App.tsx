@@ -1,5 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
+import { PrototypeProvider } from './context/PrototypeContext'
 import Shell from './components/Shell'
+import PrototypeFloatie from './components/PrototypeFloatie'
 import Overview from './screens/Overview'
 import NetworkList from './screens/NetworkList'
 import AccountDetail from './screens/AccountDetail'
@@ -12,7 +14,8 @@ import Components from './screens/Components'
 
 function App() {
   return (
-    <div className="h-screen w-full bg-surface">
+    <div className="relative h-screen w-full bg-surface">
+      <PrototypeProvider>
       <Shell>
         <Routes>
           <Route path="/" element={<Overview />} />
@@ -26,6 +29,8 @@ function App() {
           <Route path="/components" element={<Components />} />
         </Routes>
       </Shell>
+      <PrototypeFloatie />
+      </PrototypeProvider>
     </div>
   )
 }

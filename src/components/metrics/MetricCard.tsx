@@ -3,6 +3,9 @@
  * Balances Module matches Figma 2:6424: gap 8px, 16px padding, Label/Medium emphasized + Regular, Heading/Large subdued, right arrow icon.
  */
 
+import React, { useState, useRef, useEffect } from 'react'
+import ChevronDownIcon from '../../icons/ChevronDownIcon'
+import LabelTooltip from '../LabelTooltip'
 import { IconButton } from '../IconButton'
 import MetricDropdown from './MetricDropdown'
 import StaticSparkline from './StaticSparkline'
@@ -39,6 +42,16 @@ type LabelValueSparklineProps = BaseProps & {
   value: string
   /** Optional. When omitted, no chart area is shown (design note: chart is "nice to have"). */
   sparkline?: React.ReactNode
+  /** Optional +/- % change (e.g. "+2.5%" or "-1.2%"). Shown right of value, baseline-aligned; tooltip describes period (e.g. last 30 days). */
+  changePercent?: string
+  /** Tooltip label when hovering the change (e.g. "Change over last 30 days"). */
+  changeTooltipLabel?: string
+  /** Optional: options for label dropdown (e.g. Volume / Value). When set, label row shows chevron and dropdown. */
+  metricOptions?: { id: string; label: string }[]
+  /** Current metric option id when metricOptions is used. */
+  metricValue?: string
+  /** Called when user picks a different option from the label dropdown. */
+  onMetricChange?: (id: string) => void
 }
 
 type CompactProps = BaseProps & {
@@ -88,45 +101,173 @@ function MetricValueSkeleton() {
 
 const isPositiveChange = (s: string) => s.startsWith('+')
 
+type LabelValueSparklineCardProps = {
+  className: string
+  displayLabel: string
+  hasMetricDropdown: boolean
+  metricOptions: { id: string; label: string }[]
+  metricValue?: string
+  onMetricChange: (id: string) => void
+  value: string
+  changePercent?: string
+  changeTooltipLabel: string
+  changeColor: string | undefined
+  sparkline?: React.ReactNode
+}
+
+function LabelValueSparklineCard({
+  className,
+  displayLabel,
+  hasMetricDropdown,
+  metricOptions,
+  metricValue,
+  onMetricChange,
+  value,
+  changePercent,
+  changeTooltipLabel,
+  changeColor,
+  sparkline,
+}: LabelValueSparklineCardProps) {
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!dropdownOpen) return
+    const handle = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setDropdownOpen(false)
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [dropdownOpen])
+
+  return (
+    <div
+      className={`flex min-w-0 flex-col items-start justify-between overflow-hidden rounded-[8px] border border-neutral-50 bg-surface p-3 ${className}`}
+      data-name="Card 2"
+      data-node-id="28:12479"
+    >
+      <div className="relative flex min-h-5 w-full shrink-0 items-center px-1" data-node-id="28:12480" ref={ref}>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <p className="min-w-0 flex-1 font-label-medium-emphasized text-default leading-5 tracking-[-0.15px] truncate" data-node-id="28:12481">
+            {displayLabel}
+          </p>
+          {hasMetricDropdown && (
+            <button
+              type="button"
+              onClick={() => setDropdownOpen((o) => !o)}
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[4px] text-icon-subdued hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary"
+              aria-expanded={dropdownOpen}
+              aria-haspopup="listbox"
+              aria-label="Choose metric"
+            >
+              <ChevronDownIcon size={8} fill="currentColor" />
+            </button>
+          )}
+        </div>
+        {hasMetricDropdown && dropdownOpen && (
+          <ul
+            role="listbox"
+            className="absolute left-0 top-full z-20 mt-0.5 min-w-[140px] rounded-[4px] border border-neutral-100 bg-surface py-1 shadow-lg"
+            style={{ left: 4 }}
+          >
+          {metricOptions.map((opt) => (
+            <li key={opt.id} role="option" aria-selected={metricValue === opt.id}>
+              <button
+                type="button"
+                className="w-full px-3 py-1.5 text-left font-label-medium text-default hover:bg-offset focus:bg-offset focus:outline-none"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  onMetricChange(opt.id)
+                  setDropdownOpen(false)
+                }}
+              >
+                {opt.label}
+              </button>
+            </li>
+          ))}
+          </ul>
+        )}
+      </div>
+      {sparkline != null && (
+        <div
+          className="relative flex min-h-[44px] flex-1 w-full min-w-0 items-center justify-center px-1"
+          data-name="Spark line chart container"
+          data-node-id="28:12486"
+        >
+          <div className="relative h-full w-full min-h-0 min-w-0" data-node-id="28:12487">
+            {sparkline}
+          </div>
+        </div>
+      )}
+      <div className="flex w-full shrink-0 items-baseline justify-start gap-[6px] pl-1 pr-1" data-node-id="28:12484">
+        <p
+          className="min-w-0 shrink-0 text-left text-[20px] leading-6 tracking-[-0.2px] text-default tabular-nums"
+          style={{ fontFeatureSettings: "'lnum' 1, 'pnum' 1" }}
+          data-node-id="28:12485"
+        >
+          {value}
+        </p>
+        {changePercent != null && (
+          <LabelTooltip
+            label={changeTooltipLabel}
+            tooltipId="metric-card-change-tooltip"
+            placement="top"
+          >
+            <span
+              className="shrink-0 cursor-default font-label-small-emphasized tabular-nums"
+              style={{ color: changeColor }}
+              aria-hidden
+            >
+              {changePercent}
+            </span>
+          </LabelTooltip>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function MetricCard(props: MetricCardProps) {
   const { variant, className = '' } = props
   const baseCard =
     'flex min-w-0 flex-col rounded-[12px] border border-neutral-50 bg-surface'
 
   if (variant === 'labelValueSparkline') {
-    const { label, value, sparkline } = props
+    const {
+      label,
+      value,
+      sparkline,
+      changePercent,
+      changeTooltipLabel = 'Change over last 30 days',
+      metricOptions,
+      metricValue,
+      onMetricChange,
+    } = props
+    const changeColor =
+      changePercent == null
+        ? undefined
+        : changePercent.startsWith('-')
+          ? 'var(--color-feedback-critical-on)'
+          : 'var(--color-feedback-success-on)'
+    const hasMetricDropdown = metricOptions != null && metricOptions.length > 0 && onMetricChange != null
+    const currentOption = hasMetricDropdown && metricValue != null
+      ? metricOptions!.find((o) => o.id === metricValue) ?? metricOptions![0]
+      : null
+    const displayLabel = currentOption != null ? currentOption.label : label
+
     return (
-      <div
-        className={`flex min-w-0 flex-col items-start justify-between overflow-hidden rounded-[8px] border border-neutral-50 bg-surface p-3 ${className}`}
-        data-name="Card 2"
-        data-node-id="28:12479"
-      >
-        <div className="flex min-h-5 w-full shrink-0 items-center gap-2 px-1" data-node-id="28:12480">
-          <p className="min-w-0 flex-1 font-label-medium-emphasized text-default leading-5 tracking-[-0.15px]" data-node-id="28:12481">
-            {label}
-          </p>
-        </div>
-        {sparkline != null && (
-          <div
-            className="relative flex min-h-[44px] flex-1 w-full min-w-0 items-center justify-center px-1"
-            data-name="Spark line chart container"
-            data-node-id="28:12486"
-          >
-            <div className="relative h-full w-full min-h-0 min-w-0" data-node-id="28:12487">
-              {sparkline}
-            </div>
-          </div>
-        )}
-        <div className="flex w-full shrink-0 items-center justify-center px-1" data-node-id="28:12484">
-          <p
-            className="min-w-0 flex-1 text-[20px] leading-6 tracking-[-0.2px] text-default tabular-nums"
-            style={{ fontFeatureSettings: "'lnum' 1, 'pnum' 1" }}
-            data-node-id="28:12485"
-          >
-            {value}
-          </p>
-        </div>
-      </div>
+      <LabelValueSparklineCard
+        className={className}
+        displayLabel={displayLabel}
+        hasMetricDropdown={hasMetricDropdown}
+        metricOptions={metricOptions ?? []}
+        metricValue={metricValue}
+        onMetricChange={onMetricChange!}
+        value={value}
+        changePercent={changePercent}
+        changeTooltipLabel={changeTooltipLabel}
+        changeColor={changeColor}
+        sparkline={sparkline}
+      />
     )
   }
 

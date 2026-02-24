@@ -14,7 +14,7 @@ import Repayments from './Repayments'
 
 export { default as Overview } from './Overview'
 export { default as MoneyMovement } from './MoneyMovement'
-export { default as Billing } from './Billing'
+export { default as Billing, BillingSidebar } from './Billing'
 export { default as Products } from './Products'
 export { default as PaymentMethods } from './PaymentMethods'
 export { default as LoanDetails } from './LoanDetails'

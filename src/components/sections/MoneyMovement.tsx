@@ -101,7 +101,6 @@ export default function MoneyMovement({ onTransactionRowClick }: MoneyMovementPr
           <div className="flex min-w-0 flex-1 flex-col gap-10">
             {/* Balances section — content ref Figma 29:10264; built with BalancesCard */}
             <div className="flex w-full flex-col gap-2" data-node-id="29:10264">
-              <SectionHeader title="Balances" size="small" onAction={() => {}} actionLabel="View all" />
               <div className="flex flex-col gap-2 rounded-[16px] bg-offset p-2">
                 <div className="overflow-hidden rounded-[12px] shadow-[0px_2px_5px_0px_rgba(48,49,61,0.08),0px_1px_1px_0px_rgba(0,0,0,0.12)]">
                   <BalancesCard

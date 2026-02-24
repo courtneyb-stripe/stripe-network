@@ -3,7 +3,6 @@
  * Figma 24:12288: SectionHeader "Balances" + offset container with composite card (Incoming + Held in reserve) + Financial accounts card.
  */
 
-import SectionHeader from './SectionHeader'
 import BalancesCard from './BalancesCard'
 import MiniBarSparkline from './metrics/MiniBarSparkline'
 import { GramIcon } from '../icons/GramIcon'
@@ -21,7 +20,6 @@ export default function BalancesAndMetricsSection({ onOpenMoneyMovement }: Balan
       data-name="Balances"
       data-node-id="24:12288"
     >
-      <SectionHeader title="Balances" size="small" />
       <div className="flex flex-col gap-2 rounded-[length:var(--radius-xlarge)] bg-offset p-2">
         {/* Composite card: Incoming earnings (sparkline) + Held in reserve (actions) */}
         <div className="overflow-hidden rounded-[12px] shadow-[0px_2px_5px_0px_rgba(48,49,61,0.08),0px_1px_1px_0px_rgba(0,0,0,0.12)]">

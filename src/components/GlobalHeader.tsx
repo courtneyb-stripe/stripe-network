@@ -109,11 +109,11 @@ export function GlobalSearchBar() {
   )
 }
 
-/** Header actions (App Dock + Help, Notifications, Settings, Create) — for use in main top bar, flush with viewport. */
+/** Header actions (App Dock + Help, Notifications, Settings, Create) — right-aligned to viewport edge. */
 export function GlobalHeaderActions() {
   return (
     <div
-      className="flex items-center justify-end shrink-0 pr-2"
+      className="flex items-center justify-end shrink-0 ml-auto"
       data-name="[desktop +]"
       data-node-id="2:370"
     >

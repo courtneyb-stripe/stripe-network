@@ -7,6 +7,7 @@
 import { useState, useMemo } from 'react'
 import AccountDrawer from '../AccountDrawer'
 import { ViewChip } from '../NetworkFilterGroup'
+import { usePrototypeOptional } from '../../context/PrototypeContext'
 import SectionHeader from '../SectionHeader'
 import ProductsTable, { generateProductRows, generateProductRowsAlt } from '../ProductsTable'
 
@@ -20,6 +21,8 @@ const CACTUS_TOTAL = 198
 const TOYBOX_TOTAL = 124
 
 export default function Products() {
+  const prototype = usePrototypeOptional()
+  const activityFilter = prototype?.activityFilter ?? 'viewChip'
   const [activeChipId, setActiveChipId] = useState<string>(PRODUCT_CHIPS[0].id)
   const [productDrawerOpen, setProductDrawerOpen] = useState(false)
 
@@ -32,18 +35,20 @@ export default function Products() {
 
   return (
     <div className="flex flex-col gap-6" data-node-id="214:28398">
-      {/* ViewChips — above Products section header */}
-      <div className="flex flex-wrap items-center gap-2">
-        {PRODUCT_CHIPS.map((chip) => (
-          <ViewChip
-            key={chip.id}
-            label={chip.label}
-            active={activeChipId === chip.id}
-            onClick={() => setActiveChipId(chip.id)}
-            size="compact"
-          />
-        ))}
-      </div>
+      {/* ViewChips — above Products section header; hidden when Activity filter is Universal toggle */}
+      {activityFilter === 'viewChip' && (
+        <div className="flex flex-wrap items-center gap-2">
+          {PRODUCT_CHIPS.map((chip) => (
+            <ViewChip
+              key={chip.id}
+              label={chip.label}
+              active={activeChipId === chip.id}
+              onClick={() => setActiveChipId(chip.id)}
+              size="compact"
+            />
+          ))}
+        </div>
+      )}
       <div className="flex flex-col gap-3">
         <SectionHeader
           title="Products"

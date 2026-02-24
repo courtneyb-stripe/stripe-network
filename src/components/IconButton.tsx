@@ -1,13 +1,14 @@
 /**
  * IconButton — Icon-only button with tooltip on hover.
  * Variants: create (purple +, hover one shade darker), standard (gray fill), ghost (no fill).
+ * floatieTrigger: neutral-900 fill, white icon — for prototype floatie only; not in component inventory.
  * Use tooltipPlacement="bottom" in panel/modal headers so labels are visible below the button.
  */
 
 import type { TooltipPlacement } from './LabelTooltip'
 import LabelTooltip from './LabelTooltip'
 
-export type IconButtonVariant = 'create' | 'standard' | 'ghost' | 'display'
+export type IconButtonVariant = 'create' | 'standard' | 'ghost' | 'display' | 'floatieTrigger'
 
 /** 8px corner radius for all icon-only buttons across states. */
 const RADIUS_ICON = 'rounded-[8px]'
@@ -18,6 +19,8 @@ const VARIANT_CLASSES: Record<IconButtonVariant, string> = {
   standard: 'bg-offset text-default hover:bg-neutral-50',
   ghost: 'text-default hover:bg-offset',
   display: 'bg-neutral-100 text-icon-subdued pointer-events-none',
+  floatieTrigger:
+    'bg-[#1a1d21] text-white hover:bg-[#262a30] [&>svg]:transition-[fill] [&>svg]:fill-white',
 }
 
 const BASE_CLASS =

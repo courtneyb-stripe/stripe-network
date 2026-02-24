@@ -7,6 +7,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import AccountDrawer from '../AccountDrawer'
 import BalancesCard from '../BalancesCard'
 import { ViewChip } from '../NetworkFilterGroup'
+import { usePrototypeOptional } from '../../context/PrototypeContext'
 import SectionHeader from '../SectionHeader'
 import SubscriptionCard from '../SubscriptionCard'
 import InvoicesTable, { generateInvoiceRows, generateInvoiceRowsAlt } from '../InvoicesTable'
@@ -20,6 +21,8 @@ const INVOICE_ROWS = 10
 const TOYBOX_INVOICE_TOTAL = 8907
 
 export default function Billing() {
+  const prototype = usePrototypeOptional()
+  const activityFilter = prototype?.activityFilter ?? 'viewChip'
   const [activeChipId, setActiveChipId] = useState<string>(BILLING_CHIPS[0].id)
   const [invoiceDrawerOpen, setInvoiceDrawerOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -48,48 +51,25 @@ export default function Billing() {
   const invoiceTotalCount = isCactus ? INVOICE_ROWS : TOYBOX_INVOICE_TOTAL
 
   return (
-    <div ref={rootRef} className="flex w-full flex-col gap-6">
-      <div className="flex w-full gap-[40px]">
-        {/* Main content */}
-        <div className="flex min-w-0 flex-1 flex-col gap-6" data-node-id="20:9762">
-          {/* Balances first (when Cactus) so first heading is 24px from tab bar */}
-          {isCactus && (
-            <div className="flex w-full flex-col gap-2">
-              <SectionHeader title="Balances" size="small" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-[16px] bg-offset p-2">
-                <BalancesCard
-                  variant="amountRight"
-                  iconName="balance"
-                  label="Invoice balance"
-                  subtitle="Current"
-                  value="$0.00"
+    <div ref={rootRef} className="flex min-w-0 flex-1 flex-col gap-6">
+      <div className="flex min-w-0 flex-1 flex-col gap-6" data-node-id="20:9762">
+          {/* Paid to view chips — Figma 20:10301, 20:10302; hidden when Activity filter is Universal toggle */}
+          {activityFilter === 'viewChip' && (
+            <div className="flex flex-wrap items-center gap-2">
+              {BILLING_CHIPS.map((chip) => (
+                <ViewChip
+                  key={chip.id}
+                  label={chip.label}
+                  active={activeChipId === chip.id}
+                  onClick={() => handleChipClick(chip.id)}
+                  size="compact"
                 />
-                <BalancesCard
-                  variant="amountRight"
-                  iconName="balance"
-                  label="Cash account balance"
-                  subtitle="Available"
-                  value="$2.00"
-                />
-              </div>
+              ))}
             </div>
           )}
 
-          {/* Paid to view chips — below Balances; Figma 20:10301, 20:10302 */}
-          <div className="flex flex-wrap items-center gap-2">
-            {BILLING_CHIPS.map((chip) => (
-              <ViewChip
-                key={chip.id}
-                label={chip.label}
-                active={activeChipId === chip.id}
-                onClick={() => handleChipClick(chip.id)}
-                size="compact"
-              />
-            ))}
-          </div>
-
-          {/* Subscriptions — 40px below when Balances/chips above; else 24px from tab bar */}
-          <div className={`flex flex-col gap-3 ${isCactus ? 'pt-[40px]' : ''}`}>
+          {/* Subscriptions */}
+          <div className="flex flex-col gap-3">
             <SectionHeader
               title="Subscriptions"
               size="small"
@@ -97,7 +77,7 @@ export default function Billing() {
               onAdd={() => {}}
               actionLabel="View all"
             />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-[8px] gap-y-[8px]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-[8px] gap-y-[8px]">
               {isCactus ? (
                 <>
                   <SubscriptionCard
@@ -122,13 +102,6 @@ export default function Billing() {
                     onMoreClick={() => {}}
                     onNextInvoiceClick={() => {}}
                   />
-                  <SubscriptionCard
-                    planName="Starter plan"
-                    badges={[{ label: 'Active', variant: 'success' }]}
-                    invoiceFrequencyValue="Monthly on 1st"
-                    nextInvoiceValue="Mar 1 for $29.00"
-                    onNextInvoiceClick={() => {}}
-                  />
                 </>
               ) : (
                 <>
@@ -147,13 +120,6 @@ export default function Billing() {
                     ]}
                     invoiceFrequencyValue="Quarterly"
                     nextInvoiceValue="Apr 1 for $599.00"
-                    onNextInvoiceClick={() => {}}
-                  />
-                  <SubscriptionCard
-                    planName="Enterprise plan"
-                    badges={[{ label: 'Pending', variant: 'attention' }]}
-                    invoiceFrequencyValue="Yearly on Jan 1"
-                    nextInvoiceValue="Jan 1, 2026 for $12,000.00"
                     onNextInvoiceClick={() => {}}
                   />
                 </>
@@ -189,11 +155,38 @@ export default function Billing() {
             onClose={() => setInvoiceDrawerOpen(false)}
             variant="invoice-details"
           />
-        </div>
-        {/* Sidebar — gray placeholder */}
-        <div className="flex min-w-[320px] w-[30%] shrink-0 flex-col rounded-[12px] bg-offset px-4 py-3">
-          <p className="text-[12px] leading-4 text-subdued">Default payment methods</p>
-        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Billing tab sidebar: balances (no section header) + payment methods placeholder. Used only when Billing tab is active. */
+export function BillingSidebar() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <BalancesCard
+          variant="amountRight"
+          iconName="balance"
+          label="Invoice balance"
+          subtitle="Current"
+          value="$0.00"
+          valueAlign="right"
+        />
+        <BalancesCard
+          variant="amountRight"
+          iconName="balance"
+          label="Cash account balance"
+          subtitle="Available"
+          value="$2.00"
+          valueAlign="right"
+        />
+      </div>
+      <div
+        className="flex items-center rounded-[12px] bg-offset px-4 py-4"
+        data-name="Sidebar placeholder: Payment methods"
+      >
+        <p className="text-[14px] text-subdued">Payment methods — placeholder</p>
       </div>
     </div>
   )

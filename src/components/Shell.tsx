@@ -39,7 +39,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         data-name="Main"
         aria-label="Main content"
       >
-        <div className="flex shrink-0 items-center border-b border-neutral-100 bg-white/85 backdrop-blur-md px-6 py-3">
+        <div className="flex shrink-0 items-center border-b-0 bg-white/85 backdrop-blur-md pl-6 pr-10 py-3">
           <GlobalSearchBar />
           <GlobalHeaderActions />
         </div>

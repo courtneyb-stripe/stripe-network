@@ -13,6 +13,7 @@ import PayoutsTable, { generatePayoutRows } from '../PayoutsTable'
 import TableSkeleton from '../TableSkeleton'
 import TransactionsTable, { generateTransactionRows } from '../TransactionsTable'
 import { ViewChip } from '../NetworkFilterGroup'
+import { usePrototypeOptional } from '../../context/PrototypeContext'
 import type { AccountConfig } from '../../data/accountConfigs'
 
 const ALL_TRANSACTION_TABS = [
@@ -24,7 +25,7 @@ const ALL_TRANSACTION_TABS = [
 type TransactionTabId = 'payments' | 'payouts' | 'collected-fees'
 
 const SAVED_LIST_CHIPS = [
-  { id: 'cacutus' as const, label: 'Paid to Cacutus Practice' },
+  { id: 'cactus' as const, label: 'Paid to Cactus Practice' },
   { id: 'toybox' as const, label: 'Paid to Toybox Labs' },
 ] as const
 
@@ -61,8 +62,10 @@ export default function Overview({
   onOpenMoneyMovement,
 }: OverviewSectionProps) {
   const navigate = useNavigate()
+  const prototype = usePrototypeOptional()
+  const activityFilter = prototype?.activityFilter ?? 'viewChip'
   const [activeTransactionTab, setActiveTransactionTab] = useState<TransactionTabId>('payments')
-  const [savedListId, setSavedListId] = useState<SavedListId>('cacutus')
+  const [savedListId, setSavedListId] = useState<SavedListId>('cactus')
   const [activeActivityTab, setActiveActivityTab] = useState<RecentActivityTabId>('support-cases')
 
   const transactionTabs = useMemo(
@@ -129,7 +132,7 @@ export default function Overview({
               gap={6}
             />
           </div>
-          {validTransactionTab === 'payments' && (
+          {validTransactionTab === 'payments' && activityFilter === 'viewChip' && (
             <div className="flex items-center gap-2 pt-5">
               {SAVED_LIST_CHIPS.map((chip) => (
                 <ViewChip

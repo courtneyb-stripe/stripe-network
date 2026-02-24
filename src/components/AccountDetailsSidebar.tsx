@@ -166,15 +166,24 @@ export default function AccountDetailsSidebar({
         {/* 40px gap then placeholder sections */}
         <div className="h-[40px] shrink-0" aria-hidden />
         <div className="flex flex-col gap-4">
-          {['note', 'metadata', 'top customers', 'top products'].map((label) => (
-            <div
-              key={label}
-              className="flex items-center rounded-[12px] bg-offset px-4 py-4"
-              data-name={`Sidebar placeholder: ${label}`}
-            >
-              <p className="text-[14px] text-subdued">{label}</p>
-            </div>
-          ))}
+          <div
+            className="flex items-center rounded-[12px] bg-offset px-4 py-3"
+            data-name="Sidebar placeholder: Customers"
+          >
+            <p className="text-[14px] text-subdued">Customers — placeholder</p>
+          </div>
+          <div
+            className="flex items-center rounded-[12px] bg-offset px-4 py-3"
+            data-name="Sidebar placeholder: Note"
+          >
+            <p className="text-[14px] text-subdued">Note — placeholder</p>
+          </div>
+          <div
+            className="flex items-center rounded-[12px] bg-offset px-4 py-3"
+            data-name="Sidebar placeholder: Metadata"
+          >
+            <p className="text-[14px] text-subdued">Metadata — placeholder</p>
+          </div>
         </div>
       </div>
     </>
