@@ -36,6 +36,27 @@ const FILTER_CHIPS: { id: HubFilterId; label: string }[] = [
   { id: 'archived', label: 'Archived' },
 ]
 
+/** Format an ISO timestamp as PST (America/Los_Angeles); used for build/deploy time. */
+function formatPST(isoString: string): string {
+  try {
+    const date = new Date(isoString)
+    return date.toLocaleString('en-US', {
+      timeZone: 'America/Los_Angeles',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZoneName: 'short',
+    })
+  } catch {
+    return isoString
+  }
+}
+
+const LAST_DEPLOYED_PST = typeof __BUILD_TIMESTAMP__ !== 'undefined' ? formatPST(__BUILD_TIMESTAMP__) : '—'
+
 function splitByCategory(rows: PrototypeRow[]) {
   const m0 = rows.filter((r) => r.category === 'm0')
   const resources = rows.filter((r) => r.category === 'resources')
@@ -97,7 +118,7 @@ function PrototypeRowLink({
       </div>
       <div className={`${cellClass} ${COLUMNS[4].width}`}>
         <span className={`truncate font-label-medium ${textClass}`}>
-          {row.lastUpdated} PST
+          {LAST_DEPLOYED_PST}
         </span>
       </div>
     </>

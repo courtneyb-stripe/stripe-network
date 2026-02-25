@@ -57,8 +57,9 @@ export const configTemplates: Record<ConfigType, AccountConfig> = {
 export const SECTION_LABELS: Record<string, string> = {
   overview: 'Overview',
   moneyMovement: 'Money management',
-  billing: 'Billing',
+  billing: 'Your business',
   products: 'Products',
+  theirBusiness: 'Their business',
   paymentMethods: 'Payment methods',
   loanDetails: 'Loan details',
   repayments: 'Repayments',

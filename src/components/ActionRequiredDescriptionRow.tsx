@@ -63,11 +63,13 @@ export function ActionRequiredDescriptionRow({
     <span className="cursor-default">Impacts {impactsBase}</span>
   )
   return (
-    <div className={`flex w-full items-center text-[12px] leading-4 text-default ${singleLine ? 'whitespace-nowrap' : ''}`}>
-      <span className={`flex items-center gap-1.5 ${singleLine ? '' : 'min-w-0 flex-1'}`}>
-        <CriticalCircleBullet size={6} />
-        {impactsContent}
-        <span className="cursor-default">{pastDueText}</span>
+    <div className={`flex w-full min-w-0 items-center text-[12px] leading-4 text-default ${singleLine ? 'whitespace-nowrap' : 'overflow-hidden'}`}>
+      <span className={`flex min-w-0 flex-1 items-center gap-1.5 truncate ${singleLine ? '' : 'overflow-hidden'}`}>
+        <span className="shrink-0"><CriticalCircleBullet size={6} /></span>
+        <span className="min-w-0 truncate">
+          {impactsContent}
+          <span className="cursor-default whitespace-nowrap"> {pastDueText}</span>
+        </span>
       </span>
     </div>
   )

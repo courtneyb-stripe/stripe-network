@@ -9,11 +9,13 @@ import { createPortal } from 'react-dom'
 import {
   filterActionsRequired,
   getActionsRequiredCountByFilter,
+  MAX_ACTION_TITLE_LENGTH,
   getImpactsDisplayParts,
   getImpactsTooltipLabel,
   getImpactsMoreTooltipLabel,
   type ImpactsFilter,
 } from '../data/actionsRequired'
+import { truncateAtWordBoundary } from '../utils/string'
 import { ActionRequiredDescriptionRow } from './ActionRequiredDescriptionRow'
 import { List, ListItem } from './List'
 import { Icon } from '../icons/SailIcons'
@@ -159,7 +161,7 @@ export default function ActionsRequiredModal({
                       fill="var(--color-icon-subdued)"
                     />
                   }
-                  title={action.title}
+                  title={truncateAtWordBoundary(action.title, MAX_ACTION_TITLE_LENGTH)}
                   trailingContent={
                     <span
                       className="opacity-0 transition-opacity duration-150 group-hover/row:opacity-100 pr-2"

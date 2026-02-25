@@ -13,8 +13,12 @@ import PayoutsTable, { generatePayoutRows } from '../PayoutsTable'
 import TableSkeleton from '../TableSkeleton'
 import TransactionsTable, { generateTransactionRows } from '../TransactionsTable'
 import { ViewChip } from '../NetworkFilterGroup'
+import FinancialSnapshot from '../FinancialSnapshot'
+import TransactionListCard from '../TransactionListCard'
 import { usePrototypeOptional } from '../../context/PrototypeContext'
 import type { AccountConfig } from '../../data/accountConfigs'
+import { getLatestRows } from './MoneyMovement'
+import { TIME_RANGE_OPTIONS, type TimeRange } from '../metrics/constants'
 
 const ALL_TRANSACTION_TABS = [
   { id: 'payments' as const, label: 'Payments' },
@@ -35,13 +39,21 @@ const RECENT_ACTIVITY_TABS = [
   { id: 'support-cases', label: 'Support cases' },
   { id: 'events', label: 'Events' },
   { id: 'logs', label: 'Logs' },
-  { id: 'risk', label: 'Risk' },
   { id: 'sent-emails', label: 'Sent emails' },
 ] as const
 
 type RecentActivityTabId = (typeof RECENT_ACTIVITY_TABS)[number]['id']
 
-const RECENT_TRANSACTIONS_LIMIT = 10
+const LATEST_TXN_TABS_V3 = [
+  { id: 'payments' as const, label: 'Payments' },
+  { id: 'payouts' as const, label: 'Payouts' },
+  { id: 'collected-fees' as const, label: 'Collected fees' },
+  { id: 'financial-accounts' as const, label: 'Financial accounts' },
+] as const
+
+type LatestTxnTabV3Id = (typeof LATEST_TXN_TABS_V3)[number]['id']
+
+const RECENT_TRANSACTIONS_LIMIT = 25
 const EMBEDDED_PAYMENTS_TOTAL = 80
 const EMBEDDED_PAYOUTS_TOTAL = 48
 
@@ -64,9 +76,14 @@ export default function Overview({
   const navigate = useNavigate()
   const prototype = usePrototypeOptional()
   const activityFilter = prototype?.activityFilter ?? 'viewChip'
+  const iaVariant = prototype?.iaVariant ?? 'v1'
+  const loFiMode = prototype?.loFiMode ?? false
+  const v3LoFi = iaVariant === 'v3' && loFiMode
   const [activeTransactionTab, setActiveTransactionTab] = useState<TransactionTabId>('payments')
   const [savedListId, setSavedListId] = useState<SavedListId>('cactus')
   const [activeActivityTab, setActiveActivityTab] = useState<RecentActivityTabId>('support-cases')
+  const [financialTimeRange, setFinancialTimeRange] = useState<TimeRange>('Last 30 days')
+  const [activeLatestTabV3, setActiveLatestTabV3] = useState<LatestTxnTabV3Id>('payments')
 
   const transactionTabs = useMemo(
     () =>
@@ -96,9 +113,75 @@ export default function Overview({
 
   return (
     <div className="flex min-w-0 max-w-[1120px] flex-1 flex-col">
-      {showBalances && <BalancesAndMetricsSection onOpenMoneyMovement={onOpenMoneyMovement} />}
+      {showBalances && iaVariant === 'v3' && (
+        <div className="flex flex-col gap-2">
+          <SectionHeader title="Balances" size="small" />
+          {v3LoFi ? (
+            <div className="flex items-center rounded-[12px] bg-offset px-4 py-4">
+              <p className="text-[14px] text-subdued">Balances</p>
+            </div>
+          ) : (
+            <BalancesAndMetricsSection onOpenMoneyMovement={onOpenMoneyMovement} />
+          )}
+        </div>
+      )}
+      {showBalances && iaVariant !== 'v3' && <BalancesAndMetricsSection onOpenMoneyMovement={onOpenMoneyMovement} />}
 
-      {showRecentTransactions && (
+      {showRecentTransactions && iaVariant === 'v3' && (
+        <div className={`flex flex-col gap-10 ${showBalances ? 'pt-10' : ''}`}>
+          {v3LoFi ? (
+            <>
+              <div className="flex flex-col gap-2">
+                <SectionHeader title="Financial snapshot" size="small" />
+                <div className="flex items-center rounded-[12px] bg-offset px-4 py-4">
+                  <p className="text-[14px] text-subdued">Financial snapshot</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-0">
+                <SectionHeader title="Latest transactions" size="small" />
+                <p className="text-[14px] text-subdued">with Toybox Labs</p>
+                <div className="flex items-center rounded-[12px] bg-offset px-4 py-4 mt-2">
+                  <p className="text-[14px] text-subdued">Latest transactions</p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <FinancialSnapshot
+                moneyIn="$84,200.00"
+                moneyOut="$36,800.00"
+                netFlow="$47,400"
+                timeRangeValue={financialTimeRange}
+                timeRangeOptions={TIME_RANGE_OPTIONS}
+                onTimeRangeChange={setFinancialTimeRange}
+              />
+              <div className="flex flex-col gap-0">
+                <SectionHeader title="Latest transactions" size="small" />
+                <p className="text-[14px] text-subdued">with Toybox Labs</p>
+                <div className="flex w-full pt-2">
+                  <TabBar
+                    tabs={LATEST_TXN_TABS_V3.map((t) => ({ id: t.id, label: t.label }))}
+                    activeId={activeLatestTabV3}
+                    onChange={(id) => setActiveLatestTabV3(id as LatestTxnTabV3Id)}
+                    variant="secondary"
+                    gap={6}
+                  />
+                </div>
+                <div className="pt-5">
+                  <TransactionListCard
+                    variant="latest"
+                    title="Latest transactions"
+                    hideHeader
+                    onRowAction={onPaymentRowClick}
+                    rows={getLatestRows(25)}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+      {showRecentTransactions && iaVariant !== 'v3' && (
         <div className={`flex flex-col gap-0 ${showBalances ? 'pt-10' : ''}`}>
           <SectionHeader
             title="Recent transactions"
@@ -175,33 +258,27 @@ export default function Overview({
         </div>
       )}
 
-      {/* Risk placeholder — between Recent transactions and Recent activity */}
-      <div className="pt-10 flex flex-col gap-2">
-        <SectionHeader
-          title="Risk"
-          size="small"
-          onAction={accountId ? () => navigate(`/network/${accountId}/risk-analysis`) : undefined}
-          actionLabel="View"
-          actionVariant="ghost"
-        />
-        <div className="flex items-center rounded-[12px] bg-offset px-4 py-4">
-          <p className="text-[14px] text-subdued">Risk</p>
-        </div>
-      </div>
-
       {showRecentActivity && (
         <div className="pt-[40px] flex flex-col gap-0">
           <SectionHeader title="Recent Activity" size="small" />
-          <div className="flex w-full">
-            <TabBar
-              tabs={RECENT_ACTIVITY_TABS.map((t) => ({ id: t.id, label: t.label }))}
-              activeId={activeActivityTab}
-              onChange={(id) => setActiveActivityTab(id as RecentActivityTabId)}
-              variant="secondary"
-              gap={6}
-            />
-          </div>
-          <TableSkeleton rowCount={7} />
+          {v3LoFi ? (
+            <div className="flex items-center rounded-[12px] bg-offset px-4 py-4 mt-2">
+              <p className="text-[14px] text-subdued">Recent activity</p>
+            </div>
+          ) : (
+            <>
+              <div className="flex w-full">
+                <TabBar
+                  tabs={RECENT_ACTIVITY_TABS.map((t) => ({ id: t.id, label: t.label }))}
+                  activeId={activeActivityTab}
+                  onChange={(id) => setActiveActivityTab(id as RecentActivityTabId)}
+                  variant="secondary"
+                  gap={6}
+                />
+              </div>
+              <TableSkeleton rowCount={7} showCheckboxColumn={false} />
+            </>
+          )}
         </div>
       )}
 

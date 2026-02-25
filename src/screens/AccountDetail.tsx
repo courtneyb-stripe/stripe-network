@@ -16,6 +16,7 @@ import TabBar from '../components/TabBar'
 import { SECTION_COMPONENTS, BillingSidebar } from '../components/sections'
 import RadarHighRiskCard from '../components/RadarHighRiskCard'
 import ThirdPartyActivityToggle from '../components/ThirdPartyActivityToggle'
+import ViewActivityDropdown from '../components/ViewActivityDropdown'
 import { usePrototypeOptional } from '../context/PrototypeContext'
 import { configTemplates, SECTION_LABELS, type ConfigType } from '../data/accountConfigs'
 import { getAccountById } from '../data/mockAccounts'
@@ -59,13 +60,27 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
     : undefined
   const configType: ConfigType = mockAccount?.configType ?? 'merchant'
   const config = configTemplates[configType]
+  const iaVariant = prototype?.iaVariant ?? 'v1'
   /** Sections to hide from the tab bar (keep in config for later). */
   const HIDDEN_SECTIONS = ['products'] as const
-  const visibleSections = config.sections.filter((id) => !HIDDEN_SECTIONS.includes(id as (typeof HIDDEN_SECTIONS)[number]))
-  const sectionTabs = visibleSections.map((sectionId) => ({
-    id: sectionId,
-    label: SECTION_LABELS[sectionId] ?? sectionId,
-  }))
+  /** V2/V3 IA: Overview, Money management, Billing, Payment processing. */
+  const useAltSections =
+    (iaVariant === 'v2' || iaVariant === 'v3') &&
+    config.sections.includes('overview') &&
+    config.sections.includes('moneyMovement') &&
+    config.sections.includes('billing')
+  const visibleSections = useAltSections
+    ? (['overview', 'moneyMovement', 'billing', 'theirBusiness'] as const)
+    : config.sections.filter((id) => !HIDDEN_SECTIONS.includes(id as (typeof HIDDEN_SECTIONS)[number]))
+  const sectionTabs = visibleSections.map((sectionId) => {
+    const rawLabel =
+      iaVariant === 'v3' && sectionId === 'moneyMovement'
+        ? 'Manage funds'
+        : SECTION_LABELS[sectionId] ?? sectionId
+    const label =
+      iaVariant === 'v3' && sectionId !== 'overview' ? `"${rawLabel}"` : rawLabel
+    return { id: sectionId, label }
+  })
   const firstSectionId = visibleSections[0] ?? config.sections[0] ?? 'overview'
   const [activeSectionId, setActiveSectionId] = useState<string>(firstSectionId)
   useEffect(() => {
@@ -138,9 +153,10 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
           variant="primary"
           gap={12}
         />
-        {activityFilter === 'universalToggle' && (
+        {(activityFilter === 'universalToggle' || activityFilter === 'viewActivityDropdown') && (
           <div className="absolute right-10 top-0 z-10 flex h-full items-center">
-            <ThirdPartyActivityToggle />
+            {activityFilter === 'universalToggle' && <ThirdPartyActivityToggle />}
+            {activityFilter === 'viewActivityDropdown' && <ViewActivityDropdown />}
           </div>
         )}
       </div>
@@ -181,6 +197,8 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                 }}
                 showAccountRisk={mockAccount?.isRadarRuleMatch ?? false}
                 accountId={id}
+                accountName={accountName}
+                onTransactionRowClick={() => setPaymentDrawerOpen(true)}
                 />
             </div>
           </div>
@@ -196,18 +214,39 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
             </div>
           </div>
         )}
-        {effectiveSectionId !== 'overview' && effectiveSectionId !== 'billing' && (() => {
-          const SectionComponent = SECTION_COMPONENTS[effectiveSectionId]
-          if (!SectionComponent) return null
-          if (effectiveSectionId === 'moneyMovement') {
-            return (
-              <SectionComponent
-                onTransactionRowClick={() => setPaymentDrawerOpen(true)}
-              />
-            )
-          }
-          return <SectionComponent />
+        {effectiveSectionId === 'theirBusiness' && (() => {
+          const TheirBusinessSection = SECTION_COMPONENTS.theirBusiness
+          return TheirBusinessSection ? <TheirBusinessSection /> : null
         })()}
+        {effectiveSectionId === 'moneyMovement' && iaVariant === 'v3' && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center rounded-[12px] bg-offset px-4 py-4" data-name="Money management placeholder">
+              <p className="text-[14px] text-subdued">Financial accounts</p>
+            </div>
+            <div className="flex items-center rounded-[12px] bg-offset px-4 py-4" data-name="Loans placeholder">
+              <p className="text-[14px] text-subdued">Loans</p>
+            </div>
+            <div className="flex items-center rounded-[12px] bg-offset px-4 py-4" data-name="Card holders placeholder">
+              <p className="text-[14px] text-subdued">Card holders</p>
+            </div>
+          </div>
+        )}
+        {effectiveSectionId !== 'overview' &&
+          effectiveSectionId !== 'billing' &&
+          effectiveSectionId !== 'theirBusiness' &&
+          !(effectiveSectionId === 'moneyMovement' && iaVariant === 'v3') &&
+          (() => {
+            const SectionComponent = SECTION_COMPONENTS[effectiveSectionId]
+            if (!SectionComponent) return null
+            if (effectiveSectionId === 'moneyMovement') {
+              return (
+                <SectionComponent
+                  onTransactionRowClick={() => setPaymentDrawerOpen(true)}
+                />
+              )
+            }
+            return <SectionComponent />
+          })()}
       </div>
       <AccountDrawer
         open={accountDrawerOpen}

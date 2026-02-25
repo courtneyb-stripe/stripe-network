@@ -41,6 +41,8 @@ type TransactionListCardProps = {
   title: string
   /** Subheading below title: "with [accountName]" to clarify platform–account only (not customer payments). */
   accountName?: string
+  /** When true, only render the list (no SectionHeader). Use when title/description are rendered above by parent. */
+  hideHeader?: boolean
   onViewAll?: () => void
   onAdd?: () => void
   onRowAction?: (id: string) => void
@@ -74,6 +76,7 @@ export default function TransactionListCard({
   variant = 'latest',
   title,
   accountName,
+  hideHeader = false,
   onViewAll,
   onAdd,
   onRowAction,
@@ -86,15 +89,17 @@ export default function TransactionListCard({
       data-name="TransactionListCard"
       data-variant={variant}
     >
-      <SectionHeader
-        title={title}
-        description={accountName != null ? `with ${accountName}` : undefined}
-        size="small"
-        onAction={onViewAll}
-        onAdd={onAdd}
-        actionLabel="View all"
-        actionVariant="ghost"
-      />
+      {!hideHeader && (
+        <SectionHeader
+          title={title}
+          description={accountName != null ? `with ${accountName}` : undefined}
+          size="small"
+          onAction={onViewAll}
+          onAdd={onAdd}
+          actionLabel="View all"
+          actionVariant="ghost"
+        />
+      )}
       <List
         onAction={onRowAction != null ? (id) => onRowAction(String(id)) : undefined}
         aria-label={title}

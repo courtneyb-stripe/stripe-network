@@ -31,15 +31,20 @@ const LATEST_ROW_TEMPLATES: TransactionListRow[] = [
 ]
 
 const LATEST_ROWS_COUNT = 50
-function buildLatestRows(): TransactionListRow[] {
+function buildLatestRows(limit: number = LATEST_ROWS_COUNT): TransactionListRow[] {
   const rows: TransactionListRow[] = []
-  for (let i = 0; i < LATEST_ROWS_COUNT; i++) {
+  for (let i = 0; i < limit; i++) {
     const t = LATEST_ROW_TEMPLATES[i % LATEST_ROW_TEMPLATES.length]
     rows.push({ ...t, id: String(i + 1) })
   }
   return rows
 }
 const LATEST_ROWS = buildLatestRows()
+
+/** For Overview V3 latest list (cap 25). */
+export function getLatestRows(limit: number): TransactionListRow[] {
+  return buildLatestRows(limit)
+}
 
 const UPCOMING_ROWS: TransactionListRow[] = [
   { id: 'u1', transactionType: 'transfer', description: 'Payout to Bank •••• 7280', subline: 'Mar 1 • Scheduled', amount: '$1,200.00' },
@@ -48,6 +53,12 @@ const UPCOMING_ROWS: TransactionListRow[] = [
   { id: 'u4', transactionType: 'transfer', description: 'Payout to Bank •••• 4412', subline: 'Mar 8 • Scheduled', amount: '$2,040.00' },
   { id: 'u5', transactionType: 'card', description: 'Card payment · Estimated', subline: 'Mar 12 • Scheduled', amount: '$—' },
 ]
+
+const UPCOMING_DISPLAY_LIMIT = 5
+/** For Overview V3 sidebar and MM: cap upcoming to 5 items. */
+export function getUpcomingRows(limit: number = UPCOMING_DISPLAY_LIMIT): TransactionListRow[] {
+  return UPCOMING_ROWS.slice(0, limit)
+}
 
 export type MoneyMovementProps = {
   /** When set, row click opens shared AccountDrawer (payment-details) instead of local drawer. */
@@ -166,7 +177,7 @@ export default function MoneyMovement({ onTransactionRowClick }: MoneyMovementPr
               title="Upcoming transactions"
               accountName="Toybox Labs"
               onRowAction={openTxn}
-              rows={UPCOMING_ROWS}
+              rows={getUpcomingRows(UPCOMING_DISPLAY_LIMIT)}
             />
             {/* Payout information — 40px below Upcoming transactions */}
             <div className="flex w-full flex-col gap-2 pt-[40px]">

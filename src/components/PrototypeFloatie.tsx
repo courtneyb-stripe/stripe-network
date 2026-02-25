@@ -8,7 +8,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Icon } from '../icons/SailIcons'
 import { IconButton } from './IconButton'
 import { usePrototypeOptional } from '../context/PrototypeContext'
-import type { ActivityFilterMode } from '../context/PrototypeContext'
+import type { ActivityFilterMode, IaVariant } from '../context/PrototypeContext'
 
 export default function PrototypeFloatie() {
   const [open, setOpen] = useState(false)
@@ -47,7 +47,7 @@ export default function PrototypeFloatie() {
                 Activity filter
               </p>
               <div className="flex flex-col gap-2">
-                {(['viewChip', 'universalToggle'] as const).map((mode) => (
+                {(['viewChip', 'universalToggle', 'viewActivityDropdown'] as const).map((mode) => (
                   <label
                     key={mode}
                     className="flex cursor-pointer items-center gap-2 text-[14px] leading-5 text-[var(--color-default)]"
@@ -60,10 +60,41 @@ export default function PrototypeFloatie() {
                       onChange={() => prototype!.setActivityFilter(mode as ActivityFilterMode)}
                       className="h-4 w-4 border-neutral-300 text-[#1a1d21] focus:ring-action-primary"
                     />
-                    <span>{mode === 'viewChip' ? 'View Chip' : 'Universal toggle'}</span>
+                    <span>
+                      {mode === 'viewChip'
+                        ? 'View Chip'
+                        : mode === 'universalToggle'
+                          ? 'Universal toggle'
+                          : 'View activity dropdown'}
+                    </span>
                   </label>
                 ))}
               </div>
+              <div className="flex flex-col gap-2 border-t border-neutral-100 pt-3">
+                <p className="text-[12px] leading-4 font-label-medium-emphasized text-[var(--color-default)]">
+                  IA Variants
+                </p>
+                <select
+                  value={prototype!.iaVariant}
+                  onChange={(e) => prototype!.setIaVariant(e.target.value as IaVariant)}
+                  className="w-full rounded-[6px] border border-neutral-100 bg-surface px-2 py-1.5 text-[14px] leading-5 text-[var(--color-default)] focus:border-action-primary focus:outline-none focus:ring-1 focus:ring-action-primary"
+                  aria-label="IA Variant"
+                >
+                  <option value="v1">V1</option>
+                  <option value="v2">V2</option>
+                  <option value="v3">V3</option>
+                </select>
+              </div>
+              <label className="flex cursor-pointer items-center gap-2 border-t border-neutral-100 pt-3 text-[14px] leading-5 text-[var(--color-default)]">
+                <input
+                  type="checkbox"
+                  checked={prototype!.loFiMode}
+                  onChange={(e) => prototype!.setLoFiMode(e.target.checked)}
+                  className="h-4 w-4 rounded border-neutral-300 text-[#1a1d21] focus:ring-action-primary"
+                  aria-label="Lo-Fi mode"
+                />
+                <span>Lo-Fi mode</span>
+              </label>
             </div>
           ) : (
             <p className="border-t border-neutral-100 pt-3 text-[12px] leading-4 text-[var(--color-subdued)]">

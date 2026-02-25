@@ -13,7 +13,12 @@
  *
  * Where used: ActionsRequiredSidebarSection (sidebar, first 3), ActionsRequiredModal (full list + filter),
  * AccountDetailActionBar dropdown (filtered by Payouts/Payments). All use List with variant="noDividers".
+ *
+ * Truncation: Titles and impacts line use max character counts so truncation triggers before awkward wrapping.
  */
+
+/** Max character count for action title before truncation at word boundary (avoids mid-word ellipsis). */
+export const MAX_ACTION_TITLE_LENGTH = 45
 
 export type ImpactsFilter = 'payments' | 'payouts' | 'both' | 'other'
 

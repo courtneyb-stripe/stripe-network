@@ -8,10 +8,12 @@
 import { useNavigate } from 'react-router-dom'
 import {
   ACTIONS_REQUIRED_LIST,
+  MAX_ACTION_TITLE_LENGTH,
   getImpactsDisplayParts,
   getImpactsTooltipLabel,
   getImpactsMoreTooltipLabel,
 } from '../data/actionsRequired'
+import { truncateAtWordBoundary } from '../utils/string'
 import { Icon } from '../icons/SailIcons'
 import { ArrowsOutwardIcon } from '../icons/ArrowsOutwardIcon'
 import { ActionRequiredDescriptionRow } from './ActionRequiredDescriptionRow'
@@ -115,7 +117,7 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
                   fill="var(--color-icon-subdued)"
                 />
               }
-              title={action.title}
+              title={truncateAtWordBoundary(action.title, MAX_ACTION_TITLE_LENGTH)}
               trailingContent={
                 <span
                   className="opacity-0 transition-opacity duration-150 group-hover/row:opacity-100 pr-2"

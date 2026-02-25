@@ -7,9 +7,13 @@
  */
 
 import { Link } from 'react-router-dom'
-import { Icon } from '../icons/SailIcons'
+import { Icon, BrandIcon } from '../icons/SailIcons'
 import { ArrowsOutwardIcon } from '../icons/ArrowsOutwardIcon'
 import SectionHeader from './SectionHeader'
+import BalancesCard from './BalancesCard'
+import TransactionListCard from './TransactionListCard'
+import { usePrototypeOptional } from '../context/PrototypeContext'
+import { getUpcomingRows } from './sections/MoneyMovement'
 import { PillBadge, RestrictedIcon } from './PillBadge'
 import { PropertyList, PropertyListItem } from './PropertyList'
 import ActionsRequiredSidebarSection from './ActionsRequiredSidebarSection'
@@ -69,6 +73,10 @@ type AccountDetailsSidebarProps = {
   showAccountRisk?: boolean
   /** Account id for View risk analysis link. */
   accountId?: string
+  /** For IA V3 Overview sidebar: account name for Upcoming transactions card. */
+  accountName?: string
+  /** For IA V3 Overview sidebar: row click opens payment drawer. */
+  onTransactionRowClick?: () => void
 }
 
 export default function AccountDetailsSidebar({
@@ -80,7 +88,13 @@ export default function AccountDetailsSidebar({
   onOpenSettings,
   showAccountRisk = false,
   accountId,
+  accountName,
+  onTransactionRowClick,
 }: AccountDetailsSidebarProps) {
+  const prototype = usePrototypeOptional()
+  const iaVariant = prototype?.iaVariant ?? 'v1'
+  const showCustomersPlaceholder = iaVariant === 'v1'
+  const showV3OverviewSidebarBlocks = iaVariant === 'v3'
   const statusBadge =
     status === 'restricted'
       ? <PillBadge label="Restricted" variant="critical" icon={<RestrictedIcon />} />
@@ -163,21 +177,70 @@ export default function AccountDetailsSidebar({
         </div>
         </div>
 
-        {/* 40px gap then placeholder sections */}
-        <div className="h-[40px] shrink-0" aria-hidden />
-        <div className="flex flex-col gap-4">
+        {iaVariant === 'v3' && (
           <div
-            className="flex items-center rounded-[12px] bg-offset px-4 py-3"
-            data-name="Sidebar placeholder: Customers"
-          >
-            <p className="text-[14px] text-subdued">Customers — placeholder</p>
-          </div>
-          <div
-            className="flex items-center rounded-[12px] bg-offset px-4 py-3"
+            className="flex min-h-[132px] items-center rounded-[12px] bg-offset px-4 py-3 mt-4"
             data-name="Sidebar placeholder: Note"
           >
             <p className="text-[14px] text-subdued">Note — placeholder</p>
           </div>
+        )}
+
+        {/* 40px gap then placeholder sections */}
+        <div className="h-[40px] shrink-0" aria-hidden />
+        <div className="flex flex-col gap-4">
+          {showV3OverviewSidebarBlocks && (
+            <>
+              <TransactionListCard
+                variant="upcoming"
+                title="Upcoming transactions"
+                accountName={accountName}
+                onRowAction={onTransactionRowClick}
+                rows={getUpcomingRows(5)}
+              />
+              <div className="flex w-full flex-col gap-2 pt-[40px]">
+                <SectionHeader title="Payout information" size="small" />
+                <BalancesCard
+                  variant="amountRight"
+                  iconName="balance"
+                  label="Available"
+                  subtitle=" "
+                  value="$8,234.00"
+                  valueSubtitle="Available instantly $2,422.11"
+                />
+                <PropertyList orientation="vertical" className="pt-3">
+                  <PropertyListItem label="Schedule" value="Daily — 2 day rolling basis" />
+                  <PropertyListItem label="Default currency" value="USD" />
+                  <PropertyListItem
+                    label="Default external account"
+                    value={
+                      <div className="flex items-center gap-1.5">
+                        <BrandIcon name="morganchase" size={20} aria-hidden />
+                        <span className="font-label-medium text-default">Chase •••• 7280</span>
+                      </div>
+                    }
+                  />
+                  <PropertyListItem label="Payout statement descriptor" value="–" />
+                </PropertyList>
+              </div>
+            </>
+          )}
+          {showCustomersPlaceholder && (
+            <div
+              className="flex items-center rounded-[12px] bg-offset px-4 py-3"
+              data-name="Sidebar placeholder: Customers"
+            >
+              <p className="text-[14px] text-subdued">Customers — placeholder</p>
+            </div>
+          )}
+          {iaVariant !== 'v3' && (
+            <div
+              className="flex items-center rounded-[12px] bg-offset px-4 py-3"
+              data-name="Sidebar placeholder: Note"
+            >
+              <p className="text-[14px] text-subdued">Note — placeholder</p>
+            </div>
+          )}
           <div
             className="flex items-center rounded-[12px] bg-offset px-4 py-3"
             data-name="Sidebar placeholder: Metadata"

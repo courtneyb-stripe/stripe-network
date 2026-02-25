@@ -23,6 +23,10 @@ const TOYBOX_INVOICE_TOTAL = 8907
 export default function Billing() {
   const prototype = usePrototypeOptional()
   const activityFilter = prototype?.activityFilter ?? 'viewChip'
+  const iaVariant = prototype?.iaVariant ?? 'v1'
+  const loFiMode = prototype?.loFiMode ?? false
+  const v3LoFi = iaVariant === 'v3' && loFiMode
+  const showViewChips = activityFilter === 'viewChip' && iaVariant === 'v1'
   const [activeChipId, setActiveChipId] = useState<string>(BILLING_CHIPS[0].id)
   const [invoiceDrawerOpen, setInvoiceDrawerOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -53,8 +57,8 @@ export default function Billing() {
   return (
     <div ref={rootRef} className="flex min-w-0 flex-1 flex-col gap-6">
       <div className="flex min-w-0 flex-1 flex-col gap-6" data-node-id="20:9762">
-          {/* Paid to view chips — Figma 20:10301, 20:10302; hidden when Activity filter is Universal toggle */}
-          {activityFilter === 'viewChip' && (
+          {/* Paid to view chips — only in V1; V2/V3 match (no chips) */}
+          {showViewChips && (
             <div className="flex flex-wrap items-center gap-2">
               {BILLING_CHIPS.map((chip) => (
                 <ViewChip
@@ -77,6 +81,14 @@ export default function Billing() {
               onAdd={() => {}}
               actionLabel="View all"
             />
+            {iaVariant === 'v3' && (
+              <p className="text-[14px] text-subdued">with Toybox Labs</p>
+            )}
+            {v3LoFi ? (
+              <div className="flex items-center rounded-[12px] bg-offset px-4 py-4">
+                <p className="text-[14px] text-subdued">Subscriptions</p>
+              </div>
+            ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-[8px] gap-y-[8px]">
               {isCactus ? (
                 <>
@@ -125,6 +137,7 @@ export default function Billing() {
                 </>
               )}
             </div>
+            )}
           </div>
 
           {/* Invoices — 40px below Subscriptions; Figma 20:9812 */}
@@ -136,6 +149,15 @@ export default function Billing() {
               onAdd={() => {}}
               actionLabel="View all"
             />
+            {iaVariant === 'v3' && (
+              <p className="text-[14px] text-subdued">with Toybox Labs</p>
+            )}
+            {v3LoFi ? (
+              <div className="flex items-center rounded-[12px] bg-offset px-4 py-4">
+                <p className="text-[14px] text-subdued">Invoices</p>
+              </div>
+            ) : (
+            <>
             <InvoicesTable
               rows={invoiceRows}
               onRowClick={() => setInvoiceDrawerOpen(true)}
@@ -143,11 +165,21 @@ export default function Billing() {
             <p className="text-[14px] text-default">
               {invoiceRows.length} of <span className="text-action-primary">{invoiceTotalCount}</span> items
             </p>
+            </>
+            )}
           </div>
 
           {/* Credit grants table placeholder */}
-          <div className="flex flex-col gap-2 rounded-[12px] bg-offset p-4">
-            <p className="text-[14px] text-subdued">Credit grants table</p>
+          <div className="flex flex-col gap-2 pt-[40px]">
+            {v3LoFi ? (
+              <div className="flex items-center rounded-[12px] bg-offset px-4 py-4">
+                <p className="text-[14px] text-subdued">Credit grants table</p>
+              </div>
+            ) : (
+              <div className="rounded-[12px] bg-offset p-4">
+                <p className="text-[14px] text-subdued">Credit grants table</p>
+              </div>
+            )}
           </div>
 
           <AccountDrawer
