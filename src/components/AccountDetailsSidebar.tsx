@@ -14,6 +14,22 @@ import { PillBadge, RestrictedIcon } from './PillBadge'
 import { PropertyList, PropertyListItem } from './PropertyList'
 import ActionsRequiredSidebarSection from './ActionsRequiredSidebarSection'
 import { DescriptionTooltipTrigger } from './DescriptionTooltipTrigger'
+import { usePrototypeOptional } from '../context/PrototypeContext'
+import { ROW_HEIGHT } from '../constants/table'
+
+/** Skeleton row for Profile property list (low fidelity): label and value both skeleton bars, same height as table rows. */
+function ProfilePropertySkeletonRow() {
+  return (
+    <div
+      className="flex max-w-[85%] flex-col justify-center gap-0.5 w-full shrink-0"
+      data-name="PropertyListItem"
+      style={{ minHeight: ROW_HEIGHT, height: ROW_HEIGHT }}
+    >
+      <div className="h-4 w-16 rounded-[3px] bg-neutral-50" aria-hidden />
+      <div className="h-5 w-full max-w-[70%] rounded-[3px] bg-neutral-50" aria-hidden />
+    </div>
+  )
+}
 
 const ACCOUNT_DETAILS = {
   id: 'acct_Ly5pN5pGDWgtpa',
@@ -71,6 +87,8 @@ type AccountDetailsSidebarProps = {
   accountId?: string
 }
 
+const PROFILE_SKELETON_ROW_COUNT = 4
+
 export default function AccountDetailsSidebar({
   status,
   accountDrawerOpen = false,
@@ -81,6 +99,8 @@ export default function AccountDetailsSidebar({
   showAccountRisk = false,
   accountId,
 }: AccountDetailsSidebarProps) {
+  const prototype = usePrototypeOptional()
+  const isLowFidelity = prototype?.fidelity === 'low'
   const statusBadge =
     status === 'restricted'
       ? <PillBadge label="Restricted" variant="critical" icon={<RestrictedIcon />} />
@@ -134,31 +154,42 @@ export default function AccountDetailsSidebar({
       <div className="flex flex-col gap-4 w-full shrink-0" data-name="Subs" data-node-id="2:6704">
         <PropertyList>
           <PropertyListItem label="ID" value={ACCOUNT_DETAILS.id} />
-          {showAccountRisk && accountId && (
-            <PropertyListItem
-              label="Account risk"
-              value={
-                <>
-                  <p className="font-label-medium leading-5 tracking-[-0.15px]" style={{ color: 'var(--color-feedback-critical-on)' }}>
-                    High
-                  </p>
-                  <Link
-                    to={`/network/${accountId}/risk-analysis`}
-                    className="font-label-medium text-subdued underline hover:text-default hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[length:var(--radius-xsmall)] w-fit"
-                  >
-                    View risk analysis
-                  </Link>
-                </>
-              }
-            />
+          {isLowFidelity ? (
+            <>
+              {showAccountRisk && <ProfilePropertySkeletonRow />}
+              {Array.from({ length: PROFILE_SKELETON_ROW_COUNT }, (_, i) => (
+                <ProfilePropertySkeletonRow key={i} />
+              ))}
+            </>
+          ) : (
+            <>
+              {showAccountRisk && accountId && (
+                <PropertyListItem
+                  label="Account risk"
+                  value={
+                    <>
+                      <p className="font-label-medium leading-5 tracking-[-0.15px]" style={{ color: 'var(--color-feedback-critical-on)' }}>
+                        High
+                      </p>
+                      <Link
+                        to={`/network/${accountId}/risk-analysis`}
+                        className="font-label-medium text-subdued underline hover:text-default hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[length:var(--radius-xsmall)] w-fit"
+                      >
+                        View risk analysis
+                      </Link>
+                    </>
+                  }
+                />
+              )}
+              <PropertyListItem label="Email" value={ACCOUNT_DETAILS.email} />
+              <PropertyListItem label="Created" value={ACCOUNT_DETAILS.created} />
+              <PropertyListItem
+                label="Configurations"
+                value={<ConfigurationsValue />}
+              />
+              <PropertyListItem label="Country" value={ACCOUNT_DETAILS.country} />
+            </>
           )}
-          <PropertyListItem label="Email" value={ACCOUNT_DETAILS.email} />
-          <PropertyListItem label="Created" value={ACCOUNT_DETAILS.created} />
-          <PropertyListItem
-            label="Configurations"
-            value={<ConfigurationsValue />}
-          />
-          <PropertyListItem label="Country" value={ACCOUNT_DETAILS.country} />
         </PropertyList>
         </div>
         </div>
@@ -166,12 +197,6 @@ export default function AccountDetailsSidebar({
         {/* 40px gap then placeholder sections */}
         <div className="h-[40px] shrink-0" aria-hidden />
         <div className="flex flex-col gap-4">
-          <div
-            className="flex items-center rounded-[12px] bg-offset px-4 py-3"
-            data-name="Sidebar placeholder: Customers"
-          >
-            <p className="text-[14px] text-subdued">Customers — placeholder</p>
-          </div>
           <div
             className="flex items-center rounded-[12px] bg-offset px-4 py-3"
             data-name="Sidebar placeholder: Note"

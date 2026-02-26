@@ -8,7 +8,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Icon } from '../icons/SailIcons'
 import { IconButton } from './IconButton'
 import { usePrototypeOptional } from '../context/PrototypeContext'
-import type { ActivityFilterMode } from '../context/PrototypeContext'
+import { FIDELITY_OPTIONS, type FidelityId } from '../context/PrototypeContext'
 
 export default function PrototypeFloatie() {
   const [open, setOpen] = useState(false)
@@ -43,27 +43,25 @@ export default function PrototypeFloatie() {
           </p>
           {hasContext ? (
             <div className="flex flex-col gap-3 border-t border-neutral-100 pt-3">
-              <p className="text-[12px] leading-4 font-label-medium-emphasized text-[var(--color-default)]">
-                Activity filter
-              </p>
-              <div className="flex flex-col gap-2">
-                {(['viewChip', 'universalToggle'] as const).map((mode) => (
-                  <label
-                    key={mode}
-                    className="flex cursor-pointer items-center gap-2 text-[14px] leading-5 text-[var(--color-default)]"
-                  >
-                    <input
-                      type="radio"
-                      name="activityFilter"
-                      value={mode}
-                      checked={prototype!.activityFilter === mode}
-                      onChange={() => prototype!.setActivityFilter(mode as ActivityFilterMode)}
-                      className="h-4 w-4 border-neutral-300 text-[#1a1d21] focus:ring-action-primary"
-                    />
-                    <span>{mode === 'viewChip' ? 'View Chip' : 'Universal toggle'}</span>
-                  </label>
+              <label
+                htmlFor="prototype-fidelity"
+                className="text-[12px] leading-4 font-label-medium-emphasized text-[var(--color-default)]"
+              >
+                Fidelity
+              </label>
+              <select
+                id="prototype-fidelity"
+                value={prototype!.fidelity}
+                onChange={(e) => prototype!.setFidelity(e.target.value as FidelityId)}
+                className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-[14px] leading-5 text-[var(--color-default)] focus:border-action-primary focus:outline-none focus:ring-1 focus:ring-action-primary"
+                data-name="PrototypeFloatie-fidelity"
+              >
+                {FIDELITY_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
           ) : (
             <p className="border-t border-neutral-100 pt-3 text-[12px] leading-4 text-[var(--color-subdued)]">

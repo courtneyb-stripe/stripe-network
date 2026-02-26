@@ -4,20 +4,30 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useParams, useLocation } from 'react-router-dom'
+import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import AccountDetailHeader from '../components/AccountDetailHeader'
 import AccountDetailActionBar, { getActionBarVisibility } from '../components/AccountDetailActionBar'
 import MetricCard from '../components/metrics/MetricCard'
 import type { ActionsRequiredFilter } from '../components/ActionsRequiredModal'
 import AccountDrawer from '../components/AccountDrawer'
 import AccountDetailsSidebar, { type AccountStatusKind } from '../components/AccountDetailsSidebar'
-import SettingsModal from '../components/SettingsModal'
 import TabBar from '../components/TabBar'
-import { SECTION_COMPONENTS, BillingSidebar } from '../components/sections'
+import { SECTION_COMPONENTS, BillingSidebar, CommerceSidebar } from '../components/sections'
 import RadarHighRiskCard from '../components/RadarHighRiskCard'
 import ThirdPartyActivityToggle from '../components/ThirdPartyActivityToggle'
 import { usePrototypeOptional } from '../context/PrototypeContext'
-import { configTemplates, SECTION_LABELS, type ConfigType } from '../data/accountConfigs'
+import type { IaVersionId } from '../context/PrototypeContext'
+import {
+  configTemplates,
+  SECTION_LABELS,
+  V1_SECTIONS,
+  V1_SECTION_LABELS,
+  V2_SECTIONS,
+  V2_SECTION_LABELS,
+  type ConfigType,
+} from '../data/accountConfigs'
+
+const V2_SECTION_IDS = new Set(V2_SECTIONS)
 import { getAccountById } from '../data/mockAccounts'
 import { slugToDisplayName } from '../utils/string'
 
@@ -37,9 +47,8 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
   const [accountDrawerOpen, setAccountDrawerOpen] = useState(false)
   const [actionsModalOpen, setActionsModalOpen] = useState(false)
   const [actionsModalInitialFilter, setActionsModalInitialFilter] = useState<ActionsRequiredFilter>('all')
-  const [settingsModalOpen, setSettingsModalOpen] = useState(false)
-  const [settingsSectionId, setSettingsSectionId] = useState<string | undefined>(undefined)
   const [paymentDrawerOpen, setPaymentDrawerOpen] = useState(false)
+  const navigate = useNavigate()
   const prototype = usePrototypeOptional()
   const activityFilter = prototype?.activityFilter ?? 'viewChip'
 
@@ -59,12 +68,35 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
     : undefined
   const configType: ConfigType = mockAccount?.configType ?? 'merchant'
   const config = configTemplates[configType]
-  /** Sections to hide from the tab bar (keep in config for later). */
-  const HIDDEN_SECTIONS = ['products'] as const
-  const visibleSections = config.sections.filter((id) => !HIDDEN_SECTIONS.includes(id as (typeof HIDDEN_SECTIONS)[number]))
+  const iaVersion: IaVersionId = prototype?.iaVersion ?? 'v2-money-movement'
+
+  /** Sections and labels driven by IA version. V0 uses config; V1/V2 use fixed tab sets. */
+  const { visibleSections, sectionLabels } = (() => {
+    if (iaVersion === 'v1-global-ia') {
+      return {
+        visibleSections: [...V1_SECTIONS],
+        sectionLabels: V1_SECTION_LABELS as Record<string, string>,
+      }
+    }
+    if (iaVersion === 'v2-money-movement') {
+      return {
+        visibleSections: [...V2_SECTIONS],
+        sectionLabels: V2_SECTION_LABELS as Record<string, string>,
+      }
+    }
+    const HIDDEN_SECTIONS = ['products'] as const
+    const filtered = config.sections.filter(
+      (id) => !HIDDEN_SECTIONS.includes(id as (typeof HIDDEN_SECTIONS)[number])
+    )
+    return {
+      visibleSections: filtered,
+      sectionLabels: SECTION_LABELS,
+    }
+  })()
+
   const sectionTabs = visibleSections.map((sectionId) => ({
     id: sectionId,
-    label: SECTION_LABELS[sectionId] ?? sectionId,
+    label: sectionLabels[sectionId] ?? sectionId,
   }))
   const firstSectionId = visibleSections[0] ?? config.sections[0] ?? 'overview'
   const [activeSectionId, setActiveSectionId] = useState<string>(firstSectionId)
@@ -108,10 +140,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                 setActionsModalInitialFilter(filter ?? 'all')
               }}
               onCloseActionsModal={() => setActionsModalOpen(false)}
-              onOpenSettings={() => {
-                setSettingsSectionId(undefined)
-                setSettingsModalOpen(true)
-              }}
+              onOpenSettings={() => id && navigate(`/network/${id}/settings`)}
             />
           </div>
         </div>
@@ -175,10 +204,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                   setActionsModalOpen(true)
                   setActionsModalInitialFilter('all')
                 }}
-                onOpenSettings={() => {
-                  setSettingsSectionId(undefined)
-                  setSettingsModalOpen(true)
-                }}
+                onOpenSettings={() => id && navigate(`/network/${id}/settings`)}
                 showAccountRisk={mockAccount?.isRadarRuleMatch ?? false}
                 accountId={id}
                 />
@@ -196,18 +222,82 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
             </div>
           </div>
         )}
-        {effectiveSectionId !== 'overview' && effectiveSectionId !== 'billing' && (() => {
+        {effectiveSectionId === 'commerce' && (
+          <div className="flex w-full items-stretch gap-10">
+            {(() => {
+              const CommerceSection = SECTION_COMPONENTS.commerce
+              return <CommerceSection />
+            })()}
+            <div className="min-w-[320px] w-[30%] shrink-0">
+              <CommerceSidebar />
+            </div>
+          </div>
+        )}
+        {effectiveSectionId === 'network' && (
+          <div className="flex w-full items-stretch gap-10">
+            {(() => {
+              const CommerceSection = SECTION_COMPONENTS.commerce
+              return <CommerceSection />
+            })()}
+            <div className="min-w-[320px] w-[30%] shrink-0">
+              <CommerceSidebar />
+            </div>
+          </div>
+        )}
+        {V2_SECTION_IDS.has(effectiveSectionId as (typeof V2_SECTIONS)[number]) && (() => {
           const SectionComponent = SECTION_COMPONENTS[effectiveSectionId]
           if (!SectionComponent) return null
-          if (effectiveSectionId === 'moneyMovement') {
-            return (
-              <SectionComponent
-                onTransactionRowClick={() => setPaymentDrawerOpen(true)}
-              />
-            )
-          }
-          return <SectionComponent />
+          const isFirstV2Tab = effectiveSectionId === 'financialSnapshot'
+          return (
+            <div className="flex w-full items-stretch gap-10">
+              <div className="min-w-0 flex-1 flex-col gap-6 flex">
+                {isFirstV2Tab && mockAccount?.isRadarRuleMatch && (
+                  <RadarHighRiskCard accountId={id} />
+                )}
+                <SectionComponent onRowClick={() => setPaymentDrawerOpen(true)} />
+              </div>
+              <div className="min-w-[320px] w-[30%] shrink-0">
+                <AccountDetailsSidebar
+                  status={status}
+                  accountDrawerOpen={accountDrawerOpen}
+                  onOpenAccountDrawer={() => setAccountDrawerOpen(true)}
+                  onCloseAccountDrawer={() => setAccountDrawerOpen(false)}
+                  onOpenActionsModal={() => {
+                    setActionsModalOpen(true)
+                    setActionsModalInitialFilter('all')
+                  }}
+                  onOpenSettings={() => id && navigate(`/network/${id}/settings`)}
+                  showAccountRisk={mockAccount?.isRadarRuleMatch ?? false}
+                  accountId={id}
+                />
+              </div>
+            </div>
+          )
         })()}
+        {effectiveSectionId !== 'overview' &&
+          effectiveSectionId !== 'billing' &&
+          effectiveSectionId !== 'commerce' &&
+          effectiveSectionId !== 'network' &&
+          !V2_SECTION_IDS.has(effectiveSectionId as (typeof V2_SECTIONS)[number]) &&
+          (() => {
+            const SectionComponent = SECTION_COMPONENTS[effectiveSectionId]
+            if (!SectionComponent) return null
+            if (effectiveSectionId === 'moneyMovement') {
+              return (
+                <SectionComponent
+                  onTransactionRowClick={() => setPaymentDrawerOpen(true)}
+                />
+              )
+            }
+            if (effectiveSectionId === 'transactions') {
+              return (
+                <SectionComponent
+                  onRowClick={() => setPaymentDrawerOpen(true)}
+                />
+              )
+            }
+            return <SectionComponent />
+          })()}
       </div>
       <AccountDrawer
         open={accountDrawerOpen}
@@ -217,19 +307,12 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
         accountId={id}
         variant="account"
         onOpenEdit={(section) => {
-          setSettingsSectionId(section === 'contact' ? 'contact-information' : 'business-details')
-          setSettingsModalOpen(true)
+          const sectionId = section === 'contact' ? 'contact-information' : 'business-details'
+          id && navigate(`/network/${id}/settings`, { state: { sectionId } })
         }}
         onOpenCapabilitiesEdit={() => {
-          setSettingsSectionId('capabilities')
-          setSettingsModalOpen(true)
+          id && navigate(`/network/${id}/settings`, { state: { sectionId: 'capabilities' } })
         }}
-      />
-      <SettingsModal
-        open={settingsModalOpen}
-        onClose={() => setSettingsModalOpen(false)}
-        initialSectionId={settingsSectionId}
-        accountStatus={status}
       />
       <AccountDrawer
         open={paymentDrawerOpen}

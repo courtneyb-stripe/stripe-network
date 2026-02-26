@@ -3,22 +3,19 @@
  * ViewChips (2) at top, Balances section (same style as Overview: SectionHeader + offset container + BalancesCard row cards), Subscriptions, Invoices.
  */
 
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import AccountDrawer from '../AccountDrawer'
 import BalancesCard from '../BalancesCard'
 import { ViewChip } from '../NetworkFilterGroup'
 import { usePrototypeOptional } from '../../context/PrototypeContext'
 import SectionHeader from '../SectionHeader'
 import SubscriptionCard from '../SubscriptionCard'
-import InvoicesTable, { generateInvoiceRows, generateInvoiceRowsAlt } from '../InvoicesTable'
+import TableSkeleton from '../TableSkeleton'
 
 const BILLING_CHIPS = [
-  { id: 'cactus', label: 'Billed by Cactus Practice' },
+  { id: 'shopify', label: 'Billed by Shopify' },
   { id: 'toybox', label: 'Billed by Toybox Labs' },
 ] as const
-
-const INVOICE_ROWS = 10
-const TOYBOX_INVOICE_TOTAL = 8907
 
 export default function Billing() {
   const prototype = usePrototypeOptional()
@@ -28,7 +25,7 @@ export default function Billing() {
   const rootRef = useRef<HTMLDivElement>(null)
   const savedScrollTopRef = useRef<number | null>(null)
 
-  const isCactus = activeChipId === 'cactus'
+  const isShopify = activeChipId === 'shopify'
 
   useEffect(() => {
     if (savedScrollTopRef.current === null) return
@@ -44,11 +41,6 @@ export default function Billing() {
     if (scrollContainer) savedScrollTopRef.current = scrollContainer.scrollTop
     setActiveChipId(chipId)
   }
-  const invoiceRows = useMemo(
-    () => (isCactus ? generateInvoiceRows(INVOICE_ROWS) : generateInvoiceRowsAlt(INVOICE_ROWS)),
-    [isCactus]
-  )
-  const invoiceTotalCount = isCactus ? INVOICE_ROWS : TOYBOX_INVOICE_TOTAL
 
   return (
     <div ref={rootRef} className="flex min-w-0 flex-1 flex-col gap-6">
@@ -78,7 +70,7 @@ export default function Billing() {
               actionLabel="View all"
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-[8px] gap-y-[8px]">
-              {isCactus ? (
+              {isShopify ? (
                 <>
                   <SubscriptionCard
                     planName="Basic plan"
@@ -136,13 +128,11 @@ export default function Billing() {
               onAdd={() => {}}
               actionLabel="View all"
             />
-            <InvoicesTable
-              rows={invoiceRows}
+            <TableSkeleton
+              rowCount={10}
+              showCheckboxColumn={false}
               onRowClick={() => setInvoiceDrawerOpen(true)}
             />
-            <p className="text-[14px] text-default">
-              {invoiceRows.length} of <span className="text-action-primary">{invoiceTotalCount}</span> items
-            </p>
           </div>
 
           {/* Credit grants table placeholder */}

@@ -1,37 +1,26 @@
 /**
  * Products section — Figma 214:28398.
- * ViewChips (Sold by Cactus Practice / Sold by Toybox Labs), section header "Products" with View all,
- * table (Name, Pricing, Tax category, Created, Updated), row click opens product details drawer, 10 of NNN items at bottom.
+ * ViewChips (Sold by Shopify / Sold by Toybox Labs), section header "Products" with View all,
+ * skeleton table (10 rows), row click opens product details drawer.
  */
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import AccountDrawer from '../AccountDrawer'
 import { ViewChip } from '../NetworkFilterGroup'
 import { usePrototypeOptional } from '../../context/PrototypeContext'
 import SectionHeader from '../SectionHeader'
-import ProductsTable, { generateProductRows, generateProductRowsAlt } from '../ProductsTable'
+import TableSkeleton from '../TableSkeleton'
 
 const PRODUCT_CHIPS = [
-  { id: 'cactus', label: 'Sold by Cactus Practice' },
+  { id: 'shopify', label: 'Sold by Shopify' },
   { id: 'toybox', label: 'Sold by Toybox Labs' },
 ] as const
-
-const PRODUCT_ROWS = 10
-const CACTUS_TOTAL = 198
-const TOYBOX_TOTAL = 124
 
 export default function Products() {
   const prototype = usePrototypeOptional()
   const activityFilter = prototype?.activityFilter ?? 'viewChip'
   const [activeChipId, setActiveChipId] = useState<string>(PRODUCT_CHIPS[0].id)
   const [productDrawerOpen, setProductDrawerOpen] = useState(false)
-
-  const isCactus = activeChipId === 'cactus'
-  const rows = useMemo(
-    () => (isCactus ? generateProductRows(PRODUCT_ROWS) : generateProductRowsAlt(PRODUCT_ROWS)),
-    [isCactus]
-  )
-  const totalCount = isCactus ? CACTUS_TOTAL : TOYBOX_TOTAL
 
   return (
     <div className="flex flex-col gap-6" data-node-id="214:28398">
@@ -54,15 +43,14 @@ export default function Products() {
           title="Products"
           size="small"
           onAction={() => {}}
+          onAdd={() => {}}
           actionLabel="View all"
         />
-        <ProductsTable
-          rows={rows}
+        <TableSkeleton
+          rowCount={10}
+          showCheckboxColumn={false}
           onRowClick={() => setProductDrawerOpen(true)}
         />
-        <p className="text-[14px] text-default">
-          {rows.length} of <span className="text-action-primary">{totalCount}</span> items
-        </p>
       </div>
       <AccountDrawer
         open={productDrawerOpen}

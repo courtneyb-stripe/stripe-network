@@ -37,7 +37,7 @@ type SectionHeaderProps = {
   tooltipPlacement?: TooltipPlacement
   /** Optional add action; shows purple plus button. */
   onAdd?: () => void
-  /** Label for the add button tooltip. Default: "Add". */
+  /** Label for the add button tooltip. Default: "Create". */
   addLabel?: string
   /** Optional edit action; shows ghost edit button to the left of the main action (e.g. deep link to Settings). */
   onEdit?: () => void
@@ -68,7 +68,7 @@ export default function SectionHeader({
   actionVariant = 'ghost',
   tooltipPlacement = 'top',
   onAdd,
-  addLabel = 'Add',
+  addLabel = 'Create',
   onEdit,
   editLabel = 'Edit',
 }: SectionHeaderProps) {
@@ -97,6 +97,18 @@ export default function SectionHeader({
               <EditIcon size={12} fill="var(--color-icon-subdued)" />
             </IconButton>
           )}
+          {/* Create (add) icon left of View all arrow */}
+          {onAdd != null && (
+            <IconButton
+              label={addLabel}
+              tooltipId={addTooltipId}
+              variant="create"
+              tooltipPlacement={tooltipPlacement}
+              onClick={onAdd}
+            >
+              <PlusIcon size={12} fill="var(--color-action-primary)" />
+            </IconButton>
+          )}
           {onAction != null && (
             <IconButton
               label={actionLabel}
@@ -108,17 +120,6 @@ export default function SectionHeader({
               data-node-id="2:6466"
             >
               {actionIcon ?? <RightArrowIcon size={12} fill="var(--color-icon-subdued)" />}
-            </IconButton>
-          )}
-          {onAdd != null && (
-            <IconButton
-              label={addLabel}
-              tooltipId={addTooltipId}
-              variant="create"
-              tooltipPlacement={tooltipPlacement}
-              onClick={onAdd}
-            >
-              <PlusIcon size={12} fill="var(--color-action-primary)" />
             </IconButton>
           )}
         </div>

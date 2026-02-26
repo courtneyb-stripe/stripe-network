@@ -12,6 +12,7 @@ import {
   getImpactsTooltipLabel,
   getImpactsMoreTooltipLabel,
 } from '../data/actionsRequired'
+import { usePrototypeOptional } from '../context/PrototypeContext'
 import { Icon } from '../icons/SailIcons'
 import { ArrowsOutwardIcon } from '../icons/ArrowsOutwardIcon'
 import { ActionRequiredDescriptionRow } from './ActionRequiredDescriptionRow'
@@ -21,6 +22,19 @@ import { RightArrowIcon } from './metrics/MetricCard'
 
 const TOTAL_ACTIONS = ACTIONS_REQUIRED_LIST.length
 const SIDEBAR_ACTION_COUNT = 5
+
+/** Skeleton row for actions required list (low fidelity). */
+function ActionsRequiredSkeletonRow() {
+  return (
+    <div className="flex items-start gap-3 py-2 min-h-[44px]">
+      <div className="h-4 w-4 shrink-0 rounded-[3px] bg-neutral-50" aria-hidden />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="h-4 w-full max-w-[70%] rounded-[3px] bg-neutral-50" aria-hidden />
+        <div className="h-3 w-full max-w-[50%] rounded-[3px] bg-neutral-50" aria-hidden />
+      </div>
+    </div>
+  )
+}
 
 /** First 5 actions from shared list (matches modal "All" and dropdowns). */
 const SIDEBAR_ACTIONS = ACTIONS_REQUIRED_LIST.slice(0, SIDEBAR_ACTION_COUNT)
@@ -45,6 +59,8 @@ type ActionsRequiredSidebarSectionProps = {
 
 export default function ActionsRequiredSidebarSection({ onOpenActionsModal, accountId, copyLinkUrl }: ActionsRequiredSidebarSectionProps) {
   const navigate = useNavigate()
+  const prototype = usePrototypeOptional()
+  const isLowFidelity = prototype?.fidelity === 'low'
 
   const handleCopyLink = () => {
     const url = copyLinkUrl ?? (typeof window !== 'undefined' ? window.location.href : '')
@@ -86,69 +102,80 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
           </IconButton>
         </div>
       </div>
-      <List
-        aria-label="Actions required"
-        className="shrink-0"
-        variant="noDividers"
-        onAction={(id) => {
-          if (accountId) {
-            navigate(`/network/${accountId}/actions/${id}`)
-          } else {
-            onOpenActionsModal()
-          }
-        }}
-      >
-        {SIDEBAR_ACTIONS.map((action) => {
-          const daysPastDue = getDaysPastDue(action.dueDate)
-          const pastDueText = `${daysPastDue} days past due`
-          const { base: impactsBase, more: impactsMore } = getImpactsDisplayParts(action)
-          const mainTooltipLabel = getImpactsTooltipLabel(action)
-          const moreTooltipLabel = getImpactsMoreTooltipLabel(action)
-          return (
-            <ListItem
-              key={action.id}
-              id={action.id}
-              icon={
-                <Icon
-                  name="identityVerification"
-                  size={16}
-                  fill="var(--color-icon-subdued)"
+      {isLowFidelity ? (
+        <div className="flex flex-col shrink-0" aria-label="Actions required">
+          {Array.from({ length: SIDEBAR_ACTION_COUNT }, (_, i) => (
+            <ActionsRequiredSkeletonRow key={i} />
+          ))}
+          <div className="h-4 w-24 mt-1 rounded-[3px] bg-neutral-50" aria-hidden />
+        </div>
+      ) : (
+        <>
+          <List
+            aria-label="Actions required"
+            className="shrink-0"
+            variant="noDividers"
+            onAction={(id) => {
+              if (accountId) {
+                navigate(`/network/${accountId}/actions/${id}`)
+              } else {
+                onOpenActionsModal()
+              }
+            }}
+          >
+            {SIDEBAR_ACTIONS.map((action) => {
+              const daysPastDue = getDaysPastDue(action.dueDate)
+              const pastDueText = `${daysPastDue} days past due`
+              const { base: impactsBase, more: impactsMore } = getImpactsDisplayParts(action)
+              const mainTooltipLabel = getImpactsTooltipLabel(action)
+              const moreTooltipLabel = getImpactsMoreTooltipLabel(action)
+              return (
+                <ListItem
+                  key={action.id}
+                  id={action.id}
+                  icon={
+                    <Icon
+                      name="identityVerification"
+                      size={16}
+                      fill="var(--color-icon-subdued)"
+                    />
+                  }
+                  title={action.title}
+                  trailingContent={
+                    <span
+                      className="opacity-0 transition-opacity duration-150 group-hover/row:opacity-100 pr-2"
+                      aria-hidden
+                    >
+                      <RightArrowIcon size={12} fill="var(--color-icon-subdued)" />
+                    </span>
+                  }
+                  children={
+                    <ActionRequiredDescriptionRow
+                      impactsBase={impactsBase}
+                      impactsMore={impactsMore}
+                      mainTooltipLabel={mainTooltipLabel}
+                      moreTooltipLabel={impactsMore ? moreTooltipLabel : undefined}
+                      tooltipId={`actions-required-impacts-${action.title.replace(/\s+/g, '-')}`}
+                      pastDueText={pastDueText}
+                    />
+                  }
                 />
-              }
-              title={action.title}
-              trailingContent={
-                <span
-                  className="opacity-0 transition-opacity duration-150 group-hover/row:opacity-100 pr-2"
-                  aria-hidden
-                >
-                  <RightArrowIcon size={12} fill="var(--color-icon-subdued)" />
-                </span>
-              }
-              children={
-                <ActionRequiredDescriptionRow
-                  impactsBase={impactsBase}
-                  impactsMore={impactsMore}
-                  mainTooltipLabel={mainTooltipLabel}
-                  moreTooltipLabel={impactsMore ? moreTooltipLabel : undefined}
-                  tooltipId={`actions-required-impacts-${action.title.replace(/\s+/g, '-')}`}
-                  pastDueText={pastDueText}
-                />
-              }
-            />
-          )
-        })}
-      </List>
-      {/* "5 of 9 actions required" — link part in action primary */}
-      <button
-        type="button"
-        onClick={onOpenActionsModal}
-        className="flex flex-col font-label-small text-subdued text-[12px] leading-4 text-left hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[4px] -mb-1"
-      >
-        <span>
-          <span className="leading-4">{SIDEBAR_ACTION_COUNT} of </span>
-          <span className="text-action-primary leading-4">{TOTAL_ACTIONS} actions required</span>
-        </span>
-      </button>
+              )
+            })}
+          </List>
+          {/* "5 of 9 actions required" — link part in action primary */}
+          <button
+            type="button"
+            onClick={onOpenActionsModal}
+            className="flex flex-col font-label-small text-subdued text-[12px] leading-4 text-left hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[4px] -mb-1"
+          >
+            <span>
+              <span className="leading-4">{SIDEBAR_ACTION_COUNT} of </span>
+              <span className="text-action-primary leading-4">{TOTAL_ACTIONS} actions required</span>
+            </span>
+          </button>
+        </>
+      )}
     </div>
   )
 }

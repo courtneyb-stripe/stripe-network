@@ -8,9 +8,9 @@ import { Link, useLocation } from 'react-router-dom'
 import ChevronDownIcon from '../icons/ChevronDownIcon'
 import { Icon } from '../icons/SailIcons'
 
-const ACCOUNT_NAME = 'Cactus Practice'
-/** Figma asset for Account/logo (Cactus Practice). Replace with local asset if needed after expiry. */
-const ACCOUNT_LOGO_URL = 'https://www.figma.com/api/mcp/asset/548f58e9-33ce-4e7b-b059-71df5c1aae9f'
+const ACCOUNT_NAME = 'Shopify'
+/** Logo in left nav — PNG on soft gray bg (public/shopify-logo.png). */
+const ACCOUNT_LOGO_URL = '/shopify-logo.png'
 
 const topLevelNav = [
   { label: 'Home', icon: 'home' as const, to: '/' },
@@ -110,13 +110,13 @@ export default function Sidebar() {
       >
         <div className="flex items-center gap-[length:var(--spacing-small)] min-w-0 shrink">
           <div
-            className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-[length:var(--radius-xsmall)] z-[3]"
+            className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[length:var(--radius-small)] bg-offset p-1.5 z-[3]"
             data-name="AccountIcon"
           >
             <img
               src={ACCOUNT_LOGO_URL}
               alt=""
-              className="h-full w-full object-cover"
+              className="h-full w-full object-contain"
               aria-hidden
             />
           </div>

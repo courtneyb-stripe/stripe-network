@@ -1,27 +1,39 @@
 /**
  * NetworkPageHeader — Figma Page Title node 2:10678 (Stripe Network Cursor SRC).
- * Title row + action buttons + tabs for the Network screen.
+ * Title row + action buttons + tabs. Merchant dropdown removed for now.
+ * When merchant is not Shopify: tabs All, Customers, Recipients (no Merchants).
  */
 
 import { Icon } from '../icons/SailIcons'
 import { PageActionButton } from './PageActionButton'
 import TabBar from './TabBar'
 
-const TABS = [
-  { id: 'all', label: 'All' },
-  { id: 'merchants', label: 'Merchants' },
-  { id: 'customers', label: 'Customers' },
-] as const
+const TABS_SHOPIFY = [
+  { id: 'all' as const, label: 'All' },
+  { id: 'merchants' as const, label: 'Merchants' },
+  { id: 'customers' as const, label: 'Customers' },
+]
 
-export type NetworkTabId = (typeof TABS)[number]['id']
+const TABS_OTHER = [
+  { id: 'all' as const, label: 'All' },
+  { id: 'customers' as const, label: 'Customers' },
+  { id: 'recipients' as const, label: 'Recipients' },
+]
+
+export type NetworkTabId = 'all' | 'merchants' | 'customers' | 'recipients'
 
 export default function NetworkPageHeader({
   activeTab,
   onTabChange,
+  selectedMerchant,
 }: {
   activeTab: NetworkTabId
   onTabChange: (tabId: NetworkTabId) => void
+  selectedMerchant: string
+  onMerchantChange?: (name: string) => void
 }) {
+  const isShopify = selectedMerchant === 'Shopify'
+  const tabs = isShopify ? TABS_SHOPIFY : TABS_OTHER
 
   return (
     <div
@@ -29,18 +41,13 @@ export default function NetworkPageHeader({
       data-name="Page Title"
       data-node-id="2:10678"
     >
-      {/* Title row */}
-      <div
-        className="flex w-full items-center justify-between shrink-0"
-        data-name="Title"
-      >
-        <h1 className="font-heading-xlarge shrink-0" data-name="Page heading">
-          Network
-        </h1>
-        <div
-          className="flex shrink-0 items-center gap-[8px]"
-          data-name="Page Actions"
-        >
+      <div className="flex w-full items-center justify-between shrink-0" data-name="Title">
+        <div className="flex shrink-0 items-center gap-2">
+          <h1 className="font-heading-xlarge shrink-0" data-name="Page heading">
+            Network
+          </h1>
+        </div>
+        <div className="flex shrink-0 items-center gap-[8px]" data-name="Page Actions">
           <PageActionButton iconOnly aria-label="More options">
             <Icon name="more" size={12} fill="var(--color-icon-default)" />
           </PageActionButton>
@@ -52,12 +59,11 @@ export default function NetworkPageHeader({
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex w-full shrink-0 flex-col" data-name="Tabs">
         <TabBar
-          tabs={TABS}
+          tabs={tabs}
           activeId={activeTab}
-          onChange={onTabChange}
+          onChange={(id) => onTabChange(id as NetworkTabId)}
           variant="primary"
           gap={16}
         />

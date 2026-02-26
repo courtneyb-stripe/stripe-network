@@ -29,15 +29,6 @@ function TableHeader() {
       data-name="Products table header"
       style={{ height: ROW_HEIGHT, minHeight: ROW_HEIGHT }}
     >
-      <div
-        className="flex shrink-0 items-center justify-center p-[7px] w-8 opacity-0 transition-opacity group-hover:opacity-100"
-        aria-hidden
-      >
-        <div
-          className="h-3.5 w-3.5 shrink-0 rounded-[length:var(--radius-xsmall)] border border-neutral-100 bg-surface"
-          style={{ boxShadow: 'var(--shadow-button)' }}
-        />
-      </div>
       <div className="flex min-w-0 flex-1 items-center gap-6">
         {COLUMNS.map((col) => (
           <div
@@ -86,12 +77,6 @@ function ProductTableRow({
       data-name="Product table row"
       style={{ height: ROW_HEIGHT, minHeight: ROW_HEIGHT }}
     >
-      <div
-        className="flex shrink-0 items-center justify-center p-[7px] w-8 opacity-0 transition-opacity group-hover:opacity-100"
-        aria-hidden
-      >
-        <div className="h-3.5 w-3.5 shrink-0 rounded-[length:var(--radius-xsmall)] border border-neutral-100 bg-surface" />
-      </div>
       <div className="flex min-w-0 flex-1 items-center gap-6">
         <div className={`flex min-w-0 shrink-0 items-center overflow-hidden ${COLUMNS[0].width}`}>
           <span className="truncate font-label-medium-emphasized text-default">{row.name}</span>

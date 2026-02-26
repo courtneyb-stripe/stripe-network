@@ -24,7 +24,7 @@ export const configTemplates: Record<ConfigType, AccountConfig> = {
     showPayouts: true,
     showCollectedFees: true,
     showCustomers: true,
-    sections: ['overview', 'moneyMovement', 'billing', 'products'],
+    sections: ['overview', 'moneyMovement', 'billing', 'commerce', 'products'],
     overviewBlocks: ['balances', 'recentTransactions', 'recentActivity'],
   },
   customer: {
@@ -48,7 +48,7 @@ export const configTemplates: Record<ConfigType, AccountConfig> = {
     showPayouts: true,
     showCollectedFees: true,
     showCustomers: true,
-    sections: ['overview', 'moneyMovement', 'billing', 'products'],
+    sections: ['overview', 'moneyMovement', 'billing', 'commerce', 'products'],
     overviewBlocks: ['balances', 'recentTransactions', 'recentActivity'],
   },
 }
@@ -58,8 +58,37 @@ export const SECTION_LABELS: Record<string, string> = {
   overview: 'Overview',
   moneyMovement: 'Money management',
   billing: 'Billing',
+  commerce: 'Commerce',
   products: 'Products',
   paymentMethods: 'Payment methods',
   loanDetails: 'Loan details',
   repayments: 'Repayments',
+}
+
+/** V1 (Global IA) account detail tabs, in order */
+export const V1_SECTIONS = [
+  'overview',
+  'balances',
+  'transactions',
+  'billing',
+  'network',
+  'products',
+] as const
+
+export const V1_SECTION_LABELS: Record<(typeof V1_SECTIONS)[number], string> = {
+  overview: 'Overview',
+  balances: 'Balances',
+  transactions: 'Transactions',
+  billing: 'Billing',
+  network: 'Network',
+  products: 'Products',
+}
+
+/** V2 (Money movement) account detail tabs, in order */
+export const V2_SECTIONS = ['financialSnapshot', 'myRevenue', 'toyboxRevenue'] as const
+
+export const V2_SECTION_LABELS: Record<(typeof V2_SECTIONS)[number], string> = {
+  financialSnapshot: 'Overview',
+  myRevenue: 'Your business',
+  toyboxRevenue: "Toybox Lab's business",
 }

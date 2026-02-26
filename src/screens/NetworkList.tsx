@@ -18,10 +18,18 @@ const VIEW_IDS: SavedViewId[] = ['1', '2', '3', '4', '5', '6', '7']
 const CUSTOMER_VIEW_IDS: CustomerViewId[] = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7']
 
 export default function NetworkList() {
+  const [selectedMerchant, setSelectedMerchant] = useState('Shopify')
   const [activeTab, setActiveTab] = useState<NetworkTabId>('all')
   const [selectedViewId, setSelectedViewId] = useState<SavedViewId>('1')
   const [selectedCustomerViewId, setSelectedCustomerViewId] = useState<CustomerViewId>('c1')
   const [searchQuery, setSearchQuery] = useState('')
+
+  const onMerchantChange = (name: string) => {
+    if (name !== 'Shopify' && activeTab === 'merchants') {
+      setActiveTab('all')
+    }
+    setSelectedMerchant(name)
+  }
 
   const viewCounts =
     activeTab === 'customers'
@@ -49,7 +57,12 @@ export default function NetworkList() {
     <div className="flex h-full w-full flex-col gap-[8px]" data-name="NetworkList">
       {/* 8px between this block and table */}
       <div className="flex shrink-0 flex-col gap-0">
-        <NetworkPageHeader activeTab={activeTab} onTabChange={setActiveTab} />
+        <NetworkPageHeader
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          selectedMerchant={selectedMerchant}
+          onMerchantChange={onMerchantChange}
+        />
         <NetworkFilterGroup
           activeTab={activeTab}
           selectedViewId={selectedViewId}
@@ -66,6 +79,7 @@ export default function NetworkList() {
           statusViewId={selectedViewId}
           customerViewId={selectedCustomerViewId}
           searchQuery={searchQuery}
+          selectedMerchant={selectedMerchant}
         />
       </div>
       {/* 8px between metrics and table */}
@@ -75,6 +89,7 @@ export default function NetworkList() {
           statusViewId={selectedViewId}
           customerViewId={selectedCustomerViewId}
           searchQuery={searchQuery}
+          selectedMerchant={selectedMerchant}
         />
       </div>
     </div>

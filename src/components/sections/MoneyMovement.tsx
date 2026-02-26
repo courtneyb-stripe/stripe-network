@@ -1,6 +1,6 @@
 /**
- * Money management section — 320px sidebar (Financial accounts + Upcoming) + Latest transaction list.
- * Financial accounts heading in sidebar sits 24px below tabs (enforced by parent content area pt-6).
+ * Money management section — Main: Balances, Financial snapshot, Upcoming transactions, Payout information.
+ * Sidebar: Financial accounts only. Recent transactions hidden.
  */
 
 import { useState } from 'react'
@@ -21,25 +21,6 @@ const FINANCIAL_ACCOUNT_CARDS: FinancialAccountCard[] = [
   { id: 'main', accountName: 'Main', accountMask: '••1547', amount: '$8,092.34' },
   { id: 'savings', accountName: 'Savings', accountMask: '••7782', amount: '$25,092.34' },
 ]
-
-const LATEST_ROW_TEMPLATES: TransactionListRow[] = [
-  { id: '1', transactionType: 'transfer', description: 'Payout to Bank •••• 7280', subline: 'Feb 21 • Completed', amount: '$1,240.00' },
-  { id: '2', transactionType: 'card', description: 'Card payment · Coffee Co', subline: 'Feb 20 • Completed', amount: '$47.20' },
-  { id: '3', transactionType: 'card', description: 'Subscription · Pro plan', subline: 'Feb 19 • Completed', amount: '$29.00' },
-  { id: '4', transactionType: 'transfer', description: 'Platform fee', subline: 'Feb 18 • Completed', amount: '$12.50' },
-  { id: '5', transactionType: 'transfer', description: 'Transfer from Acct 9921', subline: 'Feb 17 • Completed', amount: '+$500.00', isCredit: true },
-]
-
-const LATEST_ROWS_COUNT = 50
-function buildLatestRows(): TransactionListRow[] {
-  const rows: TransactionListRow[] = []
-  for (let i = 0; i < LATEST_ROWS_COUNT; i++) {
-    const t = LATEST_ROW_TEMPLATES[i % LATEST_ROW_TEMPLATES.length]
-    rows.push({ ...t, id: String(i + 1) })
-  }
-  return rows
-}
-const LATEST_ROWS = buildLatestRows()
 
 const UPCOMING_ROWS: TransactionListRow[] = [
   { id: 'u1', transactionType: 'transfer', description: 'Payout to Bank •••• 7280', subline: 'Mar 1 • Scheduled', amount: '$1,200.00' },
@@ -143,33 +124,13 @@ export default function MoneyMovement({ onTransactionRowClick }: MoneyMovementPr
               onTimeRangeChange={setFinancialTimeRange}
             />
             <TransactionListCard
-              variant="latest"
-              title="Latest transactions"
-              accountName="Toybox Labs"
-              onRowAction={openTxn}
-              rows={LATEST_ROWS}
-            />
-          </div>
-          {/* Sidebar: 30% of container width, min 320px, 40px gap from main. */}
-          <div className="flex min-w-[320px] w-[30%] shrink-0 flex-col gap-6">
-            <FinancialAccountsSidebar
-              accountCards={FINANCIAL_ACCOUNT_CARDS}
-              accountId={accountId}
-              onHeaderAction={
-                accountId
-                  ? () => navigate(`/network/${accountId}/financial-accounts`)
-                  : undefined
-              }
-            />
-            <TransactionListCard
               variant="upcoming"
               title="Upcoming transactions"
               accountName="Toybox Labs"
               onRowAction={openTxn}
               rows={UPCOMING_ROWS}
             />
-            {/* Payout information — 40px below Upcoming transactions */}
-            <div className="flex w-full flex-col gap-2 pt-[40px]">
+            <div className="flex w-full flex-col gap-2">
               <SectionHeader title="Payout information" size="small" />
               <BalancesCard
                 variant="amountRight"
@@ -194,6 +155,18 @@ export default function MoneyMovement({ onTransactionRowClick }: MoneyMovementPr
                 <PropertyListItem label="Payout statement descriptor" value="–" />
               </PropertyList>
             </div>
+          </div>
+          {/* Sidebar: Financial accounts only */}
+          <div className="flex min-w-[320px] w-[30%] shrink-0 flex-col gap-6">
+            <FinancialAccountsSidebar
+              accountCards={FINANCIAL_ACCOUNT_CARDS}
+              accountId={accountId}
+              onHeaderAction={
+                accountId
+                  ? () => navigate(`/network/${accountId}/financial-accounts`)
+                  : undefined
+              }
+            />
           </div>
         </div>
       </div>

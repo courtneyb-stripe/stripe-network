@@ -5,63 +5,11 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
-import {
-  ACTIONS_REQUIRED_LIST,
-  filterActionsRequired,
-  getImpactsDisplayString,
-  getImpactsDisplayParts,
-  getImpactsTooltipLabel,
-  getImpactsMoreTooltipLabel,
-  type ImpactsFilter,
-} from '../data/actionsRequired'
-import { ActionRequiredDescriptionRow } from './ActionRequiredDescriptionRow'
-import { List, ListItem } from './List'
+import { useNavigate } from 'react-router-dom'
 import { Icon } from '../icons/SailIcons'
 import { ConvertIcon } from '../icons/ConvertIcon'
-import { RightArrowIcon } from './metrics/MetricCard'
 import ActionsRequiredModal from './ActionsRequiredModal'
 import type { ActionsRequiredFilter } from './ActionsRequiredModal'
-import SettingsModal from './SettingsModal'
-
-/** One required action item for dropdown — Figma 17-7459 / .action-payment-item. No row icon (kept simple). */
-export type RequiredAction = {
-  id: string
-  title: string
-  dueDate: Date
-  impacts: string
-  impactsFilter: ImpactsFilter
-}
-
-function getDaysPastDue(due: Date): number {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const d = new Date(due)
-  d.setHours(0, 0, 0, 0)
-  const diff = today.getTime() - d.getTime()
-  return Math.max(0, Math.floor(diff / (24 * 60 * 60 * 1000)))
-}
-
-/** Payouts dropdown: first few actions that impact payouts (matches modal "Impacts payouts"). No row icon. */
-const REQUIRED_ACTIONS_PAYOUTS: RequiredAction[] = filterActionsRequired('payouts')
-  .slice(0, 3)
-  .map((a) => ({
-    id: a.id,
-    title: a.title,
-    dueDate: a.dueDate,
-    impacts: getImpactsDisplayString(a),
-    impactsFilter: a.impactsFilter,
-  }))
-
-/** Payments dropdown: first few actions that impact payments (matches modal "Impacts payments"). No row icon. */
-const REQUIRED_ACTIONS_PAYMENTS: RequiredAction[] = filterActionsRequired('payments')
-  .slice(0, 3)
-  .map((a) => ({
-    id: a.id,
-    title: a.title,
-    dueDate: a.dueDate,
-    impacts: getImpactsDisplayString(a),
-    impactsFilter: a.impactsFilter,
-  }))
 
 const MOVE_MONEY_OPTIONS = [
   'Send funds',
@@ -149,147 +97,29 @@ type AccountDetailActionBarProps = {
   onOpenSettings?: () => void
 }
 
-/** Actions required dropdown — small section header, list, then "N of total" link at bottom. */
-function ActionsRequiredDropdown({
-  open,
-  onClose,
-  actions,
-  anchorRef,
-  onViewAllClick,
-}: {
-  open: boolean
-  onClose: () => void
-  actions: RequiredAction[]
-  anchorRef: React.RefObject<HTMLDivElement | null>
-  /** Opens the fullscreen Actions required modal. */
-  onViewAllClick?: () => void
-}) {
-  const panelRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    function handleClickOutside(e: MouseEvent) {
-      const anchor = anchorRef.current
-      const panel = panelRef.current
-      const target = e.target as Node
-      if (anchor?.contains(target) || panel?.contains(target)) return
-      onClose()
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [open, onClose, anchorRef])
-
-  if (!open) return null
-
-  return (
-    <div
-      ref={panelRef}
-      className="absolute left-0 top-full z-20 mt-1 min-w-[320px] w-max max-w-[90vw] rounded-[12px] border border-neutral-100 bg-surface p-2 shadow-[0px_15px_35px_0px_rgba(48,49,61,0.08),0px_5px_15px_0px_rgba(0,0,0,0.12)]"
-      data-name=".action-menu-refund-list"
-      data-node-id="17:7305"
-    >
-      <div className="flex flex-col gap-4 w-max min-w-full px-2" data-name="List" data-node-id="17:7307">
-        <List
-          aria-label="Actions required"
-          className="[&>li]:min-w-[max-content] !px-0"
-          variant="noDividers"
-          onAction={(id) => {
-            onViewAllClick?.()
-            onClose()
-          }}
-        >
-          {actions.map((action) => {
-            const daysPastDue = getDaysPastDue(action.dueDate)
-            const pastDueText = `${daysPastDue} days past due`
-            const fullAction = ACTIONS_REQUIRED_LIST.find((a) => a.id === action.id)
-            const impactsBase = fullAction ? getImpactsDisplayParts(fullAction).base : action.impacts
-            const impactsMore = fullAction ? getImpactsDisplayParts(fullAction).more : undefined
-            const mainTooltipLabel = fullAction ? getImpactsTooltipLabel(fullAction) : action.impacts
-            const moreTooltipLabel = fullAction ? getImpactsMoreTooltipLabel(fullAction) : ''
-            return (
-              <ListItem
-                key={action.id}
-                id={action.id}
-                icon={
-                  <Icon
-                    name="identityVerification"
-                    size={16}
-                    fill="var(--color-icon-subdued)"
-                  />
-                }
-                title={action.title}
-                trailingContent={
-                  <span
-                    className="opacity-0 transition-opacity duration-150 group-hover/row:opacity-100 pr-2"
-                    aria-hidden
-                  >
-                    <RightArrowIcon size={12} fill="var(--color-icon-subdued)" />
-                  </span>
-                }
-                children={
-                  <ActionRequiredDescriptionRow
-                    impactsBase={impactsBase}
-                    impactsMore={impactsMore}
-                    mainTooltipLabel={mainTooltipLabel}
-                    moreTooltipLabel={impactsMore ? moreTooltipLabel : undefined}
-                    tooltipId={`actions-dropdown-impacts-${action.id}`}
-                    pastDueText={pastDueText}
-                    singleLine
-                  />
-                }
-              />
-            )
-          })}
-        </List>
-      </div>
-    </div>
-  )
-}
-
-/** Restricted Payouts/Payments button with actions-required dropdown — Figma 17-7488 + 17-7305. */
-function RestrictedActionButtonWithDropdown({
+/** Restricted Payouts/Payments button — click opens Actions required full page (no dropdown, no chevron). */
+function RestrictedActionButton({
   label,
   tooltipLabel,
   tooltipId,
-  actions,
-  dropdownOpen,
-  onDropdownToggle,
-  onDropdownClose,
-  onViewAllClick,
-  wrapperRef,
+  onClick,
 }: {
   label: string
   tooltipLabel: string
   tooltipId: string
-  actions: RequiredAction[]
-  dropdownOpen: boolean
-  onDropdownToggle: () => void
-  onDropdownClose: () => void
-  onViewAllClick?: () => void
-  wrapperRef: React.RefObject<HTMLDivElement | null>
+  onClick: () => void
 }) {
   return (
-    <div className="relative inline-block" ref={wrapperRef}>
-      <ActionButton
-        label={tooltipLabel}
-        tooltipId={tooltipId}
-        variant="standard"
-        showChevron
-        onClick={onDropdownToggle}
-        aria-expanded={dropdownOpen}
-        aria-haspopup="dialog"
-      >
-        <RestrictedCircleIcon size={12} />
-        {label}
-      </ActionButton>
-      <ActionsRequiredDropdown
-        open={dropdownOpen}
-        onClose={onDropdownClose}
-        actions={actions}
-        anchorRef={wrapperRef}
-        onViewAllClick={onViewAllClick}
-      />
-    </div>
+    <ActionButton
+      label={tooltipLabel}
+      tooltipId={tooltipId}
+      variant="standard"
+      showChevron={false}
+      onClick={onClick}
+    >
+      <RestrictedCircleIcon size={12} />
+      {label}
+    </ActionButton>
   )
 }
 
@@ -316,22 +146,24 @@ export default function AccountDetailActionBar({
   onCloseActionsModal: controlledOnClose,
   onOpenSettings: onOpenSettingsProp,
 }: AccountDetailActionBarProps) {
+  const navigate = useNavigate()
   const v = useVisibility(visibility)
   const [moveMoneyOpen, setMoveMoneyOpen] = useState(false)
-  const [actionsDropdownOpen, setActionsDropdownOpen] = useState<'payouts' | 'payments' | null>(null)
   const [internalActionsModalOpen, setInternalActionsModalOpen] = useState(false)
-  const [internalSettingsModalOpen, setInternalSettingsModalOpen] = useState(false)
-  const settingsModalOpen = onOpenSettingsProp != null ? false : internalSettingsModalOpen
-  const openSettings = onOpenSettingsProp ?? (() => setInternalSettingsModalOpen(true))
+  const [internalActionsModalFilter, setInternalActionsModalFilter] = useState<ActionsRequiredFilter>('all')
+  const openSettings =
+    onOpenSettingsProp ??
+    (accountId ? () => navigate(`/network/${accountId}/settings`) : () => {})
   const isControlled = controlledOnOpen != null && controlledOnClose != null
   const actionsModalOpen = isControlled ? (controlledActionsModalOpen ?? false) : internalActionsModalOpen
   const openActionsModal = isControlled
     ? (filter?: ActionsRequiredFilter) => controlledOnOpen!(filter)
-    : () => setInternalActionsModalOpen(true)
+    : (filter?: ActionsRequiredFilter) => {
+        setInternalActionsModalFilter(filter ?? 'all')
+        setInternalActionsModalOpen(true)
+      }
   const closeActionsModal = isControlled ? controlledOnClose! : () => setInternalActionsModalOpen(false)
   const moveMoneyRef = useRef<HTMLDivElement>(null)
-  const payoutsDropdownRef = useRef<HTMLDivElement>(null)
-  const paymentsDropdownRef = useRef<HTMLDivElement>(null)
   const isRestricted = status === 'restricted' // customer-only (status undefined) → not restricted
 
   useEffect(() => {
@@ -368,16 +200,11 @@ export default function AccountDetailActionBar({
       ) : (
         <>
           {v.showPayouts && (isRestricted ? (
-            <RestrictedActionButtonWithDropdown
+            <RestrictedActionButton
               label="Payouts"
               tooltipLabel="Payouts paused"
               tooltipId="payouts-tooltip"
-              actions={REQUIRED_ACTIONS_PAYOUTS}
-              dropdownOpen={actionsDropdownOpen === 'payouts'}
-              onDropdownToggle={() => setActionsDropdownOpen((o) => (o === 'payouts' ? null : 'payouts'))}
-              onDropdownClose={() => setActionsDropdownOpen(null)}
-              onViewAllClick={() => openActionsModal('payouts')}
-              wrapperRef={payoutsDropdownRef}
+              onClick={() => openActionsModal('payouts')}
             />
           ) : (
             <ActionButton label="Payouts are enabled for this account." tooltipId="payouts-tooltip" variant="outline">
@@ -386,16 +213,11 @@ export default function AccountDetailActionBar({
             </ActionButton>
           ))}
           {v.showPayments && (isRestricted ? (
-            <RestrictedActionButtonWithDropdown
+            <RestrictedActionButton
               label="Payments"
               tooltipLabel="Payments paused"
               tooltipId="payments-tooltip"
-              actions={REQUIRED_ACTIONS_PAYMENTS}
-              dropdownOpen={actionsDropdownOpen === 'payments'}
-              onDropdownToggle={() => setActionsDropdownOpen((o) => (o === 'payments' ? null : 'payments'))}
-              onDropdownClose={() => setActionsDropdownOpen(null)}
-              onViewAllClick={() => openActionsModal('payments')}
-              wrapperRef={paymentsDropdownRef}
+              onClick={() => openActionsModal('payments')}
             />
           ) : (
             <ActionButton label="Payments are enabled for this account." tooltipId="payments-tooltip" variant="outline">
@@ -473,11 +295,8 @@ export default function AccountDetailActionBar({
         open={actionsModalOpen}
         onClose={closeActionsModal}
         accountId={accountId}
-        initialFilter={actionsModalInitialFilter ?? 'all'}
+        initialFilter={isControlled ? (actionsModalInitialFilter ?? 'all') : internalActionsModalFilter}
       />
-      {onOpenSettingsProp == null && (
-        <SettingsModal open={settingsModalOpen} onClose={() => setInternalSettingsModalOpen(false)} />
-      )}
     </div>
   )
 }

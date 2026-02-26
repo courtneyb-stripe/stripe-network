@@ -1,17 +1,22 @@
 /**
  * Shell — App layout: global header + left nav + main content.
- * On /components (component inventory), hides header and nav so the page has its own full-width layout.
+ * On /components and /network/:id/settings, hides header and nav for full-width layout.
  */
 
 import { useLocation } from 'react-router-dom'
 import { GlobalSearchBar, GlobalHeaderActions } from './GlobalHeader'
+import PrototypeFloatie from './PrototypeFloatie'
 import Sidebar from './Sidebar'
+
+const SETTINGS_PAGE_PATTERN = /^\/network\/[^/]+\/settings$/
 
 export default function Shell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation()
   const isComponentInventory = pathname === '/components'
+  const isSettingsPage = SETTINGS_PAGE_PATTERN.test(pathname)
+  const hideNav = isComponentInventory || isSettingsPage
 
-  if (isComponentInventory) {
+  if (hideNav) {
     return (
       <div
         className="relative h-screen w-full overflow-hidden rounded-[20px] bg-surface"
@@ -34,6 +39,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       data-name="Shell"
     >
       <Sidebar />
+      <PrototypeFloatie />
       <main
         className="flex min-w-0 flex-1 flex-col overflow-hidden bg-surface"
         data-name="Main"

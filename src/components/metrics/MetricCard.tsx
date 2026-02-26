@@ -90,6 +90,19 @@ type SimpleProps = BaseProps & {
 
 export type MetricCardProps = CompactProps | WithSparklineProps | SimpleProps | LabelValueSparklineProps
 
+/** Skeleton for simple metric card (low fidelity): label and value as gray bars. */
+export function SimpleMetricCardSkeleton({ className = '' }: { className?: string }) {
+  return (
+    <div
+      className={`flex min-w-0 flex-col rounded-[12px] border border-neutral-50 bg-surface justify-center gap-1.5 p-4 shadow-[0px_1px_2px_-0.5px_rgba(0,0,0,0.05)] ${className}`.trim()}
+      data-name="Metric card (simple) skeleton"
+    >
+      <div className="h-4 w-20 rounded-[3px] bg-neutral-50" aria-hidden />
+      <div className="h-6 w-16 rounded-[3px] bg-neutral-50" aria-hidden />
+    </div>
+  )
+}
+
 function MetricValueSkeleton() {
   return (
     <div className="flex items-baseline gap-2" aria-hidden>

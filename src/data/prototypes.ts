@@ -1,6 +1,8 @@
 /**
  * Prototype directory data for the hub landing page.
  * Categories: M0 (e2e prototype), Resources (component library, TXN list, etc.), Archived.
+ * Only entries in this list appear in the directory; branches other than main are not published
+ * here unless added to PROTOTYPES (no automatic branch discovery).
  */
 
 export type PrototypeCategory = 'm0' | 'resources' | 'archived'

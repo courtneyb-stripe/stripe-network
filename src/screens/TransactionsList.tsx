@@ -107,7 +107,11 @@ export default function TransactionsList() {
   return (
     <div className="flex h-full w-full flex-col gap-[8px]" data-name="TransactionsList">
       <div className="flex shrink-0 flex-col gap-0">
-        <TransactionsPageHeader activeTab={activeTab} onTabChange={setActiveTab} />
+        <TransactionsPageHeader
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          initialMerchant={accountName ?? undefined}
+        />
         {activeTab === 'payments' && (
           <div
             className="flex w-full flex-col gap-[12px] px-[40px] py-[8px]"

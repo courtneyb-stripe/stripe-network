@@ -62,6 +62,8 @@ function filterRowsByTab(rows: Row[], tab: NetworkTabId): Row[] {
   if (tab === 'merchants') return rows.filter((row) => row.configurations.includes('Merchant'))
   // Customers = anyone who is a customer (Customer-only OR Merchant, Customer — merchants are also customers)
   if (tab === 'customers') return rows.filter((row) => row.configurations.includes('Customer'))
+  // Recipients = customer-only accounts (no Merchant)
+  if (tab === 'recipients') return rows.filter((row) => !row.configurations.includes('Merchant'))
   return rows
 }
 
@@ -147,6 +149,15 @@ export function getFilteredRows(
   return filterRows(byView, searchQuery)
 }
 
+/** Column set when merchant is not Shopify: no Status, LTV shown as Total spend. */
+function getVisibleColumns(statusViewId: SavedViewId, isShopify: boolean): Col[] {
+  let cols = statusViewId === '7' ? [...COLUMNS] : COLUMNS.filter((c): c is Col => c.key !== 'risk')
+  if (!isShopify) {
+    cols = cols.filter((c): c is Col => c.key !== 'status')
+  }
+  return cols
+}
+
 export { parseLtv }
 
 function StatusBadge({ kind }: { kind: StatusKind }) {
@@ -173,10 +184,13 @@ function TableHeader({
   columns,
   ltvSortDirection,
   onLtvSortClick,
+  ltvColumnLabel,
 }: {
   columns: readonly Col[]
   ltvSortDirection: LtvSortDirection
   onLtvSortClick: () => void
+  /** When set (e.g. non-Shopify view), use instead of column label for lifetimeValue. */
+  ltvColumnLabel?: string
 }) {
   return (
     <div
@@ -196,6 +210,7 @@ function TableHeader({
       <div className="flex min-w-0 flex-1 items-center gap-6">
         {columns.map((col) => {
           const isLtv = col.key === 'lifetimeValue'
+          const headerLabel = isLtv && ltvColumnLabel != null ? ltvColumnLabel : col.label
           return (
             <div
               key={col.key}
@@ -212,7 +227,7 @@ function TableHeader({
                   className="inline-flex w-full cursor-pointer items-center justify-end gap-1 rounded-[length:var(--radius-xsmall)] font-label-small-emphasized text-subdued transition-colors hover:text-default focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary"
                   aria-sort={ltvSortDirection === 'asc' ? 'ascending' : ltvSortDirection === 'desc' ? 'descending' : undefined}
                 >
-                  <span className="truncate text-right">{col.label}</span>
+                  <span className="truncate text-right">{headerLabel}</span>
                   <span
                     className={`flex shrink-0 items-center transition-opacity group-hover/ltv:opacity-100 ${ltvSortDirection != null ? 'opacity-100' : 'opacity-0'}`}
                   >
@@ -329,16 +344,17 @@ export default function NetworkTable({
   statusViewId = '1',
   customerViewId = 'c1',
   searchQuery = '',
+  selectedMerchant = 'Shopify',
 }: {
   activeTab?: NetworkTabId
   statusViewId?: SavedViewId
   customerViewId?: CustomerViewId
   searchQuery?: string
+  selectedMerchant?: string
 }) {
   const [ltvSortDirection, setLtvSortDirection] = useState<LtvSortDirection>(null)
-  /** Risk column only on Radar rule matches view (7). */
-  const visibleColumns =
-    statusViewId === '7' ? COLUMNS : COLUMNS.filter((c): c is Col => c.key !== 'risk')
+  const isShopify = selectedMerchant === 'Shopify'
+  const visibleColumns = getVisibleColumns(statusViewId, isShopify)
   const rowsForTab = filterRowsByTab(DATA_ROWS, activeTab)
   const rowsForView =
     activeTab === 'customers'
@@ -367,6 +383,7 @@ export default function NetworkTable({
         columns={visibleColumns}
         ltvSortDirection={ltvSortDirection}
         onLtvSortClick={handleLtvSortClick}
+        ltvColumnLabel={isShopify ? undefined : 'Total spend'}
       />
       <div className="flex flex-col">
         {filteredRows.map((row, i) => (

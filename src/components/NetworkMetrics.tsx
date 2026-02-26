@@ -85,11 +85,13 @@ export default function NetworkMetrics({
   statusViewId = '1',
   customerViewId = 'c1',
   searchQuery = '',
+  selectedMerchant = 'Shopify',
 }: {
   activeTab?: NetworkTabId
   statusViewId?: SavedViewId
   customerViewId?: CustomerViewId
   searchQuery?: string
+  selectedMerchant?: string
 }) {
   const viewId = activeTab === 'customers' ? customerViewId : statusViewId
   const [financialLoading, setFinancialLoading] = useState(true)
@@ -98,20 +100,6 @@ export default function NetworkMetrics({
   const [accountsMetric, setAccountsMetric] = useState<AccountsMetric>('Total accounts')
   const [financialTime, setFinancialTime] = useState<TimeRange>('Last 30 days')
   const [accountsTime, setAccountsTime] = useState<TimeRange>('Last 30 days')
-
-  // Financial card: loading only when list view or this card’s metric/time range changes
-  useEffect(() => {
-    setFinancialLoading(true)
-    const t = setTimeout(() => setFinancialLoading(false), LOAD_DELAY_MS)
-    return () => clearTimeout(t)
-  }, [activeTab, viewId, searchQuery, financialMetric, financialTime])
-
-  // Accounts card: loading only when list view or this card’s metric/time range changes
-  useEffect(() => {
-    setAccountsLoading(true)
-    const t = setTimeout(() => setAccountsLoading(false), LOAD_DELAY_MS)
-    return () => clearTimeout(t)
-  }, [activeTab, viewId, searchQuery, accountsMetric, accountsTime])
 
   const rows = getFilteredRows(
     activeTab,
@@ -123,8 +111,37 @@ export default function NetworkMetrics({
   const ltvTotal = rows.reduce((sum, r) => sum + parseLtv(r.lifetimeValue), 0)
   const newInPeriod = countNewInPeriod(rows)
 
+  const isShopify = selectedMerchant === 'Shopify'
+
+  // Financial card: loading only when list view or this card's metric/time range changes
+  useEffect(() => {
+    setFinancialLoading(true)
+    const t = setTimeout(() => setFinancialLoading(false), LOAD_DELAY_MS)
+    return () => clearTimeout(t)
+  }, [activeTab, viewId, searchQuery, financialMetric, financialTime])
+
+  // Accounts card: loading only when list view or this card's metric/time range changes
+  useEffect(() => {
+    setAccountsLoading(true)
+    const t = setTimeout(() => setAccountsLoading(false), LOAD_DELAY_MS)
+    return () => clearTimeout(t)
+  }, [activeTab, viewId, searchQuery, accountsMetric, accountsTime])
+
   const financial = getFinancialDisplay(financialMetric, financialTime, ltvTotal)
   const accounts = getAccountsDisplay(accountsMetric, accountsTime, totalAccounts, newInPeriod)
+
+  if (!isShopify) {
+    return (
+      <div
+        className="grid w-full shrink-0 grid-cols-2 gap-2 px-[40px] py-2"
+        data-name="Metrics row"
+        data-node-id="5:5052"
+      >
+        <MetricCard variant="simple" label="Total spend" value={formatLtv(ltvTotal)} />
+        <MetricCard variant="simple" label="Total accounts" value={totalAccounts.toLocaleString()} />
+      </div>
+    )
+  }
 
   return (
     <div

@@ -34,43 +34,6 @@ export type TransactionRow = {
   date: string
 }
 
-/** Header matches NetworkTable TableHeader: same height (52px), checkbox placeholder, font-label-small-emphasized text-subdued. */
-function TableHeader() {
-  return (
-    <div
-      className="group flex w-full shrink-0 items-center overflow-hidden pr-6"
-      data-name="Table Header"
-      data-node-id="2:10689"
-      style={{ height: ROW_HEIGHT, minHeight: ROW_HEIGHT }}
-    >
-      <div
-        className="flex shrink-0 items-center justify-center p-[7px] w-8 opacity-0 transition-opacity group-hover:opacity-100"
-        aria-hidden
-      >
-        <div
-          className="h-3.5 w-3.5 shrink-0 rounded-[length:var(--radius-xsmall)] border border-neutral-100 bg-surface"
-          style={{ boxShadow: 'var(--shadow-button)' }}
-        />
-      </div>
-      <div className="flex min-w-0 flex-1 items-center gap-6">
-        {COLUMNS.map((col) => (
-          <div
-            key={col.key}
-            className={`flex min-w-0 shrink-0 items-center overflow-hidden ${col.width} ${col.align === 'right' ? 'justify-end' : ''}`}
-            data-name="Table Header Cell"
-          >
-            <span
-              className={`truncate font-label-small-emphasized text-subdued ${col.align === 'right' ? 'text-right' : ''}`}
-            >
-              {col.label}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 function TableRow({
   row,
   isAlternate,
@@ -93,12 +56,6 @@ function TableRow({
       data-name="Table Row 2.0"
       style={{ height: ROW_HEIGHT, minHeight: ROW_HEIGHT }}
     >
-      <div
-        className="flex shrink-0 items-center justify-center p-[7px] w-8 opacity-0 transition-opacity group-hover:opacity-100"
-        aria-hidden
-      >
-        <div className="h-3.5 w-3.5 shrink-0 rounded-[length:var(--radius-xsmall)] border border-neutral-100 bg-surface" />
-      </div>
       <div className="flex min-w-0 flex-1 items-center gap-6">
         <div className={`flex min-w-0 shrink-0 items-center gap-1.5 overflow-hidden ${COLUMNS[0].width}`}>
           <span className="truncate font-label-medium-emphasized text-default tabular-nums">{row.amount}</span>
@@ -176,7 +133,6 @@ export default function TransactionsTable({ rows = DEFAULT_ROWS, onRowClick }: T
       data-name="Table 2.0"
       data-node-id="2:10689"
     >
-      <TableHeader />
       <div className="flex flex-col">
         {rows.map((row, i) => (
           <TableRow key={i} row={row} isAlternate={i % 2 === 0} onClick={onRowClick} />

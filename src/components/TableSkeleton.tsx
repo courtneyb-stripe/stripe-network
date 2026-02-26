@@ -1,6 +1,6 @@
 /**
  * TableSkeleton — Loading skeleton for data tables.
- * Renders one header row (skeleton bars only) + N skeleton rows with checkbox column and configurable column widths.
+ * Renders N skeleton rows (no header row) with optional checkbox column and configurable column widths.
  * Matches NetworkTable / AccountDetail Recent Activity table structure (52px row height).
  */
 
@@ -17,72 +17,62 @@ type TableSkeletonProps = {
   rowCount?: number
   columnWidths?: string[]
   showCheckboxColumn?: boolean
+  /** When set, rows are clickable and invoke this (e.g. open preview drawer). */
+  onRowClick?: () => void
 }
 
 export default function TableSkeleton({
   rowCount = 7,
   columnWidths = DEFAULT_COLUMN_WIDTHS,
   showCheckboxColumn = true,
+  onRowClick,
 }: TableSkeletonProps) {
+  const isClickable = onRowClick != null
   return (
     <div className="pt-5 flex w-full flex-col overflow-hidden" data-name="Table 2.0">
-      {/* Skeleton header */}
-      <div
-        className="group flex w-full shrink-0 items-center overflow-hidden pr-6"
-        data-name="Table Header"
-        style={{ height: ROW_HEIGHT, minHeight: ROW_HEIGHT }}
-      >
-        {showCheckboxColumn && (
-          <div
-            className="flex shrink-0 items-center justify-center p-[7px] w-8 opacity-0 transition-opacity group-hover:opacity-100"
-            aria-hidden
+      {Array.from({ length: rowCount }, (_, i) => {
+        const RowWrapper = isClickable ? 'button' : 'div'
+        return (
+          <RowWrapper
+            key={i}
+            type={isClickable ? 'button' : undefined}
+            onClick={isClickable ? onRowClick : undefined}
+            onKeyDown={
+              isClickable
+                ? (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onRowClick?.()
+                    }
+                  }
+                : undefined
+            }
+            className={`group flex w-full shrink-0 items-center rounded-[length:var(--radius-action)] pl-2 pr-2 transition-colors ${i % 2 === 0 ? 'bg-[#fafbfb]' : 'bg-surface'} ${isClickable ? 'cursor-pointer text-left hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary' : ''}`}
+            data-name="Table Row 2.0"
+            aria-busy={!isClickable}
+            style={{ height: ROW_HEIGHT }}
           >
-            <div
-              className="h-3.5 w-3.5 shrink-0 rounded-[length:var(--radius-xsmall)] border border-neutral-100 bg-surface"
-              style={{ boxShadow: 'var(--shadow-button)' }}
-            />
-          </div>
-        )}
-        <div className="flex min-w-0 flex-1 items-center gap-6">
-          {columnWidths.map((width, i) => (
-            <div
-              key={i}
-              className={`flex min-w-0 shrink-0 items-center overflow-hidden ${width}`}
-            >
-              <div className="h-2.5 w-full max-w-full rounded-[3px] bg-neutral-50" aria-hidden />
-            </div>
-          ))}
-        </div>
-      </div>
-      {/* Skeleton rows */}
-      {Array.from({ length: rowCount }, (_, i) => (
-        <div
-          key={i}
-          className={`group flex w-full shrink-0 items-center rounded-[length:var(--radius-action)] pr-2 transition-colors ${i % 2 === 0 ? 'bg-[#fafbfb]' : 'bg-surface'}`}
-          data-name="Table Row 2.0"
-          aria-busy
-          style={{ height: ROW_HEIGHT }}
-        >
-          {showCheckboxColumn && (
-            <div
-              className="flex shrink-0 items-center justify-center p-[7px] w-8 opacity-0 transition-opacity group-hover:opacity-100"
-              aria-hidden
-            >
-              <div className="h-3.5 w-3.5 shrink-0 rounded-[length:var(--radius-xsmall)] border border-neutral-100 bg-surface" />
-            </div>
-          )}
-          <div className="flex min-w-0 flex-1 items-center gap-6">
-            {columnWidths.map((width, j) => (
+            {showCheckboxColumn && (
               <div
-                key={j}
-                className={`flex min-w-0 shrink-0 items-center overflow-hidden ${width}`}
+                className="flex shrink-0 items-center justify-center p-[7px] w-8 opacity-0 transition-opacity group-hover:opacity-100"
+                aria-hidden
               >
-                <div className="h-2.5 w-full max-w-full rounded-[3px] bg-neutral-50" aria-hidden />
+                <div className="h-3.5 w-3.5 shrink-0 rounded-[length:var(--radius-xsmall)] border border-neutral-100 bg-surface" />
               </div>
-            ))}
-          </div>
-        </div>
-      ))}
+            )}
+            <div className="flex min-w-0 flex-1 items-center gap-6">
+              {columnWidths.map((width, j) => (
+                <div
+                  key={j}
+                  className={`flex min-w-0 shrink-0 items-center overflow-hidden ${width}`}
+                >
+                  <div className="h-2.5 w-full max-w-full rounded-[3px] bg-neutral-50" aria-hidden />
+                </div>
+              ))}
+            </div>
+          </RowWrapper>
+        )
+      })}
     </div>
   )
 }

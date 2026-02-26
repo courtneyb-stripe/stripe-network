@@ -8,7 +8,7 @@
  * consider closing on outside click if needed.
  */
 
-import SectionHeader from './SectionHeader'
+import LabelTooltip from './LabelTooltip'
 import MetricDropdown from './metrics/MetricDropdown'
 import StaticSparkline from './metrics/StaticSparkline'
 import type { TimeRange } from './metrics/constants'
@@ -63,10 +63,7 @@ export default function FinancialSnapshot({
       className={`flex w-full flex-col gap-2 ${className}`.trim()}
       data-node-id="29:15219"
     >
-      <div className="flex w-full items-center justify-between gap-2" data-node-id="29:15125">
-        <div className="min-w-0 flex-1">
-          <SectionHeader title="Financial snapshot" size="small" />
-        </div>
+      <div className="flex w-full items-center justify-end gap-2" data-node-id="29:15125">
         <MetricDropdown
           value={timeRangeValue}
           options={timeRangeOptions}
@@ -94,9 +91,15 @@ export default function FinancialSnapshot({
             </div>
           </div>
           <div className="flex w-full items-center pt-0" data-name="Bottom" data-node-id="29:15275">
-            <p className="text-[20px] font-normal leading-6 tracking-[-0.2px] text-default tabular-nums">
-              {netFlow}
-            </p>
+            <LabelTooltip
+              label="Net flow amount"
+              tooltipId="financial-snapshot-net-flow-tooltip"
+              placement="top"
+            >
+              <p className="text-[20px] font-normal leading-6 tracking-[-0.2px] text-default tabular-nums">
+                {netFlow}
+              </p>
+            </LabelTooltip>
           </div>
         </div>
         {/* Second card: Money in / Money out */}
