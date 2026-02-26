@@ -15,8 +15,8 @@ import { EditIcon } from '../icons/EditIcon'
 export type SectionHeaderSize = 'medium' | 'small'
 
 const SIZE_CLASSES: Record<SectionHeaderSize, string> = {
-  medium: 'text-[20px] leading-[28px] font-semibold tracking-[-0.15px] text-default',
-  small: 'text-[18px] leading-[26px] font-semibold tracking-[-0.15px] text-default',
+  medium: 'text-[20px] leading-[28px] font-semibold tracking-0 text-default',
+  small: 'text-[18px] leading-[26px] font-semibold tracking-0 text-default',
 }
 
 type SectionHeaderProps = {

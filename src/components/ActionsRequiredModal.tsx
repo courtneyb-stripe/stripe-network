@@ -111,7 +111,7 @@ function ActionDetailContent({ action, accountId }: { action: ActionRequiredItem
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-[18px] leading-[26px] font-semibold tracking-[-0.15px] text-default m-0">
+      <h2 className="text-[18px] leading-[26px] font-semibold tracking-0 text-default m-0">
         {action.title}
       </h2>
       <ActionRequiredDescriptionRow
@@ -336,7 +336,7 @@ export default function ActionsRequiredModal({
                 {accountName}
               </span>
             )}
-            <h1 className="min-w-0 w-fit whitespace-pre-wrap text-[18px] leading-[26px] font-semibold tracking-[-0.15px] text-default m-0">
+            <h1 className="min-w-0 w-fit whitespace-pre-wrap text-[18px] leading-[26px] font-semibold tracking-0 text-default m-0">
               Needs Attention
             </h1>
           </div>

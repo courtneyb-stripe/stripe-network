@@ -261,7 +261,7 @@ export default function AccountDrawer({
         {/* Header: title + optional badge + (view full details only for non-profile) + close */}
         <div className="flex shrink-0 w-full items-center justify-between gap-2 pb-4" data-node-id="16:6870">
           <div className="flex min-w-0 flex-1 items-center gap-1.5" data-node-id="16:6965">
-            <p className="shrink-0 text-[18px] leading-[26px] font-semibold tracking-[-0.15px] text-default">
+            <p className="shrink-0 text-[18px] leading-[26px] font-semibold tracking-0 text-default">
               {title}
             </p>
             {badge}

@@ -58,7 +58,7 @@ export default function EditDetailsModal({ open, onClose, section }: EditDetails
       >
         <div className="flex shrink-0 w-full items-center justify-between gap-2 px-4 pt-4 pb-4">
           <div>
-            <p className="text-[18px] leading-[26px] font-semibold tracking-[-0.15px] text-default">
+            <p className="text-[18px] leading-[26px] font-semibold tracking-0 text-default">
               Edit details
             </p>
             <p className="font-label-medium text-subdued mt-0.5">{SECTION_LABELS[section]}</p>

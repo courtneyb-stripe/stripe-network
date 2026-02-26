@@ -23,7 +23,7 @@ export default function RiskAnalysis() {
   const status: AccountStatusKind | undefined = hasMerchantConfig ? (mockAccount?.status ?? 'enabled') : undefined
 
   const breadcrumbs = [
-    { label: 'Network IA (onsite)', href: '/network' },
+    { label: 'Network', href: '/network' },
     { label: accountName, href: id ? `/network/${id}` : null },
     { label: 'Risk analysis', href: null },
   ]

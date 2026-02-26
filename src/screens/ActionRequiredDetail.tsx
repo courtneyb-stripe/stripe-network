@@ -19,7 +19,7 @@ export default function ActionRequiredDetail() {
   const actionTitle = actionId ? getActionTitle(actionId) : '—'
 
   const breadcrumbs = [
-    { label: 'Network IA (onsite)', href: '/network' },
+    { label: 'Network', href: '/network' },
     { label: accountName, href: id ? `/network/${id}` : null },
     { label: actionTitle, href: null },
   ]

@@ -22,7 +22,7 @@ export default function FinancialAccountsList() {
   const status: AccountStatusKind | undefined = hasMerchantConfig ? (mockAccount?.status ?? 'enabled') : undefined
 
   const breadcrumbs = [
-    { label: 'Network IA (onsite)', href: '/network' },
+    { label: 'Network', href: '/network' },
     { label: accountName, href: id ? `/network/${id}` : null },
     { label: 'Financial accounts', href: null },
   ]

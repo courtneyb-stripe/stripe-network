@@ -182,7 +182,7 @@ export default function SettingsPanel({
                 {accountName}
               </span>
             )}
-            <h1 className="min-w-0 w-fit whitespace-pre-wrap text-[18px] leading-[26px] font-semibold tracking-[-0.15px] text-default m-0">Settings</h1>
+            <h1 className="min-w-0 w-fit whitespace-pre-wrap text-[18px] leading-[26px] font-semibold tracking-0 text-default m-0">Settings</h1>
           </div>
         )}
         <div className={`min-h-0 flex-1 overflow-auto px-6 pb-8 ${hideHeader ? 'pt-8' : 'pt-8'}`}>

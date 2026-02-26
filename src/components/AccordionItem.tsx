@@ -55,7 +55,7 @@ export function AccordionItem({
         </span>
         <div className="flex min-w-0 flex-1 flex-col items-start gap-0">
           <div className="flex items-center gap-2 shrink-0 min-w-0">
-            <span className="text-[16px] leading-6 font-semibold tracking-[-0.15px] text-default">
+            <span className="text-[16px] leading-6 font-semibold tracking-0 text-default">
               {title}
             </span>
             {tooltipLabel != null && tooltipId != null && (

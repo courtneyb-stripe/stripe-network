@@ -108,7 +108,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
     ? activeSectionId
     : firstSectionId
 
-  const breadcrumbs = [{ label: 'Network IA (onsite)', href: '/network' }]
+  const breadcrumbs = [{ label: 'Network', href: '/network' }]
 
   const LTV_METRIC_OPTIONS = [
     { id: 'volume', label: 'Lifetime volume' },

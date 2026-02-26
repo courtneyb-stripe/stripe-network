@@ -23,7 +23,7 @@ export default function RadarHighRiskCard({ accountId, fraudScore = 85 }: RadarH
     >
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         <div className="flex flex-col gap-3">
-          <h2 className="text-[18px] leading-[26px] font-semibold tracking-[-0.15px] text-default">
+          <h2 className="text-[18px] leading-[26px] font-semibold tracking-0 text-default">
             Radar detected high risk of fraud
           </h2>
           <p className="font-label-medium text-default leading-5 tracking-[-0.15px]">

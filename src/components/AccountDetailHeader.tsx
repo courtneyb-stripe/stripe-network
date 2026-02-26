@@ -27,7 +27,7 @@ export type BreadcrumbItem = { label: string; href: string | null }
 
 export default function AccountDetailHeader({
   accountName,
-  breadcrumbs = [{ label: 'Network IA (onsite)', href: '/network' }],
+  breadcrumbs = [{ label: 'Network', href: '/network' }],
   /** When set, used for the main heading (e.g. action required title); logo initials still use accountName. */
   heading,
 }: {

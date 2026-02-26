@@ -91,7 +91,7 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
       {/* Header: same structure as SectionHeader (min-h-8, 18px title) for consistency */}
       <div className="flex min-h-8 w-full items-center justify-between gap-1.5 shrink-0" data-node-id="18:7609">
         <div className="flex min-w-0 flex-1 items-center gap-1.5" data-node-id="18:7610">
-          <p className="min-w-0 w-fit text-[18px] leading-[26px] font-semibold tracking-[-0.15px] text-default shrink-0">
+          <p className="min-w-0 w-fit text-[18px] leading-[26px] font-semibold tracking-0 text-default shrink-0">
             Needs Attention
           </p>
         </div>

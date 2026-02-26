@@ -138,13 +138,23 @@ body {
   color: var(--color-default);
 }
 
-/* Figma: Heading/XLarge (28px Bold, 36px line-height, 0.38px letter-spacing) */
+/* Figma: Heading/XLarge (28px Bold, 36px line-height, 0 letter-spacing) */
 .font-heading-xlarge {
   font-family: inherit;
   font-weight: 700;
   font-size: 28px;
   line-height: 36px;
-  letter-spacing: 0.38px;
+  letter-spacing: 0;
+  color: var(--color-default);
+}
+
+/* Heading/Medium — section headings (18–20px semibold, 0 letter-spacing) */
+.font-heading-medium {
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 26px;
+  letter-spacing: 0;
   color: var(--color-default);
 }
 
