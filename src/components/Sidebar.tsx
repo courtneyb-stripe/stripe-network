@@ -16,7 +16,7 @@ const topLevelNav = [
   { label: 'Home', icon: 'home' as const, to: '/' },
   { label: 'Balances', icon: 'balance' as const },
   { label: 'Transactions', icon: 'arrowsLoop' as const, to: '/transactions' },
-  { label: 'Network', icon: 'person' as const, to: '/network' },
+  { label: 'Network IA (onsite)', icon: 'person' as const, to: '/network' },
   { label: 'Product catalog', icon: 'product' as const },
 ]
 

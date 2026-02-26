@@ -84,7 +84,7 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
 
   return (
     <div
-      className="flex w-full flex-col gap-1 shrink-0 overflow-hidden rounded-[12px] bg-surface px-4 pb-4 pt-0"
+      className="flex w-full min-w-0 flex-col gap-1 shrink-0 overflow-hidden rounded-[12px] bg-surface px-4 pb-4 pt-0"
       data-name="Needs Attention section"
       data-node-id="18:7608"
     >

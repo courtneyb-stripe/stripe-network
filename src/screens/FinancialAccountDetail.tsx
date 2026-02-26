@@ -32,7 +32,7 @@ export default function FinancialAccountDetail() {
   const faName = faId ? getFinancialAccountName(faId) : '—'
 
   const breadcrumbs = [
-    { label: 'Network', href: '/network' },
+    { label: 'Network IA (onsite)', href: '/network' },
     { label: accountName, href: id ? `/network/${id}` : null },
     { label: 'Financial accounts', href: id ? `/network/${id}/financial-accounts` : null },
     { label: faName, href: null },

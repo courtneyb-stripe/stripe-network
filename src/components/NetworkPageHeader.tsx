@@ -44,7 +44,7 @@ export default function NetworkPageHeader({
       <div className="flex w-full items-center justify-between shrink-0" data-name="Title">
         <div className="flex shrink-0 items-center gap-2">
           <h1 className="font-heading-xlarge shrink-0" data-name="Page heading">
-            Network
+            Network IA (onsite)
           </h1>
         </div>
         <div className="flex shrink-0 items-center gap-[8px]" data-name="Page Actions">

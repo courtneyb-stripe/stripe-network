@@ -135,7 +135,7 @@ export default function AccountDetailsSidebar({
           </>
         )}
         <div
-          className="flex flex-col gap-2 overflow-hidden rounded-[12px] bg-surface px-2 pb-2 pt-0"
+          className="flex w-full flex-col gap-2 overflow-hidden rounded-[12px] bg-surface px-4 pb-4 pt-0"
           data-name="baby/card/prop-list_vertical"
           data-node-id="2:6692"
         >

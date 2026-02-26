@@ -131,9 +131,17 @@ export default function FinancialSnapshotSection({ onRowClick }: FinancialSnapsh
         />
       </div>
 
-      {/* Balances — Figma 2085:46771: single white card in gray area */}
+      {/* Balances — Figma 2085:46771: single white card in gray area; header shows total in FinancialSnapshot value style */}
       <div className="flex flex-col gap-2">
-        <SectionHeader title="Balances" size="small" />
+        <SectionHeader
+          title="Balances"
+          size="small"
+          trailing={
+            <span className="text-[20px] font-normal leading-6 tracking-[-0.2px] text-default tabular-nums">
+              $12,345.67
+            </span>
+          }
+        />
         <BalancesCardPlaceholder />
       </div>
 
