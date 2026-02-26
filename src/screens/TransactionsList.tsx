@@ -4,7 +4,7 @@
  */
 
 import { useState, useMemo, useEffect } from 'react'
-import { useLocation, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import TransactionsPageHeader from '../components/TransactionsPageHeader'
 import ReturnToAccountFloating from '../components/ReturnToAccountFloating'
 import type { TransactionsTabId } from '../components/TransactionsPageHeader'
@@ -72,6 +72,7 @@ type TransactionsLocationState = {
 
 export default function TransactionsList() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const state = (location.state ?? null) as TransactionsLocationState | null
 
@@ -83,6 +84,19 @@ export default function TransactionsList() {
   const accountId = state?.accountId ?? accountIdFromUrl
   const accountName = state?.accountName ?? accountNameFromUrl
 
+  const clearAccountFilter = () => {
+    navigate(`/transactions?tab=${activeTab}`, { replace: true })
+  }
+
+  /** Default account when user clicks Add filter (switch to filtered state). */
+  const ADD_FILTER_DEFAULT_ACCOUNT = { id: 'toybox-labs', name: 'Toybox Labs' }
+  const applyAddFilter = () => {
+    navigate(
+      `/transactions?tab=${activeTab}&accountId=${encodeURIComponent(ADD_FILTER_DEFAULT_ACCOUNT.id)}&accountName=${encodeURIComponent(ADD_FILTER_DEFAULT_ACCOUNT.name)}`,
+      { replace: true }
+    )
+  }
+
   const [activeTab, setActiveTab] = useState<TransactionsTabId>(stateTab ?? 'payments')
   const [selectedStatus, setSelectedStatus] = useState<'all' | TransactionStatus>('all')
   const [selectedPayoutStatus, setSelectedPayoutStatus] = useState<'all' | PayoutStatus>('all')
@@ -93,16 +107,25 @@ export default function TransactionsList() {
   }, [stateTab])
 
   const statusCounts = useMemo(() => getStatusCounts(ALL_TRANSACTIONS), [])
-  const filteredRows = useMemo(
+  const rowsByStatus = useMemo(
     () => filterByStatus(ALL_TRANSACTIONS, selectedStatus),
     [selectedStatus]
   )
+  const filteredRows = useMemo(() => {
+    if (!accountName) return rowsByStatus
+    return rowsByStatus.filter((row) => row.accountName === accountName)
+  }, [rowsByStatus, accountName])
+
   const allPayoutRows = useMemo(() => generatePayoutRows(48), [])
   const payoutStatusCounts = useMemo(() => getPayoutStatusCounts(allPayoutRows), [allPayoutRows])
-  const filteredPayoutRows = useMemo(
+  const payoutsByStatus = useMemo(
     () => filterByPayoutStatus(allPayoutRows, selectedPayoutStatus),
     [allPayoutRows, selectedPayoutStatus]
   )
+  const filteredPayoutRows = useMemo(() => {
+    if (!accountName) return payoutsByStatus
+    return payoutsByStatus.filter((row) => row.accountName === accountName)
+  }, [payoutsByStatus, accountName])
 
   return (
     <div className="flex h-full w-full flex-col gap-[8px]" data-name="TransactionsList">
@@ -111,6 +134,7 @@ export default function TransactionsList() {
           activeTab={activeTab}
           onTabChange={setActiveTab}
           initialMerchant={accountName ?? undefined}
+          onMerchantChange={clearAccountFilter}
         />
         {activeTab === 'payments' && (
           <div
@@ -133,6 +157,17 @@ export default function TransactionsList() {
               onSearchChange={setSearchQuery}
               placeholder="Search by amount, description, or date"
               searchAriaLabel="Search by amount, description, or date"
+              activeFilter={
+                accountId && accountName
+                  ? {
+                      label: 'Account',
+                      value: accountName,
+                      onClear: clearAccountFilter,
+                      clearAriaLabel: `Remove account filter ${accountName}`,
+                    }
+                  : null
+              }
+              onAddFilterClick={applyAddFilter}
             />
           </div>
         )}
@@ -157,6 +192,17 @@ export default function TransactionsList() {
               onSearchChange={setSearchQuery}
               placeholder="Search by amount, description, or date"
               searchAriaLabel="Search by amount, description, or date"
+              activeFilter={
+                accountId && accountName
+                  ? {
+                      label: 'Account',
+                      value: accountName,
+                      onClear: clearAccountFilter,
+                      clearAriaLabel: `Remove account filter ${accountName}`,
+                    }
+                  : null
+              }
+              onAddFilterClick={applyAddFilter}
             />
           </div>
         )}
@@ -167,6 +213,17 @@ export default function TransactionsList() {
               onSearchChange={setSearchQuery}
               placeholder="Search by amount, description, or date"
               searchAriaLabel="Search by amount, description, or date"
+              activeFilter={
+                accountId && accountName
+                  ? {
+                      label: 'Account',
+                      value: accountName,
+                      onClear: clearAccountFilter,
+                      clearAriaLabel: `Remove account filter ${accountName}`,
+                    }
+                  : null
+              }
+              onAddFilterClick={applyAddFilter}
             />
           </div>
         )}

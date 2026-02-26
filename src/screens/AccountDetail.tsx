@@ -133,6 +133,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
               visibility={getActionBarVisibility(config, { isRadarRuleMatch: mockAccount?.isRadarRuleMatch })}
               onOpenAccountDrawer={() => setAccountDrawerOpen(true)}
               accountId={id}
+              accountName={accountName}
               actionsModalOpen={actionsModalOpen}
               actionsModalInitialFilter={actionsModalInitialFilter}
               onOpenActionsModal={(filter) => {
@@ -144,19 +145,21 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
             />
           </div>
         </div>
-        <div className="flex h-[120px] w-[200px] shrink-0 items-center justify-center">
-          <MetricCard
-            variant="labelValueSparkline"
-            label="Lifetime volume"
-            value={ltvDisplay.value}
-            changePercent={ltvDisplay.changePercent}
-            changeTooltipLabel="Change over last 30 days"
-            metricOptions={[...LTV_METRIC_OPTIONS]}
-            metricValue={ltvMetric}
-            onMetricChange={(id) => setLtvMetric(id as 'volume' | 'value')}
-            className="h-full w-full"
-          />
-        </div>
+        {effectiveSectionId !== 'overview' && (
+          <div className="flex h-[120px] w-[200px] shrink-0 items-center justify-center">
+            <MetricCard
+              variant="labelValueSparkline"
+              label="Lifetime volume"
+              value={ltvDisplay.value}
+              changePercent={ltvDisplay.changePercent}
+              changeTooltipLabel="Change over last 30 days"
+              metricOptions={[...LTV_METRIC_OPTIONS]}
+              metricValue={ltvMetric}
+              onMetricChange={(id) => setLtvMetric(id as 'volume' | 'value')}
+              className="h-full w-full"
+            />
+          </div>
+        )}
       </div>
       {/* Tab row: full-width tab bar; toggle floats above on the right so tab bottom border extends beneath it. */}
       <div className="relative w-full shrink-0 pl-10 pr-10 pt-2" data-name="Tabs">
@@ -248,13 +251,17 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
           const SectionComponent = SECTION_COMPONENTS[effectiveSectionId]
           if (!SectionComponent) return null
           const isFirstV2Tab = effectiveSectionId === 'financialSnapshot'
+          const sectionProps =
+            effectiveSectionId === 'myRevenue' || effectiveSectionId === 'toyboxRevenue'
+              ? { onRowClick: () => setPaymentDrawerOpen(true), accountName }
+              : { onRowClick: () => setPaymentDrawerOpen(true) }
           return (
             <div className="flex w-full items-stretch gap-10">
               <div className="min-w-0 flex-1 flex-col gap-6 flex">
                 {isFirstV2Tab && mockAccount?.isRadarRuleMatch && (
                   <RadarHighRiskCard accountId={id} />
                 )}
-                <SectionComponent onRowClick={() => setPaymentDrawerOpen(true)} />
+                <SectionComponent {...sectionProps} />
               </div>
               <div className="min-w-[320px] w-[30%] shrink-0">
                 <AccountDetailsSidebar

@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router-dom'
 import AccountDrawer from '../AccountDrawer'
 import MetricCard from '../metrics/MetricCard'
 import { SimpleMetricCardSkeleton } from '../metrics/MetricCard'
+import MetricDropdown from '../metrics/MetricDropdown'
+import { TIME_RANGE_OPTIONS, type TimeRange } from '../metrics/constants'
 import SectionHeader from '../SectionHeader'
 import TabBar from '../TabBar'
 import TableSkeleton from '../TableSkeleton'
@@ -34,15 +36,18 @@ function PlaceholderBox({ label, dataName }: { label: string; dataName?: string 
 export type ToyboxRevenueSectionProps = {
   /** When set, skeleton table rows are clickable and call this (e.g. open preview drawer). */
   onRowClick?: () => void
+  /** Account name for section header (optional). */
+  accountName?: string
 }
 
 const TOYBOX_LABS_ACCOUNT_ID = 'toybox-labs'
 const TOYBOX_LABS_ACCOUNT_NAME = 'Toybox Labs'
 
-export default function ToyboxRevenueSection({ onRowClick }: ToyboxRevenueSectionProps = {}) {
+export default function ToyboxRevenueSection({ onRowClick, accountName }: ToyboxRevenueSectionProps = {}) {
   const navigate = useNavigate()
   const prototype = usePrototypeOptional()
   const isLowFidelity = prototype?.fidelity === 'low'
+  const [timeRange, setTimeRange] = useState<TimeRange>('Last 30 days')
   const [transactionsTab, setTransactionsTab] = useState<string>(TRANSACTION_TABS[0].id)
   const [invoiceDrawerOpen, setInvoiceDrawerOpen] = useState(false)
   const [productDrawerOpen, setProductDrawerOpen] = useState(false)
@@ -59,8 +64,21 @@ export default function ToyboxRevenueSection({ onRowClick }: ToyboxRevenueSectio
   }
   return (
     <div className="flex min-w-0 max-w-[1120px] flex-1 flex-col" style={{ gap: 40 }}>
-      {/* Metric cards row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="flex flex-col gap-0">
+        <SectionHeader
+          title="Volume"
+          size="small"
+          trailing={
+            <MetricDropdown
+              value={timeRange}
+              options={TIME_RANGE_OPTIONS}
+              onChange={(v) => setTimeRange(v)}
+              ariaLabel="Time range"
+            />
+          }
+        />
+        {/* Metric cards row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {isLowFidelity ? (
           <>
             <SimpleMetricCardSkeleton />
@@ -74,6 +92,7 @@ export default function ToyboxRevenueSection({ onRowClick }: ToyboxRevenueSectio
             <MetricCard variant="simple" label="Transactions" value="1,247" />
           </>
         )}
+        </div>
       </div>
       {/* Subscriptions */}
       <div className="flex flex-col gap-2">

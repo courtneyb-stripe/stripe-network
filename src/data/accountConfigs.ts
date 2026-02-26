@@ -55,7 +55,7 @@ export const configTemplates: Record<ConfigType, AccountConfig> = {
 
 /** Section id -> display label for tabs */
 export const SECTION_LABELS: Record<string, string> = {
-  overview: 'Overview',
+  overview: 'Financial overview',
   moneyMovement: 'Money management',
   billing: 'Billing',
   commerce: 'Commerce',
@@ -76,7 +76,7 @@ export const V1_SECTIONS = [
 ] as const
 
 export const V1_SECTION_LABELS: Record<(typeof V1_SECTIONS)[number], string> = {
-  overview: 'Overview',
+  overview: 'Financial overview',
   balances: 'Balances',
   transactions: 'Transactions',
   billing: 'Billing',
@@ -88,7 +88,7 @@ export const V1_SECTION_LABELS: Record<(typeof V1_SECTIONS)[number], string> = {
 export const V2_SECTIONS = ['financialSnapshot', 'myRevenue', 'toyboxRevenue'] as const
 
 export const V2_SECTION_LABELS: Record<(typeof V2_SECTIONS)[number], string> = {
-  financialSnapshot: 'Overview',
+  financialSnapshot: 'Financial overview',
   myRevenue: 'Your business',
   toyboxRevenue: "Toybox Lab's business",
 }

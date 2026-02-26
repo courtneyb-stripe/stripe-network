@@ -88,6 +88,8 @@ type AccountDetailActionBarProps = {
   onOpenAccountDrawer?: () => void
   /** Account id so actions-required modal rows open detail in new tab. */
   accountId?: string
+  /** Account name shown above "Needs Attention" in the modal (match Settings). */
+  accountName?: string
   /** When provided, actions-required modal is controlled by parent. Pass filter to open with that view (e.g. 'payouts' from Payouts dropdown). */
   actionsModalOpen?: boolean
   actionsModalInitialFilter?: ActionsRequiredFilter
@@ -140,6 +142,7 @@ export default function AccountDetailActionBar({
   visibility,
   onOpenAccountDrawer,
   accountId,
+  accountName,
   actionsModalOpen: controlledActionsModalOpen,
   actionsModalInitialFilter,
   onOpenActionsModal: controlledOnOpen,
@@ -295,6 +298,7 @@ export default function AccountDetailActionBar({
         open={actionsModalOpen}
         onClose={closeActionsModal}
         accountId={accountId}
+        accountName={accountName}
         initialFilter={isControlled ? (actionsModalInitialFilter ?? 'all') : internalActionsModalFilter}
       />
     </div>

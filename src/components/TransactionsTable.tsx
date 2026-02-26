@@ -32,6 +32,8 @@ export type TransactionRow = {
   paymentMethodBrand?: 'visa' | 'amex' | 'mastercard'
   description: string
   date: string
+  /** Account name for filtering (e.g. Toybox Labs, Shopify). */
+  accountName?: string
 }
 
 function TableRow({
@@ -101,6 +103,7 @@ const DATES = [
 ]
 const CARD_BRANDS: Array<'amex' | 'visa' | 'mastercard'> = ['amex', 'visa', 'mastercard']
 const STATUSES: TransactionStatus[] = ['succeeded', 'succeeded', 'succeeded', 'pending', 'failed', 'refunded', 'disputed', 'uncaptured']
+const ACCOUNT_NAMES = ['Toybox Labs', 'Shopify'] as const
 
 export function generateTransactionRows(count: number): TransactionRow[] {
   const rows: TransactionRow[] = []
@@ -113,6 +116,7 @@ export function generateTransactionRows(count: number): TransactionRow[] {
       paymentMethodBrand: CARD_BRANDS[i % CARD_BRANDS.length],
       description: DESCRIPTIONS[i % DESCRIPTIONS.length],
       date: DATES[i % DATES.length],
+      accountName: ACCOUNT_NAMES[i % ACCOUNT_NAMES.length],
     })
   }
   return rows

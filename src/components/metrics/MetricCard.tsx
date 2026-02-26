@@ -90,15 +90,18 @@ type SimpleProps = BaseProps & {
 
 export type MetricCardProps = CompactProps | WithSparklineProps | SimpleProps | LabelValueSparklineProps
 
+/** Min height for simple metric card and skeleton so they match and appear taller. */
+const SIMPLE_METRIC_CARD_MIN_HEIGHT = 'min-h-[80px]'
+
 /** Skeleton for simple metric card (low fidelity): label and value as gray bars. */
 export function SimpleMetricCardSkeleton({ className = '' }: { className?: string }) {
   return (
     <div
-      className={`flex min-w-0 flex-col rounded-[12px] border border-neutral-50 bg-surface justify-center gap-1.5 p-4 shadow-[0px_1px_2px_-0.5px_rgba(0,0,0,0.05)] ${className}`.trim()}
+      className={`flex min-w-0 flex-col rounded-[12px] border border-neutral-50 bg-surface justify-center gap-1.5 p-[8px] shadow-[0px_1px_2px_-0.5px_rgba(0,0,0,0.05)] ${SIMPLE_METRIC_CARD_MIN_HEIGHT} ${className}`.trim()}
       data-name="Metric card (simple) skeleton"
     >
-      <div className="h-4 w-20 rounded-[3px] bg-neutral-50" aria-hidden />
-      <div className="h-6 w-16 rounded-[3px] bg-neutral-50" aria-hidden />
+      <div className="h-3 w-20 rounded-[3px] bg-neutral-100" aria-hidden />
+      <div className="h-3 w-16 rounded-[3px] bg-neutral-100" aria-hidden />
     </div>
   )
 }
@@ -106,8 +109,8 @@ export function SimpleMetricCardSkeleton({ className = '' }: { className?: strin
 function MetricValueSkeleton() {
   return (
     <div className="flex items-baseline gap-2" aria-hidden>
-      <div className="h-8 w-24 rounded-[3px] bg-neutral-50 animate-pulse" />
-      <div className="h-4 w-10 rounded-[3px] bg-neutral-50 animate-pulse" />
+      <div className="h-8 w-24 rounded-[3px] bg-neutral-100 animate-pulse" />
+      <div className="h-4 w-10 rounded-[3px] bg-neutral-100 animate-pulse" />
     </div>
   )
 }
@@ -288,7 +291,7 @@ export default function MetricCard(props: MetricCardProps) {
     const hasAction = props.actionIcon != null
     return (
       <div
-        className={`${baseCard} justify-center gap-1.5 p-4 shadow-[0px_1px_2px_-0.5px_rgba(0,0,0,0.05)] ${className}`}
+        className={`${baseCard} justify-center gap-1.5 p-4 shadow-[0px_1px_2px_-0.5px_rgba(0,0,0,0.05)] ${SIMPLE_METRIC_CARD_MIN_HEIGHT} ${className}`}
         data-name="Metric card (simple)"
       >
         <div className="flex w-full shrink-0 items-start justify-between gap-2">

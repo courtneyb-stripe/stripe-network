@@ -1,17 +1,20 @@
 /**
- * Actions required sidebar section — Figma 18-7608.
- * Shown when account is Restricted: title, link/expand buttons,
+ * Needs Attention sidebar section — Figma 18-7608.
+ * Shown when account is Restricted: title "Needs Attention", nested segmented control, link/expand buttons,
  * first 5 actions from shared list (using List/ListItem), "5 of 9 actions required" link (opens modal with All).
  * Styling aligned with Profile card and other sidebar sections.
  */
 
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ACTIONS_REQUIRED_LIST,
+  filterActionsRequired,
   getImpactsDisplayParts,
   getImpactsTooltipLabel,
   getImpactsMoreTooltipLabel,
 } from '../data/actionsRequired'
+import BabySegmentedControl from './BabySegmentedControl'
 import { usePrototypeOptional } from '../context/PrototypeContext'
 import { Icon } from '../icons/SailIcons'
 import { ArrowsOutwardIcon } from '../icons/ArrowsOutwardIcon'
@@ -27,17 +30,20 @@ const SIDEBAR_ACTION_COUNT = 5
 function ActionsRequiredSkeletonRow() {
   return (
     <div className="flex items-start gap-3 py-2 min-h-[44px]">
-      <div className="h-4 w-4 shrink-0 rounded-[3px] bg-neutral-50" aria-hidden />
+      <div className="h-3 w-3 shrink-0 rounded-[3px] bg-neutral-100" aria-hidden />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="h-4 w-full max-w-[70%] rounded-[3px] bg-neutral-50" aria-hidden />
-        <div className="h-3 w-full max-w-[50%] rounded-[3px] bg-neutral-50" aria-hidden />
+        <div className="h-3 w-full max-w-[70%] rounded-[3px] bg-neutral-100" aria-hidden />
+        <div className="h-3 w-full max-w-[50%] rounded-[3px] bg-neutral-100" aria-hidden />
       </div>
     </div>
   )
 }
 
-/** First 5 actions from shared list (matches modal "All" and dropdowns). */
-const SIDEBAR_ACTIONS = ACTIONS_REQUIRED_LIST.slice(0, SIDEBAR_ACTION_COUNT)
+const SEGMENT_OPTIONS = [
+  { id: 'blocking' as const, label: 'Blocking issues' },
+  { id: 'actions' as const, label: 'Actions required' },
+] as const
+type SegmentId = (typeof SEGMENT_OPTIONS)[number]['id']
 
 function getDaysPastDue(due: Date): number {
   const today = new Date()
@@ -61,6 +67,13 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
   const navigate = useNavigate()
   const prototype = usePrototypeOptional()
   const isLowFidelity = prototype?.fidelity === 'low'
+  const [segment, setSegment] = useState<SegmentId>('blocking')
+  const filteredForSidebar = filterActionsRequired('all')
+  /** Blocking: 2 items only; Actions required: full preview list. */
+  const sidebarActions =
+    segment === 'blocking'
+      ? filteredForSidebar.slice(0, 2)
+      : filteredForSidebar.slice(0, SIDEBAR_ACTION_COUNT)
 
   const handleCopyLink = () => {
     const url = copyLinkUrl ?? (typeof window !== 'undefined' ? window.location.href : '')
@@ -72,14 +85,14 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
   return (
     <div
       className="flex w-full flex-col gap-1 shrink-0 overflow-hidden rounded-[12px] bg-surface px-4 pb-4 pt-0"
-      data-name="Actions required section"
+      data-name="Needs Attention section"
       data-node-id="18:7608"
     >
       {/* Header: same structure as SectionHeader (min-h-8, 18px title) for consistency */}
       <div className="flex min-h-8 w-full items-center justify-between gap-1.5 shrink-0" data-node-id="18:7609">
         <div className="flex min-w-0 flex-1 items-center gap-1.5" data-node-id="18:7610">
           <p className="min-w-0 w-fit text-[18px] leading-[26px] font-semibold tracking-[-0.15px] text-default shrink-0">
-            Actions required
+            Needs Attention
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1" data-node-id="18:7613">
@@ -102,17 +115,25 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
           </IconButton>
         </div>
       </div>
+      {/* Nested segmented control — Figma 2059:88785 */}
+      <div className="shrink-0 pt-1">
+        <BabySegmentedControl
+          options={SEGMENT_OPTIONS}
+          selectedId={segment}
+          onChange={setSegment}
+          aria-label="Filter needs attention"
+        />
+      </div>
       {isLowFidelity ? (
-        <div className="flex flex-col shrink-0" aria-label="Actions required">
+        <div className="flex flex-col shrink-0" aria-label="Needs Attention">
           {Array.from({ length: SIDEBAR_ACTION_COUNT }, (_, i) => (
             <ActionsRequiredSkeletonRow key={i} />
           ))}
-          <div className="h-4 w-24 mt-1 rounded-[3px] bg-neutral-50" aria-hidden />
         </div>
       ) : (
         <>
           <List
-            aria-label="Actions required"
+            aria-label="Needs Attention"
             className="shrink-0"
             variant="noDividers"
             onAction={(id) => {
@@ -123,7 +144,7 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
               }
             }}
           >
-            {SIDEBAR_ACTIONS.map((action) => {
+            {sidebarActions.map((action) => {
               const daysPastDue = getDaysPastDue(action.dueDate)
               const pastDueText = `${daysPastDue} days past due`
               const { base: impactsBase, more: impactsMore } = getImpactsDisplayParts(action)
@@ -170,8 +191,8 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
             className="flex flex-col font-label-small text-subdued text-[12px] leading-4 text-left hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[4px] -mb-1"
           >
             <span>
-              <span className="leading-4">{SIDEBAR_ACTION_COUNT} of </span>
-              <span className="text-action-primary leading-4">{TOTAL_ACTIONS} actions required</span>
+              <span className="leading-4">{sidebarActions.length} of </span>
+              <span className="text-action-primary leading-4">{TOTAL_ACTIONS} need attention</span>
             </span>
           </button>
         </>

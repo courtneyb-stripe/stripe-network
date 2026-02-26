@@ -4,7 +4,7 @@
  * Background: Figma node 45:11049 (Stripe Network Cursor SRC).
  */
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { ROW_HEIGHT } from '../constants/table'
 import { ViewChip } from '../components/NetworkFilterGroup'
 import { PillBadge } from '../components/PillBadge'
@@ -35,9 +35,6 @@ const FILTER_CHIPS: { id: HubFilterId; label: string }[] = [
   { id: 'resources', label: 'Resources' },
   { id: 'archived', label: 'Archived' },
 ]
-
-/** For branch discovery: GitHub repo owner and name (public API). Override via window.__HUB_GITHUB_REPO__ or env if needed. */
-const GITHUB_REPO = { owner: 'stripe', repo: 'stripe-network' }
 
 function splitByCategory(rows: PrototypeRow[]) {
   const m0 = rows.filter((r) => r.category === 'm0')
@@ -165,139 +162,34 @@ function SectionDivider({ label }: { label: string }) {
   )
 }
 
-/** Compact neutral switch — gray track and thumb, for Show branches. */
-function CompactNeutralSwitch({
-  checked,
-  onChange,
-  id,
-}: {
-  checked: boolean
-  onChange: (checked: boolean) => void
-  id: string
-}) {
-  return (
-    <label
-      htmlFor={id}
-      className="relative inline-flex h-5 w-8 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-within:ring-2 focus-within:ring-action-primary focus-within:ring-offset-1"
-      role="switch"
-      aria-checked={checked}
-    >
-      <input
-        id={id}
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="peer sr-only"
-      />
-      <span className="block h-5 w-8 rounded-full bg-neutral-200 transition-colors peer-checked:bg-neutral-400" />
-      <span className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-3" />
-    </label>
-  )
-}
-
 function FilterChipsRow({
   activeFilter,
   onFilterChange,
   counts,
-  showBranches,
-  onShowBranchesChange,
 }: {
   activeFilter: HubFilterId
   onFilterChange: (id: HubFilterId) => void
   counts: { all: number; m0: number; resources: number; archived: number }
-  showBranches: boolean
-  onShowBranchesChange: (value: boolean) => void
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {FILTER_CHIPS.map((chip) => (
-          <ViewChip
-            key={chip.id}
-            label={chip.label}
-            count={counts[chip.id]}
-            active={activeFilter === chip.id}
-            onClick={() => onFilterChange(chip.id)}
-            size="compact"
-          />
-        ))}
-      </div>
-      <div className="flex items-center gap-2 ml-auto">
-        <span className="text-[14px] leading-5 text-[var(--color-default)]">
-          Show branches
-        </span>
-        <CompactNeutralSwitch
-          id="hub-show-branches"
-          checked={showBranches}
-          onChange={onShowBranchesChange}
+      {FILTER_CHIPS.map((chip) => (
+        <ViewChip
+          key={chip.id}
+          label={chip.label}
+          count={counts[chip.id]}
+          active={activeFilter === chip.id}
+          onClick={() => onFilterChange(chip.id)}
+          size="compact"
         />
-      </div>
+      ))}
     </div>
   )
 }
 
-type GitHubBranch = { name: string; commit?: { sha: string; url: string } }
-
-function branchNamesToRows(names: string[]): PrototypeRow[] {
-  return names.map((branch) => ({
-    id: `branch-${branch}`,
-    category: 'm0' as const,
-    name: 'Network WIP',
-    branch,
-    owner: '—',
-    lastUpdated: '—',
-    url: '/network',
-  }))
-}
-
-/** Fallback when GitHub API fails (e.g. private repo or 404). */
-const FALLBACK_BRANCH_NAMES = ['main', 'develop', 'staging']
-
-function useBranchDiscovery(enabled: boolean): PrototypeRow[] {
-  const [branchRows, setBranchRows] = useState<PrototypeRow[]>([])
-  useEffect(() => {
-    if (!enabled) {
-      setBranchRows([])
-      return
-    }
-    const { owner, repo } = GITHUB_REPO
-    const perPage = 100
-    const headers = { Accept: 'application/vnd.github.v3+json' as const }
-    const fetchPage = (page: number) =>
-      fetch(
-        `https://api.github.com/repos/${owner}/${repo}/branches?per_page=${perPage}&page=${page}`,
-        { headers }
-      ).then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-
-    Promise.all([fetchPage(1), fetchPage(2)])
-      .then(([page1, page2]) => {
-        const branches = [
-          ...(Array.isArray(page1) ? page1 : []),
-          ...(Array.isArray(page2) ? page2 : []),
-        ]
-        const names =
-          branches.length > 0
-            ? branches.map((b: GitHubBranch) => b.name)
-            : FALLBACK_BRANCH_NAMES
-        setBranchRows(branchNamesToRows(names))
-      })
-      .catch(() => setBranchRows(branchNamesToRows(FALLBACK_BRANCH_NAMES)))
-  }, [enabled])
-  return branchRows
-}
-
 export default function PrototypeHub() {
   const [activeFilter, setActiveFilter] = useState<HubFilterId>('m0')
-  const [showBranches, setShowBranches] = useState(false)
-  const branchRows = useBranchDiscovery(showBranches)
-  const branchesToShow =
-    showBranches && branchRows.length > 0
-      ? branchRows
-      : showBranches
-        ? branchNamesToRows(FALLBACK_BRANCH_NAMES)
-        : []
-  const displayPrototypes =
-    branchesToShow.length > 0 ? [...PROTOTYPES, ...branchesToShow] : PROTOTYPES
+  const displayPrototypes = PROTOTYPES
   const { m0, resources, archived } = splitByCategory(displayPrototypes)
   const counts = {
     all: displayPrototypes.length,
@@ -396,8 +288,6 @@ export default function PrototypeHub() {
           activeFilter={activeFilter}
           onFilterChange={setActiveFilter}
           counts={counts}
-          showBranches={showBranches}
-          onShowBranchesChange={setShowBranches}
         />
 
         <div

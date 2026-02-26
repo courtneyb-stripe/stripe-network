@@ -138,7 +138,7 @@ export default function SettingsPanel({
         </div>
       )}
       <nav
-        className="flex h-full w-[240px] shrink-0 flex-col border-r border-neutral-50 bg-surface pb-16 pt-5 pl-6 pr-6"
+        className="flex h-full w-[320px] shrink-0 flex-col border-r border-neutral-50 bg-surface pb-16 pt-5 pl-6 pr-6"
         aria-label="Settings"
       >
         <div className="flex flex-1 flex-col gap-4 overflow-auto">

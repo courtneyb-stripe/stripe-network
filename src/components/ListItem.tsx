@@ -18,6 +18,8 @@ type ListItemProps = {
   trailingContent?: React.ReactNode
   /** Rich content below description (e.g. body text + Link). */
   children?: React.ReactNode
+  /** When true, show selected state (e.g. in Needs Attention list). */
+  active?: boolean
 }
 
 export function ListItem({
@@ -27,6 +29,7 @@ export function ListItem({
   description,
   trailingContent,
   children,
+  active = false,
 }: ListItemProps) {
   const onAction = useListAction()
   const content = (
@@ -69,7 +72,7 @@ export function ListItem({
         <button
           type="button"
           onClick={() => onAction(id)}
-          className={`${rowClass} group/row cursor-pointer hover:bg-offset transition-colors w-full px-2`}
+          className={`${rowClass} group/row cursor-pointer hover:bg-offset transition-colors w-full px-2 ${active ? 'bg-offset' : ''}`}
         >
           {content}
         </button>

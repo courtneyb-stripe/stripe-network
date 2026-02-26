@@ -110,7 +110,7 @@ function SkeletonPropRow({ label }: { label: string }) {
   return (
     <div className="flex flex-col gap-0.5 w-full shrink-0" data-name="List item">
       <p className="font-label-small-emphasized text-default leading-4 w-full">{label}</p>
-      <div className="h-5 w-full max-w-[80%] rounded-[3px] bg-neutral-50" aria-hidden />
+      <div className="h-3 w-full max-w-[80%] rounded-[3px] bg-neutral-100" aria-hidden />
     </div>
   )
 }

@@ -29,6 +29,15 @@ export const PROTOTYPES: PrototypeRow[] = [
     url: '/network',
   },
   {
+    id: 'onsite-ia-rev',
+    category: 'm0',
+    name: 'Network (onsite IA rev)',
+    branch: 'onsite-ia-rev',
+    owner: '@courtneyb',
+    lastUpdated: 'Feb 25, 2025',
+    url: '/network',
+  },
+  {
     id: 'component-library',
     category: 'resources',
     name: 'Component library',

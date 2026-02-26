@@ -331,7 +331,7 @@ function SkeletonRow({ columns, isAlternate }: { columns: readonly Col[]; isAlte
             key={col.key}
             className={`flex min-w-0 shrink-0 items-center overflow-hidden ${col.width} ${col.align === 'right' ? 'justify-end' : ''}`}
           >
-            <div className="h-2.5 w-full max-w-full rounded-[3px] bg-neutral-50" aria-hidden />
+            <div className="h-3 w-full max-w-full rounded-[3px] bg-neutral-100" aria-hidden />
           </div>
         ))}
       </div>

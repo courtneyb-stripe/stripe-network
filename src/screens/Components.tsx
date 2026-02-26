@@ -679,7 +679,7 @@ function ComponentVariants({ name, demoState }: { name: string; demoState: DemoS
     case 'TabBar':
       return (
         <div className="flex flex-col gap-6">
-          <TabBar tabs={[{ id: 'overview', label: 'Overview' }, { id: 'billing', label: 'Billing' }, { id: 'moneyMovement', label: 'Money management' }]} activeId={tabPrimary} onChange={setTabPrimary} variant="primary" gap={4} />
+          <TabBar tabs={[{ id: 'overview', label: 'Financial overview' }, { id: 'billing', label: 'Billing' }, { id: 'moneyMovement', label: 'Money management' }]} activeId={tabPrimary} onChange={setTabPrimary} variant="primary" gap={4} />
           <TabBar tabs={[{ id: 'payments', label: 'Payments' }, { id: 'payouts', label: 'Payouts' }, { id: 'collected-fees', label: 'Platform fees' }]} activeId={tabSecondary} onChange={setTabSecondary} variant="secondary" gap={6} />
         </div>
       )

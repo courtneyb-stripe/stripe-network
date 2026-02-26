@@ -6,9 +6,7 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import BalancesAndMetricsSection from '../BalancesAndMetricsSection'
 import FinancialSnapshot from '../FinancialSnapshot'
-import { SimpleMetricCardSkeleton } from '../metrics/MetricCard'
 import { PropertyList, PropertyListItem } from '../PropertyList'
 import SectionHeader from '../SectionHeader'
 import TabBar from '../TabBar'
@@ -22,9 +20,50 @@ import { TIME_RANGE_OPTIONS, type TimeRange } from '../metrics/constants'
 function LowFidelityBox({ className = '' }: { className?: string }) {
   return (
     <div
-      className={`min-h-[80px] rounded-[12px] bg-neutral-50 flex items-center justify-center ${className}`.trim()}
+      className={`min-h-[80px] rounded-[12px] bg-neutral-100 flex items-center justify-center ${className}`.trim()}
       aria-hidden
     />
+  )
+}
+
+/** Balance card from Figma 2085:46771 — white card with placeholder layout, embedded in gray. */
+function BalancesCardPlaceholder() {
+  const bar = 'h-[10px] rounded-[3px] bg-neutral-100'
+  const iconBox = 'size-6 shrink-0 rounded-[6px] bg-neutral-100'
+  const cardContent = (
+    <>
+      <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <div className={iconBox} />
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className={`${bar} w-full max-w-[200px]`} />
+            <div className={`${bar} w-[58px]`} />
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <div className={`${bar} w-full max-w-[120px]`} />
+          <div className={`${bar} w-[58px]`} />
+        </div>
+      </div>
+    </>
+  )
+  return (
+    <div
+      className="flex w-full flex-col gap-2 rounded-[12px] bg-offset p-3"
+      data-name="Balances"
+      data-node-id="2085-46771"
+      aria-hidden
+    >
+      {[1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="flex h-[60px] w-full items-center gap-10 overflow-clip rounded-[12px] bg-white p-3"
+          data-name="Card-layout"
+        >
+          {cardContent}
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -79,30 +118,23 @@ export default function FinancialSnapshotSection({ onRowClick }: FinancialSnapsh
   }
   return (
     <div className="flex min-w-0 max-w-[1120px] flex-1 flex-col" style={{ gap: 40 }}>
-      {/* Financial snapshot */}
+      {/* Financial snapshot — full when high fi, grayscale low-fi variant when low fi */}
       <div className="flex flex-col gap-2">
-        {isLowFidelity ? (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <SimpleMetricCardSkeleton />
-              <SimpleMetricCardSkeleton />
-              <SimpleMetricCardSkeleton />
-            </div>
-        ) : (
-          <FinancialSnapshot
-            moneyIn="$84,200.00"
-            moneyOut="$36,800.00"
-            netFlow="$47,400"
-            timeRangeValue={timeRange}
-            timeRangeOptions={TIME_RANGE_OPTIONS}
-            onTimeRangeChange={setTimeRange}
-          />
-        )}
+        <FinancialSnapshot
+          moneyIn="$84,200.00"
+          moneyOut="$36,800.00"
+          netFlow="$47,400"
+          timeRangeValue={timeRange}
+          timeRangeOptions={TIME_RANGE_OPTIONS}
+          onTimeRangeChange={setTimeRange}
+          lowFidelity={isLowFidelity}
+        />
       </div>
 
-      {/* Balances */}
+      {/* Balances — Figma 2085:46771: single white card in gray area */}
       <div className="flex flex-col gap-2">
         <SectionHeader title="Balances" size="small" />
-        {isLowFidelity ? <LowFidelityBox /> : <BalancesAndMetricsSection />}
+        <BalancesCardPlaceholder />
       </div>
 
       {/* Recent transactions */}

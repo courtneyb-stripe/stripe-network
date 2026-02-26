@@ -31,15 +31,19 @@ export type TransactionsTabId = (typeof TABS)[number]['id']
 export default function TransactionsPageHeader({
   activeTab,
   onTabChange,
-  /** When set (e.g. from account detail), show this merchant; otherwise default to Shopify. */
-  initialMerchant,
+  /** Not used for header selection; header always shows chevron with no account selected. Kept for API compatibility. */
+  initialMerchant: _initialMerchant,
+  /** Called when user selects a specific account (not "All accounts"); use to clear the search-row account filter. */
+  onMerchantChange,
 }: {
   activeTab: TransactionsTabId
   onTabChange: (tabId: TransactionsTabId) => void
   initialMerchant?: string
+  onMerchantChange?: (merchant: string | null) => void
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [selectedMerchant, setSelectedMerchant] = useState(initialMerchant ?? 'Shopify')
+  /** No account selected by default across lists, even when navigating from account detail. */
+  const [selectedMerchant, setSelectedMerchant] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -73,7 +77,7 @@ export default function TransactionsPageHeader({
               aria-expanded={dropdownOpen}
               aria-label="Select merchant"
             >
-              {selectedMerchant !== 'Shopify' && selectedMerchant}
+              {selectedMerchant != null && selectedMerchant}
               <ChevronDownIcon size={8} fill="var(--color-icon-subdued)" />
             </button>
             {dropdownOpen && (
@@ -86,21 +90,21 @@ export default function TransactionsPageHeader({
                   type="button"
                   className="w-full px-3 py-2 text-left font-label-medium text-default hover:bg-offset focus:bg-offset focus:outline-none"
                   role="option"
-                  aria-selected={selectedMerchant === 'Shopify'}
+                  aria-selected={selectedMerchant === null}
                   onMouseDown={(e) => {
                     e.preventDefault()
-                    setSelectedMerchant('Shopify')
+                    setSelectedMerchant(null)
                     setDropdownOpen(false)
                   }}
                 >
-                  Shopify
+                  All accounts
                 </button>
                 <div className="my-1 border-t border-neutral-100" aria-hidden />
                 <div
                   className="overflow-y-auto overscroll-contain"
                   style={{ maxHeight: DROPDOWN_MAX_HEIGHT }}
                 >
-                  {MERCHANT_OPTIONS.filter((name) => name !== 'Shopify').map((name) => (
+                  {MERCHANT_OPTIONS.map((name) => (
                     <button
                       key={name}
                       type="button"
@@ -111,6 +115,7 @@ export default function TransactionsPageHeader({
                         e.preventDefault()
                         setSelectedMerchant(name)
                         setDropdownOpen(false)
+                        onMerchantChange?.(name)
                       }}
                     >
                       {name}

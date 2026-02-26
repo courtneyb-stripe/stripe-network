@@ -1,9 +1,18 @@
 /**
- * SearchBar — M0 Bar: filter button + search input + table options button.
- * Shared by Network filter group and Transactions list.
+ * SearchBar — List search bar per Figma 2082:23779 / 2082:23906 (Search Row).
+ * One row, consistent height: [ M1 Search Bar (search + input or placeholder) ] [ Add filter | or M1 Filter Well (chip left of Add filter) ] [ Table ].
+ * Shared by Network filter group and Transactions list (not global search).
  */
 
 import { Icon } from '../icons/SailIcons'
+import ActiveFilterChip from './ActiveFilterChip'
+
+export type ActiveFilter = {
+  label: string
+  value: string
+  onClear: () => void
+  clearAriaLabel?: string
+}
 
 type SearchBarProps = {
   value: string
@@ -12,9 +21,13 @@ type SearchBarProps = {
   searchAriaLabel?: string
   filterAriaLabel?: string
   optionsAriaLabel?: string
+  /** When set, M1 Filter Well appears with this chip left of Add filter; search bar shows placeholder (Figma 2082:23906). */
+  activeFilter?: ActiveFilter | null
+  /** Called when user clicks Add filter (e.g. to switch to filtered state with a default account). */
+  onAddFilterClick?: () => void
 }
 
-function BarButton({
+function TableControlsButton({
   'aria-label': ariaLabel,
   children,
 }: {
@@ -25,34 +38,41 @@ function BarButton({
     <button
       type="button"
       aria-label={ariaLabel}
-      className="flex h-7 min-h-7 w-7 shrink-0 items-center justify-center rounded-[length:var(--radius-action)] border border-neutral-50 bg-surface font-label-medium-emphasized transition-colors hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-action-primary"
+      className="flex h-[28px] min-h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[8px] border border-neutral-50 bg-surface transition-colors hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-action-primary"
     >
       {children}
     </button>
   )
 }
 
+const ADD_FILTER_BUTTON_CLASS =
+  'flex h-[28px] shrink-0 items-center gap-2 rounded-[6px] border border-neutral-50 bg-surface px-[10px] py-[6px] font-label-small-emphasized text-subdued transition-colors hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-action-primary'
+
 export default function SearchBar({
   value,
   onSearchChange,
   placeholder = 'Search',
   searchAriaLabel,
-  filterAriaLabel = 'Filter',
+  filterAriaLabel = 'Add filter',
   optionsAriaLabel = 'Table options',
+  activeFilter,
+  onAddFilterClick,
 }: SearchBarProps) {
   const ariaLabel = searchAriaLabel ?? placeholder
+  const showActiveFilter = activeFilter != null
+  const handleAddFilterClick = () => {
+    onAddFilterClick?.()
+  }
+
   return (
-    <div
-      className="flex w-full shrink-0 flex-col rounded-[length:var(--radius-xlarge)] border border-neutral-50 p-[4px] transition-[border-color,border-width] focus-within:border-2 focus-within:border-neutral-100"
-      data-name="M0 Bar"
-    >
-      <div className="flex w-full items-center gap-[10px] rounded-[length:var(--radius-rounded)] p-[6px]">
-        <BarButton aria-label={filterAriaLabel}>
-          <Icon name="filter" size={16} fill="var(--color-icon-default)" />
-        </BarButton>
-        <div className="flex min-h-px min-w-0 flex-1 items-center">
-          <label className="flex w-full min-w-0 items-center gap-[8px]">
-            <Icon name="search" size={16} fill="var(--color-icon-subdued)" className="shrink-0" aria-hidden />
+    <div className="flex w-full items-center gap-[16px]" data-name="Search Row">
+      {/* M1 Search Bar only — 44px tall, does not wrap filter or settings (Figma 2082:23908) */}
+      <div className="flex h-[44px] min-w-0 flex-1 items-center gap-[12px] overflow-clip rounded-[12px] border border-neutral-50 bg-surface px-[12px]">
+        <Icon name="search" size={16} fill="var(--color-icon-subdued)" className="shrink-0" aria-hidden />
+        {showActiveFilter ? (
+          <span className="font-label-medium text-icon-subdued">{placeholder}</span>
+        ) : (
+          <label className="flex min-w-0 flex-1 items-center">
             <input
               type="search"
               placeholder={placeholder}
@@ -62,11 +82,37 @@ export default function SearchBar({
               aria-label={ariaLabel}
             />
           </label>
-        </div>
-        <BarButton aria-label={optionsAriaLabel}>
-          <Icon name="settings" size={16} fill="var(--color-icon-default)" />
-        </BarButton>
+        )}
       </div>
+
+      {/* 16px gap then filter group: M1 Filter Well (chip + Add filter) or Add filter only */}
+      {showActiveFilter ? (
+        <div
+          className="flex shrink-0 items-center gap-[10px] rounded-[12px] border border-[var(--color-offset)] bg-offset p-[8px]"
+          data-name="M1 Filter Well"
+        >
+          <ActiveFilterChip
+            label={activeFilter.label}
+            value={activeFilter.value}
+            onClear={activeFilter.onClear}
+            clearAriaLabel={activeFilter.clearAriaLabel}
+          />
+          <button type="button" aria-label={filterAriaLabel} className={ADD_FILTER_BUTTON_CLASS} onClick={handleAddFilterClick}>
+            <Icon name="add" size={16} fill="var(--color-icon-subdued)" />
+            <span className="leading-4">Add filter</span>
+          </button>
+        </div>
+      ) : (
+        <button type="button" aria-label={filterAriaLabel} className={ADD_FILTER_BUTTON_CLASS} onClick={handleAddFilterClick}>
+          <Icon name="add" size={16} fill="var(--color-icon-subdued)" />
+          <span className="leading-4">Add filter</span>
+        </button>
+      )}
+
+      {/* 16px gap then table controls */}
+      <TableControlsButton aria-label={optionsAriaLabel}>
+        <Icon name="settings" size={16} fill="var(--color-icon-default)" />
+      </TableControlsButton>
     </div>
   )
 }

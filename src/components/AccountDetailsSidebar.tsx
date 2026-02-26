@@ -25,8 +25,8 @@ function ProfilePropertySkeletonRow() {
       data-name="PropertyListItem"
       style={{ minHeight: ROW_HEIGHT, height: ROW_HEIGHT }}
     >
-      <div className="h-4 w-16 rounded-[3px] bg-neutral-50" aria-hidden />
-      <div className="h-5 w-full max-w-[70%] rounded-[3px] bg-neutral-50" aria-hidden />
+      <div className="h-3 w-16 rounded-[3px] bg-neutral-100" aria-hidden />
+      <div className="h-3 w-full max-w-[70%] rounded-[3px] bg-neutral-100" aria-hidden />
     </div>
   )
 }
@@ -135,7 +135,7 @@ export default function AccountDetailsSidebar({
           </>
         )}
         <div
-          className="flex flex-col gap-2 overflow-hidden rounded-[12px] bg-surface px-4 pb-4 pt-0"
+          className="flex flex-col gap-2 overflow-hidden rounded-[12px] bg-surface px-2 pb-2 pt-0"
           data-name="baby/card/prop-list_vertical"
           data-node-id="2:6692"
         >

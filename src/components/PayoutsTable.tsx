@@ -36,6 +36,8 @@ export type PayoutRow = {
   bankName: string
   destinationLast4: string
   arriveBy: string
+  /** Account name for filtering (e.g. Toybox Labs, Shopify). */
+  accountName?: string
 }
 
 function PayoutTableRow({
@@ -96,6 +98,7 @@ const PAYOUT_AMOUNTS = [
   '$1,200.00', '$850.50', '$2,340.00', '$456.78', '$5,000.00', '$312.00', '$1,890.25', '$675.00',
 ]
 const PAYOUT_STATUSES: PayoutStatus[] = ['paid', 'paid', 'pending', 'in_transit', 'paid', 'failed', 'pending', 'canceled']
+const PAYOUT_ACCOUNT_NAMES = ['Toybox Labs', 'Shopify'] as const
 
 export function generatePayoutRows(count: number): PayoutRow[] {
   const rows: PayoutRow[] = []
@@ -107,6 +110,7 @@ export function generatePayoutRows(count: number): PayoutRow[] {
       bankName: BANK_NAMES[i % BANK_NAMES.length],
       destinationLast4: String(1000 + (i % 9000)).slice(-4),
       arriveBy: ARRIVE_BY_DATES[i % ARRIVE_BY_DATES.length],
+      accountName: PAYOUT_ACCOUNT_NAMES[i % PAYOUT_ACCOUNT_NAMES.length],
     })
   }
   return rows

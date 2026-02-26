@@ -43,6 +43,8 @@ type SectionHeaderProps = {
   onEdit?: () => void
   /** Label for the edit button tooltip. Default: "Edit". */
   editLabel?: string
+  /** Optional trailing element (e.g. time range dropdown) rendered after the action buttons. */
+  trailing?: React.ReactNode
 }
 
 function sectionHeaderTooltipId(title: string): string {
@@ -71,6 +73,7 @@ export default function SectionHeader({
   addLabel = 'Create',
   onEdit,
   editLabel = 'Edit',
+  trailing,
 }: SectionHeaderProps) {
   const tooltipId = sectionHeaderTooltipId(title)
   const addTooltipId = sectionHeaderAddTooltipId(title)
@@ -122,6 +125,7 @@ export default function SectionHeader({
               {actionIcon ?? <RightArrowIcon size={12} fill="var(--color-icon-subdued)" />}
             </IconButton>
           )}
+          {trailing != null && <span className="flex shrink-0 items-center">{trailing}</span>}
         </div>
       </div>
       {description != null && description !== '' && (

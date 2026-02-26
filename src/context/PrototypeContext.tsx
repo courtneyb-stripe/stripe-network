@@ -42,7 +42,7 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
   const [activityFilter, setActivityFilter] = useState<ActivityFilterMode>('viewChip')
   const [includeThirdPartyActivity, setIncludeThirdPartyActivity] = useState(false)
   const [iaVersion, setIaVersion] = useState<IaVersionId>('v2-money-movement')
-  const [fidelity, setFidelity] = useState<FidelityId>('mid')
+  const [fidelity, setFidelity] = useState<FidelityId>('low')
 
   const value = useMemo(
     () => ({

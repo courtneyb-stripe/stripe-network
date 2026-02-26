@@ -5,7 +5,6 @@
 
 import { useLocation } from 'react-router-dom'
 import { GlobalSearchBar, GlobalHeaderActions } from './GlobalHeader'
-import PrototypeFloatie from './PrototypeFloatie'
 import Sidebar from './Sidebar'
 
 const SETTINGS_PAGE_PATTERN = /^\/network\/[^/]+\/settings$/
@@ -39,7 +38,6 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       data-name="Shell"
     >
       <Sidebar />
-      <PrototypeFloatie />
       <main
         className="flex min-w-0 flex-1 flex-col overflow-hidden bg-surface"
         data-name="Main"
