@@ -49,7 +49,7 @@ function BalancesCardPlaceholder() {
   )
   return (
     <div
-      className="flex w-full flex-col gap-2 rounded-[12px] bg-offset p-3"
+      className="flex w-full flex-col gap-2 rounded-[12px] bg-offset p-[8px]"
       data-name="Balances"
       data-node-id="2085-46771"
       aria-hidden
@@ -116,20 +116,23 @@ export default function FinancialSnapshotSection({ onRowClick }: FinancialSnapsh
       },
     })
   }
+  const showFinancialSnapshot = false
+
   return (
     <div className="flex min-w-0 max-w-[1120px] flex-1 flex-col" style={{ gap: 40 }}>
-      {/* Financial snapshot — full when high fi, grayscale low-fi variant when low fi */}
-      <div className="flex flex-col gap-2">
-        <FinancialSnapshot
-          moneyIn="$84,200.00"
-          moneyOut="$36,800.00"
-          netFlow="$47,400"
-          timeRangeValue={timeRange}
-          timeRangeOptions={TIME_RANGE_OPTIONS}
-          onTimeRangeChange={setTimeRange}
-          lowFidelity={isLowFidelity}
-        />
-      </div>
+      {showFinancialSnapshot && (
+        <div className="flex flex-col gap-2">
+          <FinancialSnapshot
+            moneyIn="$84,200.00"
+            moneyOut="$36,800.00"
+            netFlow="$47,400"
+            timeRangeValue={timeRange}
+            timeRangeOptions={TIME_RANGE_OPTIONS}
+            onTimeRangeChange={setTimeRange}
+            lowFidelity={isLowFidelity}
+          />
+        </div>
+      )}
 
       {/* Balances — Figma 2085:46771: single white card in gray area; header shows total in FinancialSnapshot value style */}
       <div className="flex flex-col gap-2">

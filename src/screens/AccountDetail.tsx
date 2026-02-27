@@ -6,8 +6,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import AccountDetailHeader from '../components/AccountDetailHeader'
-import AccountDetailActionBar, { getActionBarVisibility } from '../components/AccountDetailActionBar'
-import MetricCard from '../components/metrics/MetricCard'
+import AccountDetailActionBar, { AccountDetailHeaderStatusButtons, getActionBarVisibility } from '../components/AccountDetailActionBar'
 import type { ActionsRequiredFilter } from '../components/ActionsRequiredModal'
 import AccountDrawer from '../components/AccountDrawer'
 import AccountDetailsSidebar, { type AccountStatusKind } from '../components/AccountDetailsSidebar'
@@ -109,28 +108,36 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
     : firstSectionId
 
   const breadcrumbs = [{ label: 'Network', href: '/network' }]
-
-  const LTV_METRIC_OPTIONS = [
-    { id: 'volume', label: 'Lifetime volume' },
-    { id: 'value', label: 'Lifetime value' },
-  ] as const
-  const [ltvMetric, setLtvMetric] = useState<'volume' | 'value'>('volume')
-  const ltvDisplay = ltvMetric === 'volume'
-    ? { value: '$9.88K', changePercent: '+2.4%' }
-    : { value: '$24.6K', changePercent: '-0.8%' }
+  const actionBarVisibility = getActionBarVisibility(config, { isRadarRuleMatch: mockAccount?.isRadarRuleMatch })
 
   return (
     <div className="flex h-full w-full flex-col" data-name="AccountDetail">
-      {/* Header + action bar + LTV card grouped; top-aligned so header position is stable across detail and nested pages. */}
-      <div className="flex min-h-[160px] shrink-0 items-start gap-6 px-10 pt-6 pb-0">
+      {/* Header + action bar; top-aligned so header position is stable across detail and nested pages. */}
+      <div className="flex h-fit shrink-0 items-start gap-0 pl-10 pr-10 pt-5 pb-0 tracking-normal">
         <div className="flex min-w-0 flex-1 flex-col">
           <div>
-            <AccountDetailHeader accountName={accountName} breadcrumbs={breadcrumbs} />
+            <AccountDetailHeader
+              accountName={accountName}
+              breadcrumbs={breadcrumbs}
+              trailing={
+                (actionBarVisibility.showPayouts || actionBarVisibility.showPayments) ? (
+                  <AccountDetailHeaderStatusButtons
+                    showPayouts={actionBarVisibility.showPayouts ?? false}
+                    showPayments={actionBarVisibility.showPayments ?? false}
+                    status={status}
+                    onOpenActionsModal={(filter) => {
+                      setActionsModalOpen(true)
+                      setActionsModalInitialFilter(filter ?? 'all')
+                    }}
+                  />
+                ) : null
+              }
+            />
           </div>
-          <div className="pt-6">
+          <div className="pt-2">
             <AccountDetailActionBar
               status={status}
-              visibility={getActionBarVisibility(config, { isRadarRuleMatch: mockAccount?.isRadarRuleMatch })}
+              visibility={actionBarVisibility}
               onOpenAccountDrawer={() => setAccountDrawerOpen(true)}
               accountId={id}
               accountName={accountName}
@@ -145,21 +152,6 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
             />
           </div>
         </div>
-        {effectiveSectionId !== 'overview' && (
-          <div className="flex h-[120px] w-[200px] shrink-0 items-center justify-center">
-            <MetricCard
-              variant="labelValueSparkline"
-              label="Lifetime volume"
-              value={ltvDisplay.value}
-              changePercent={ltvDisplay.changePercent}
-              changeTooltipLabel="Change over last 30 days"
-              metricOptions={[...LTV_METRIC_OPTIONS]}
-              metricValue={ltvMetric}
-              onMetricChange={(id) => setLtvMetric(id as 'volume' | 'value')}
-              className="h-full w-full"
-            />
-          </div>
-        )}
       </div>
       {/* Tab row: full-width tab bar; toggle floats above on the right so tab bottom border extends beneath it. */}
       <div className="relative w-full shrink-0 pl-10 pr-10 pt-2" data-name="Tabs">

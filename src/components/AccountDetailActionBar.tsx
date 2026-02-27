@@ -125,6 +125,52 @@ function RestrictedActionButton({
   )
 }
 
+/** Payouts/Payments for header: ghost style when enabled, restricted style when restricted. Rendered upper right on same baseline as page heading. */
+export function AccountDetailHeaderStatusButtons({
+  showPayouts,
+  showPayments,
+  status,
+  onOpenActionsModal,
+}: {
+  showPayouts: boolean
+  showPayments: boolean
+  status?: 'enabled' | 'restricted' | 'restricted_soon' | undefined
+  onOpenActionsModal?: (filter?: ActionsRequiredFilter) => void
+}) {
+  const isRestricted = status === 'restricted'
+  if (!showPayouts && !showPayments) return null
+  return (
+    <div className={`flex items-center ${isRestricted ? 'gap-[8px]' : 'gap-0'}`}>
+      {showPayouts && (isRestricted ? (
+        <RestrictedActionButton
+          label="Payouts"
+          tooltipLabel="Payouts paused"
+          tooltipId="payouts-tooltip"
+          onClick={() => onOpenActionsModal?.('payouts')}
+        />
+      ) : (
+        <ActionButton label="Payouts are enabled for this account." tooltipId="payouts-tooltip" variant="ghost">
+          <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />
+          Payouts
+        </ActionButton>
+      ))}
+      {showPayments && (isRestricted ? (
+        <RestrictedActionButton
+          label="Payments"
+          tooltipLabel="Payments paused"
+          tooltipId="payments-tooltip"
+          onClick={() => onOpenActionsModal?.('payments')}
+        />
+      ) : (
+        <ActionButton label="Payments are enabled for this account." tooltipId="payments-tooltip" variant="ghost">
+          <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />
+          Payments
+        </ActionButton>
+      ))}
+    </div>
+  )
+}
+
 /** When visibility is omitted, show all. Otherwise respect each flag (undefined = show). */
 function useVisibility(visibility: ActionBarVisibility | undefined) {
   return {
@@ -167,7 +213,6 @@ export default function AccountDetailActionBar({
       }
   const closeActionsModal = isControlled ? controlledOnClose! : () => setInternalActionsModalOpen(false)
   const moveMoneyRef = useRef<HTMLDivElement>(null)
-  const isRestricted = status === 'restricted' // customer-only (status undefined) → not restricted
 
   useEffect(() => {
     if (!moveMoneyOpen) return
@@ -180,56 +225,12 @@ export default function AccountDetailActionBar({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [moveMoneyOpen])
 
-  /** Consistent 8px gap between all action buttons. Only ghost variant should be grouped with gap-0 (no padding between). */
-  const bothPayoutsPaymentsEnabled = v.showPayouts && v.showPayments && !isRestricted
-
   return (
     <div
       className="flex flex-wrap items-center gap-[8px]"
       data-name="Home actions"
       data-node-id="2:6375"
     >
-      {bothPayoutsPaymentsEnabled ? (
-        <>
-          <ActionButton label="Payouts are enabled for this account." tooltipId="payouts-tooltip" variant="outline">
-            <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />
-            Payouts
-          </ActionButton>
-          <ActionButton label="Payments are enabled for this account." tooltipId="payments-tooltip" variant="outline">
-            <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />
-            Payments
-          </ActionButton>
-        </>
-      ) : (
-        <>
-          {v.showPayouts && (isRestricted ? (
-            <RestrictedActionButton
-              label="Payouts"
-              tooltipLabel="Payouts paused"
-              tooltipId="payouts-tooltip"
-              onClick={() => openActionsModal('payouts')}
-            />
-          ) : (
-            <ActionButton label="Payouts are enabled for this account." tooltipId="payouts-tooltip" variant="outline">
-              <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />
-              Payouts
-            </ActionButton>
-          ))}
-          {v.showPayments && (isRestricted ? (
-            <RestrictedActionButton
-              label="Payments"
-              tooltipLabel="Payments paused"
-              tooltipId="payments-tooltip"
-              onClick={() => openActionsModal('payments')}
-            />
-          ) : (
-            <ActionButton label="Payments are enabled for this account." tooltipId="payments-tooltip" variant="outline">
-              <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />
-              Payments
-            </ActionButton>
-          ))}
-        </>
-      )}
       {v.showMoveMoney && (
         <div className="relative" ref={moveMoneyRef}>
           <ActionButton
@@ -269,6 +270,17 @@ export default function AccountDetailActionBar({
           )}
         </div>
       )}
+      {v.showSettings && (
+        <ActionButton
+          label="Settings"
+          tooltipId="actionbar-settings-tooltip"
+          variant="standard"
+          onClick={openSettings}
+        >
+          <Icon name="settings" size={12} fill={iconDefault} />
+          Settings
+        </ActionButton>
+      )}
       {v.showMore && (
         <IconButton label="More actions" tooltipId="actionbar-more-tooltip" roundedFull>
           <Icon name="more" size={12} fill={iconDefault} />
@@ -282,16 +294,6 @@ export default function AccountDetailActionBar({
           onClick={onOpenAccountDrawer}
         >
           <Icon name="identityVerification" size={12} fill={iconDefault} />
-        </IconButton>
-      )}
-      {v.showSettings && (
-        <IconButton
-          label="Settings"
-          tooltipId="actionbar-settings-tooltip"
-          roundedFull
-          onClick={openSettings}
-        >
-          <Icon name="settings" size={12} fill={iconDefault} />
         </IconButton>
       )}
       <ActionsRequiredModal
