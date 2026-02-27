@@ -1,9 +1,10 @@
 /**
  * AccountDetailHeader — Figma baby/PageHeader (node 7:6475).
- * Logo + breadcrumbs + account name for the account detail page.
- * Design: Text/Subdued #596171, Text/Default #353A44, 64px logo, 12px breadcrumbs, 28px heading.
+ * Breadcrumbs + account name (and optional badge) for the account detail page.
+ * Optional trailing (e.g. Payouts/Payments) on the same row as account name, upper right.
  */
 
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
 /** 8px breadcrumb separator per Figma (baby/breadcrumb). */
@@ -27,13 +28,19 @@ export type BreadcrumbItem = { label: string; href: string | null }
 
 export default function AccountDetailHeader({
   accountName,
-  breadcrumbs = [{ label: 'Network IA (onsite)', href: '/network' }],
-  /** When set, used for the main heading (e.g. action required title); logo initials still use accountName. */
+  breadcrumbs = [{ label: 'Network', href: '/network' }],
+  /** When set, used for the main heading (e.g. action required title). */
   heading,
+  /** Badge(s) shown next to the account name (e.g. Enabled, Restricted, High risk). */
+  badge,
+  /** Rendered upper right on the same row as the account name (e.g. Payouts/Payments ghost buttons). */
+  trailing,
 }: {
   accountName: string
   breadcrumbs?: BreadcrumbItem[]
   heading?: string
+  badge?: ReactNode
+  trailing?: ReactNode
 }) {
   const displayHeading = heading ?? accountName
   return (
@@ -42,22 +49,7 @@ export default function AccountDetailHeader({
       data-name="baby/PageHeader"
       data-node-id="7:6475"
     >
-      {/* Logo — 64×64, rounded 8px (Figma 7:6476) */}
-      <div
-        className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[8px] bg-black text-white font-semibold text-sm tracking-tight"
-        aria-hidden
-      >
-        {accountName
-          .split(/\s+/)
-          .map((w) => w[0])
-          .join('')
-          .slice(0, 2)
-          .toUpperCase() || '—'}
-      </div>
-
-      {/* Breadcrumb + heading (Figma 7:6478) */}
       <div className="flex min-w-0 flex-1 flex-col items-start gap-0">
-        {/* Breadcrumbs — 12px Semibold, subdued, 8px gap (Figma baby/breadcrumb) */}
         <nav
           className="flex flex-wrap items-center gap-[8px]"
           aria-label="Breadcrumb"
@@ -81,10 +73,15 @@ export default function AccountDetailHeader({
             </span>
           ))}
         </nav>
-        {/* Heading — 28px, Text/Default (Figma 7:6481) */}
-        <h1 className="font-heading-xlarge mt-0 shrink-0" data-name="heading">
-          {displayHeading}
-        </h1>
+        <div className="mt-0 flex w-full items-center justify-between gap-4">
+          <div className="flex min-w-0 shrink-0 items-center gap-2">
+            <h1 className="font-heading-xlarge shrink-0" data-name="heading">
+              {displayHeading}
+            </h1>
+            {badge != null ? <span className="shrink-0">{badge}</span> : null}
+          </div>
+          {trailing != null ? <div className="shrink-0">{trailing}</div> : null}
+        </div>
       </div>
     </header>
   )

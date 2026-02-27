@@ -26,7 +26,7 @@ const COLUMNS = [
   { key: 'name', label: 'Name', width: 'w-[200px]' },
   { key: 'branch', label: 'Branch', width: 'w-[160px]' },
   { key: 'owner', label: 'Owner', width: 'w-[140px]' },
-  { key: 'lastUpdated', label: 'Last updated (PST)', width: 'w-[200px]' },
+  { key: 'description', label: 'Description', width: 'min-w-0 flex-1' },
 ] as const
 
 const FILTER_CHIPS: { id: HubFilterId; label: string }[] = [
@@ -110,7 +110,7 @@ function PrototypeRowLink({
       </div>
       <div className={`${cellClass} ${COLUMNS[4].width}`}>
         <span className={`truncate font-label-medium ${textClass}`}>
-          {row.lastUpdated} PST
+          {row.description}
         </span>
       </div>
     </>

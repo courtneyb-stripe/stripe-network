@@ -111,7 +111,7 @@ export default function Overview({
 
   return (
     <div className="flex min-w-0 max-w-[1120px] flex-1 flex-col">
-      {showBalances && <BalancesAndMetricsSection onOpenMoneyMovement={onOpenMoneyMovement} />}
+      {showBalances && <BalancesAndMetricsSection accountId={accountId} onOpenMoneyMovement={onOpenMoneyMovement} />}
 
       {showBalances && iaVersion === 'v1-global-ia' && (
         <div className="flex flex-col gap-6 pt-6">

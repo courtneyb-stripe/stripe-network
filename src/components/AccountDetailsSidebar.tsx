@@ -6,24 +6,14 @@
  * When showAccountRisk (e.g. radar rule matches), show Account risk + View risk analysis below ID (Figma 1966:24837).
  */
 
-import { Icon } from '../icons/SailIcons'
 import { ArrowsOutwardIcon } from '../icons/ArrowsOutwardIcon'
 import SectionHeader from './SectionHeader'
-import { PillBadge, RestrictedIcon } from './PillBadge'
 import ProfileSectionContent from './ProfileSectionContent'
-
-const ENABLED_BADGE = (
-  <PillBadge
-    label="Enabled"
-    variant="success"
-    icon={<Icon name="checkCircleFilled" size={12} fill="var(--color-feedback-success-on)" />}
-  />
-)
 
 export type AccountStatusKind = 'enabled' | 'restricted' | 'restricted_soon'
 
 type AccountDetailsSidebarProps = {
-  /** When 'restricted', shows Restricted badge and Actions required section above Account card. Undefined = customer-only (no status). */
+  /** When 'restricted', shows Actions required section above Account card. Badges (Enabled/Restricted/High risk) are shown in the page header next to account name. */
   status?: AccountStatusKind | undefined
   /** Controlled account drawer open state (shared with action bar verification button). */
   accountDrawerOpen?: boolean
@@ -49,25 +39,6 @@ export default function AccountDetailsSidebar({
   showAccountRisk = false,
   accountId,
 }: AccountDetailsSidebarProps) {
-  const statusBadge =
-    status === 'restricted'
-      ? <PillBadge label="Restricted" variant="critical" icon={<RestrictedIcon />} />
-      : status === 'restricted_soon'
-        ? <PillBadge label="Restricted soon" variant="attention" />
-        : status === 'enabled'
-          ? ENABLED_BADGE
-          : undefined
-  const badge =
-    statusBadge != null || showAccountRisk ? (
-      <div className="flex items-center gap-1">
-        {statusBadge}
-        {showAccountRisk && (
-          <PillBadge label="High risk" variant="critical" />
-        )}
-      </div>
-    ) : status === undefined ? (
-      <span className="font-label-medium text-subdued">–</span>
-    ) : undefined
   return (
     <>
       <div className="flex min-w-[320px] w-full shrink-0 flex-col">
@@ -80,7 +51,6 @@ export default function AccountDetailsSidebar({
           <SectionHeader
             title="Profile"
             size="small"
-            badge={badge}
             onEdit={onOpenSettings}
             editLabel="Settings"
             onAction={onOpenAccountDrawer}

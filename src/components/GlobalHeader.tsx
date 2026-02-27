@@ -5,11 +5,16 @@
 
 import { Icon } from '../icons/SailIcons'
 
-/* Figma asset URLs for App Dock (replace with local assets if needed after expiry) */
-const APP_DOCK_LOGO_1 = 'https://www.figma.com/api/mcp/asset/66b613b2-2a45-4061-979a-73b8072d15a1'
-const APP_DOCK_LOGO_2 = 'https://www.figma.com/api/mcp/asset/b3af7195-0f0a-4c39-a175-db7cff111dce'
-const APP_DOCK_LOGO_3 = 'https://www.figma.com/api/mcp/asset/b6d48d39-eea8-418b-9f43-116be5079eb0'
-const APP_DOCK_ADD_ICON = 'https://www.figma.com/api/mcp/asset/cfdbab8a-0a96-4fc6-9b18-3c5e7f64dab1'
+/** App Dock icons: Figma asset URLs expire or require auth, so use inline placeholders so the dock always renders. */
+function AppDockIcon({ className = 'h-4 w-4', bg }: { className?: string; bg?: string }) {
+  return (
+    <span
+      className={`shrink-0 rounded-[length:var(--radius-xsmall)] ${className}`}
+      style={{ backgroundColor: bg ?? 'var(--color-neutral-100)' }}
+      aria-hidden
+    />
+  )
+}
 
 function KeyboardShortcut({ keyChar = '/' }: { keyChar?: string }) {
   return (
@@ -37,21 +42,21 @@ function AppDock() {
           className="relative flex h-4 w-4 shrink-0 items-center justify-center rounded-[length:var(--radius-xsmall)] transition-colors hover:bg-offset"
           aria-label="App 1"
         >
-          <img src={APP_DOCK_LOGO_1} alt="" className="h-4 w-4 object-contain" />
+          <AppDockIcon />
         </button>
         <button
           type="button"
-          className="relative flex h-4 w-4 shrink-0 items-center justify-center rounded-[length:var(--radius-xsmall)] bg-[#063667] transition-colors hover:bg-offset"
+          className="relative flex h-4 w-4 shrink-0 items-center justify-center rounded-[length:var(--radius-xsmall)] transition-colors hover:bg-offset"
           aria-label="App 2"
         >
-          <img src={APP_DOCK_LOGO_2} alt="" className="h-2.5 w-2.5 object-contain" />
+          <AppDockIcon className="h-4 w-4" bg="#063667" />
         </button>
         <button
           type="button"
           className="relative flex h-4 w-4 shrink-0 items-center justify-center rounded-[length:var(--radius-xsmall)] transition-colors hover:bg-offset"
           aria-label="App 3"
         >
-          <img src={APP_DOCK_LOGO_3} alt="" className="h-4 w-4 object-contain" />
+          <AppDockIcon />
         </button>
       </div>
       <button
@@ -60,7 +65,7 @@ function AppDock() {
         aria-label="Add app"
         data-name="addApp"
       >
-        <img src={APP_DOCK_ADD_ICON} alt="" className="h-4 w-4 object-contain" />
+        <Icon name="add" size={16} fill="var(--color-icon-default)" />
       </button>
       <div
         className="pointer-events-none absolute inset-0 left-0 right-0 top-1/2 h-10 -translate-y-1/2 rounded-[length:var(--radius-rounded)] border border-neutral-50"

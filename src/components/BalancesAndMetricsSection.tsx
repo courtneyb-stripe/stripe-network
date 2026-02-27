@@ -9,11 +9,13 @@ import { GramIcon } from '../icons/GramIcon'
 import { DailyPayoutIcon } from '../icons/DailyPayoutIcon'
 
 export type BalancesAndMetricsSectionProps = {
+  /** When set, Financial accounts card links to embedded financial-accounts page. */
+  accountId?: string
   /** When set, Financial accounts card shows a ghost icon that deep-links to Money management. */
   onOpenMoneyMovement?: () => void
 }
 
-export default function BalancesAndMetricsSection({ onOpenMoneyMovement }: BalancesAndMetricsSectionProps = {}) {
+export default function BalancesAndMetricsSection({ accountId, onOpenMoneyMovement }: BalancesAndMetricsSectionProps = {}) {
   return (
     <div
       className="flex w-full flex-col gap-2"
@@ -58,7 +60,7 @@ export default function BalancesAndMetricsSection({ onOpenMoneyMovement }: Balan
           footerIcon={<DailyPayoutIcon size={12} />}
           onMore={() => {}}
         />
-        {/* Standalone card: Financial accounts — Gram icon in blurple container, daily payout icon in footer */}
+        {/* Standalone card: Financial accounts — blurple icon box, links to financial-accounts page */}
         <BalancesCard
           variant="default"
           icon={<GramIcon size={15} />}
@@ -69,8 +71,10 @@ export default function BalancesAndMetricsSection({ onOpenMoneyMovement }: Balan
           footerLabel="Earnings settle daily"
           footerIcon={<DailyPayoutIcon size={12} />}
           onMore={() => {}}
-          onSecondaryAction={onOpenMoneyMovement}
+          onSecondaryAction={accountId == null ? onOpenMoneyMovement : undefined}
           secondaryActionLabel="Financial accounts"
+          href={accountId ? `/network/${accountId}/financial-accounts` : undefined}
+          iconBoxClassName="bg-[#635BFF]"
         />
       </div>
     </div>

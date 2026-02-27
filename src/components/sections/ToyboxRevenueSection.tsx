@@ -10,6 +10,7 @@ import { SimpleMetricCardSkeleton } from '../metrics/MetricCard'
 import MetricDropdown from '../metrics/MetricDropdown'
 import { TIME_RANGE_OPTIONS, type TimeRange } from '../metrics/constants'
 import SectionHeader from '../SectionHeader'
+import TabBar from '../TabBar'
 import TableSkeleton from '../TableSkeleton'
 import { usePrototypeOptional } from '../../context/PrototypeContext'
 
@@ -35,6 +36,7 @@ export default function ToyboxRevenueSection({ onRowClick, accountName }: Toybox
   const prototype = usePrototypeOptional()
   const isLowFidelity = prototype?.fidelity === 'low'
   const [timeRange, setTimeRange] = useState<TimeRange>('Last 30 days')
+  const [networkTab, setNetworkTab] = useState<string>('customer')
   const [invoiceDrawerOpen, setInvoiceDrawerOpen] = useState(false)
   const [productDrawerOpen, setProductDrawerOpen] = useState(false)
 
@@ -94,9 +96,19 @@ export default function ToyboxRevenueSection({ onRowClick, accountName }: Toybox
         <TableSkeleton rowCount={10} showCheckboxColumn={false} onRowClick={() => setProductDrawerOpen(true)} />
       </div>
 
-      {/* Customers */}
+      {/* Network — Customer and Recipient tabs */}
       <div className="flex flex-col gap-2">
-        <SectionHeader title="Customers" size="small" onAction={() => {}} actionLabel="View all" />
+        <SectionHeader title="Network" size="small" onAction={() => {}} actionLabel="View all" />
+        <TabBar
+          tabs={[
+            { id: 'customer', label: 'Customer' },
+            { id: 'recipient', label: 'Recipient' },
+          ]}
+          activeId={networkTab}
+          onChange={setNetworkTab}
+          variant="secondary"
+          gap={6}
+        />
         <TableSkeleton rowCount={10} showCheckboxColumn={false} onRowClick={onRowClick} />
       </div>
 

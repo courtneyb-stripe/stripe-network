@@ -12,7 +12,7 @@ import { EditIcon } from '../icons/EditIcon'
 import { ExternalLinkIcon } from '../icons/ExternalLinkIcon'
 import { Accordion, AccordionItem } from './Accordion'
 import { IconButton } from './IconButton'
-import { PillBadge, RestrictedIcon } from './PillBadge'
+import { PillBadge } from './PillBadge'
 import { PropertyList, PropertyListItem } from './PropertyList'
 import SectionHeader from './SectionHeader'
 import TabBar from './TabBar'
@@ -115,13 +115,7 @@ function SkeletonPropRow({ label }: { label: string }) {
   )
 }
 
-const ENABLED_BADGE = (
-  <PillBadge
-    label="Enabled"
-    variant="success"
-    icon={<Icon name="checkCircleFilled" size={12} fill="var(--color-feedback-success-on)" />}
-  />
-)
+const ENABLED_BADGE = <PillBadge label="Enabled" variant="success" />
 
 export type ProfileEditSection = 'contact' | 'business'
 
@@ -213,7 +207,7 @@ export default function AccountDrawer({
   const isDetailsVariant = isPaymentDetails || isInvoiceDetails || isProductDetails
   const statusBadge =
     !isDetailsVariant && status === 'restricted'
-      ? <PillBadge label="Restricted" variant="critical" icon={<RestrictedIcon />} />
+      ? <PillBadge label="Restricted" variant="critical" />
       : !isDetailsVariant && status === 'restricted_soon'
         ? <PillBadge label="Restricted soon" variant="attention" />
         : !isDetailsVariant && status === 'enabled'

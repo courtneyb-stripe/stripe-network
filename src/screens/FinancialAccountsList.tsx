@@ -3,10 +3,12 @@
  * Same header position as Account detail main.
  */
 
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import AccountDetailHeader from '../components/AccountDetailHeader'
-import AccountDetailActionBar from '../components/AccountDetailActionBar'
+import AccountDetailActionBar, { AccountDetailMainActions, getActionBarVisibility } from '../components/AccountDetailActionBar'
+import { PillBadge } from '../components/PillBadge'
 import { getAccountById } from '../data/mockAccounts'
+import { configTemplates } from '../data/accountConfigs'
 import type { AccountStatusKind } from '../components/AccountDetailsSidebar'
 import { slugToDisplayName } from '../utils/string'
 import { useState } from 'react'
@@ -14,31 +16,72 @@ import AccountDrawer from '../components/AccountDrawer'
 
 export default function FinancialAccountsList() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [accountDrawerOpen, setAccountDrawerOpen] = useState(false)
+  const [actionsModalOpen, setActionsModalOpen] = useState(false)
+  const [actionsModalFilter, setActionsModalFilter] = useState<'all' | 'payouts' | 'payments'>('all')
 
   const mockAccount = getAccountById(id)
   const accountName = mockAccount?.name ?? (id ? slugToDisplayName(id) : '—')
   const hasMerchantConfig = mockAccount?.configurations?.includes('Merchant') ?? false
   const status: AccountStatusKind | undefined = hasMerchantConfig ? (mockAccount?.status ?? 'enabled') : undefined
+  const config = configTemplates[mockAccount?.configType ?? 'merchant']
+  const visibility = getActionBarVisibility(config, { hasMerchantConfig: hasMerchantConfig ?? false, isRadarRuleMatch: mockAccount?.isRadarRuleMatch })
 
   const breadcrumbs = [
-    { label: 'Network IA (onsite)', href: '/network' },
+    { label: 'Network', href: '/network' },
     { label: accountName, href: id ? `/network/${id}` : null },
     { label: 'Financial accounts', href: null },
   ]
+
+  const headerStatusBadge =
+    status === 'restricted'
+      ? <PillBadge label="Restricted" variant="critical" />
+      : status === 'restricted_soon'
+        ? <PillBadge label="Restricted soon" variant="attention" />
+        : status === 'enabled'
+          ? <PillBadge label="Enabled" variant="success" />
+          : undefined
+  const headerBadge =
+    headerStatusBadge != null || mockAccount?.isRadarRuleMatch ? (
+      <div className="flex items-center gap-1">
+        {headerStatusBadge}
+        {mockAccount?.isRadarRuleMatch && (
+          <PillBadge label="High risk" variant="critical" />
+        )}
+      </div>
+    ) : undefined
 
   return (
     <div className="flex h-full w-full flex-col" data-name="FinancialAccountsList">
       <div className="flex min-h-[160px] shrink-0 items-start gap-6 px-10 pt-6 pb-0">
         <div className="flex min-w-0 flex-1 flex-col">
           <div>
-            <AccountDetailHeader accountName={accountName} breadcrumbs={breadcrumbs} />
+            <AccountDetailHeader
+              accountName={accountName}
+              breadcrumbs={breadcrumbs}
+              badge={headerBadge}
+              trailing={
+                <AccountDetailMainActions
+                  visibility={visibility}
+                  onOpenAccountDrawer={() => setAccountDrawerOpen(true)}
+                  accountId={id}
+                />
+              }
+            />
           </div>
-          <div className="pt-6">
+          <div className="-ml-10 pl-10 pt-0">
             <AccountDetailActionBar
               status={status}
+              visibility={visibility}
               onOpenAccountDrawer={() => setAccountDrawerOpen(true)}
               accountId={id}
+              actionsModalOpen={actionsModalOpen}
+              actionsModalInitialFilter={actionsModalFilter}
+              actionsModalInitialSegment="actions"
+              onOpenActionsModal={(f) => { setActionsModalOpen(true); setActionsModalFilter(f ?? 'all') }}
+              onCloseActionsModal={() => setActionsModalOpen(false)}
+              onOpenSettingsSection={(sectionId) => id && navigate(`/network/${id}/settings`, { state: { sectionId } })}
             />
           </div>
         </div>

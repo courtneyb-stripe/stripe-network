@@ -6,8 +6,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import AccountDetailHeader from '../components/AccountDetailHeader'
-import AccountDetailActionBar, { getActionBarVisibility } from '../components/AccountDetailActionBar'
-import MetricCard from '../components/metrics/MetricCard'
+import AccountDetailActionBar, { AccountDetailMainActions, getActionBarVisibility } from '../components/AccountDetailActionBar'
+import { PillBadge } from '../components/PillBadge'
 import type { ActionsRequiredFilter } from '../components/ActionsRequiredModal'
 import AccountDrawer from '../components/AccountDrawer'
 import AccountDetailsSidebar, { type AccountStatusKind } from '../components/AccountDetailsSidebar'
@@ -47,6 +47,8 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
   const [accountDrawerOpen, setAccountDrawerOpen] = useState(false)
   const [actionsModalOpen, setActionsModalOpen] = useState(false)
   const [actionsModalInitialFilter, setActionsModalInitialFilter] = useState<ActionsRequiredFilter>('all')
+  const [actionsModalInitialSegment, setActionsModalInitialSegment] = useState<'blocking' | 'actions' | undefined>(undefined)
+  const [actionsModalInitialSelectedActionId, setActionsModalInitialSelectedActionId] = useState<string | undefined>(undefined)
   const [paymentDrawerOpen, setPaymentDrawerOpen] = useState(false)
   const navigate = useNavigate()
   const prototype = usePrototypeOptional()
@@ -108,58 +110,70 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
     ? activeSectionId
     : firstSectionId
 
-  const breadcrumbs = [{ label: 'Network IA (onsite)', href: '/network' }]
+  const breadcrumbs = [{ label: 'Network', href: '/network' }]
+  const actionBarVisibility = getActionBarVisibility(config, { hasMerchantConfig: hasMerchantConfig ?? false, isRadarRuleMatch: mockAccount?.isRadarRuleMatch })
 
-  const LTV_METRIC_OPTIONS = [
-    { id: 'volume', label: 'Lifetime volume' },
-    { id: 'value', label: 'Lifetime value' },
-  ] as const
-  const [ltvMetric, setLtvMetric] = useState<'volume' | 'value'>('volume')
-  const ltvDisplay = ltvMetric === 'volume'
-    ? { value: '$9.88K', changePercent: '+2.4%' }
-    : { value: '$24.6K', changePercent: '-0.8%' }
+  const headerStatusBadge =
+    status === 'restricted'
+      ? <PillBadge label="Restricted" variant="critical" />
+      : status === 'restricted_soon'
+        ? <PillBadge label="Restricted soon" variant="attention" />
+        : status === 'enabled'
+          ? <PillBadge label="Enabled" variant="success" />
+          : undefined
+  const headerBadge =
+    headerStatusBadge != null || mockAccount?.isRadarRuleMatch ? (
+      <div className="flex items-center gap-1">
+        {headerStatusBadge}
+        {mockAccount?.isRadarRuleMatch && (
+          <PillBadge label="High risk" variant="critical" />
+        )}
+      </div>
+    ) : undefined
 
   return (
     <div className="flex h-full w-full flex-col" data-name="AccountDetail">
-      {/* Header + action bar + LTV card grouped; top-aligned so header position is stable across detail and nested pages. */}
-      <div className="flex min-h-[160px] shrink-0 items-start gap-6 px-10 pt-6 pb-0">
+      {/* Header + action bar; top-aligned so header position is stable across detail and nested pages. */}
+      <div className="flex shrink-0 items-start gap-6 px-10 pt-6 pb-0">
         <div className="flex min-w-0 flex-1 flex-col">
           <div>
-            <AccountDetailHeader accountName={accountName} breadcrumbs={breadcrumbs} />
+            <AccountDetailHeader
+              accountName={accountName}
+              breadcrumbs={breadcrumbs}
+              badge={headerBadge}
+              trailing={
+                <AccountDetailMainActions
+                  visibility={actionBarVisibility}
+                  onOpenAccountDrawer={() => setAccountDrawerOpen(true)}
+                  accountId={id}
+                  onOpenSettings={id ? () => navigate(`/network/${id}/settings`) : undefined}
+                />
+              }
+            />
           </div>
-          <div className="pt-6">
+          <div className="-ml-10 pl-10 pt-1">
             <AccountDetailActionBar
               status={status}
-              visibility={getActionBarVisibility(config, { isRadarRuleMatch: mockAccount?.isRadarRuleMatch })}
+              visibility={actionBarVisibility}
               onOpenAccountDrawer={() => setAccountDrawerOpen(true)}
               accountId={id}
               accountName={accountName}
               actionsModalOpen={actionsModalOpen}
               actionsModalInitialFilter={actionsModalInitialFilter}
+              actionsModalInitialSegment={actionsModalInitialSegment}
+              actionsModalInitialSelectedActionId={actionsModalInitialSelectedActionId}
               onOpenActionsModal={(filter) => {
                 setActionsModalOpen(true)
                 setActionsModalInitialFilter(filter ?? 'all')
+                setActionsModalInitialSegment('actions')
+                setActionsModalInitialSelectedActionId(undefined)
               }}
               onCloseActionsModal={() => setActionsModalOpen(false)}
               onOpenSettings={() => id && navigate(`/network/${id}/settings`)}
+              onOpenSettingsSection={(sectionId) => id && navigate(`/network/${id}/settings`, { state: { sectionId } })}
             />
           </div>
         </div>
-        {effectiveSectionId !== 'overview' && (
-          <div className="flex h-[120px] w-[200px] shrink-0 items-center justify-center">
-            <MetricCard
-              variant="labelValueSparkline"
-              label="Lifetime volume"
-              value={ltvDisplay.value}
-              changePercent={ltvDisplay.changePercent}
-              changeTooltipLabel="Change over last 30 days"
-              metricOptions={[...LTV_METRIC_OPTIONS]}
-              metricValue={ltvMetric}
-              onMetricChange={(id) => setLtvMetric(id as 'volume' | 'value')}
-              className="h-full w-full"
-            />
-          </div>
-        )}
       </div>
       {/* Tab row: full-width tab bar; toggle floats above on the right so tab bottom border extends beneath it. */}
       <div className="relative w-full shrink-0 pl-10 pr-10 pt-2" data-name="Tabs">
@@ -206,6 +220,8 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                 onOpenActionsModal={() => {
                   setActionsModalOpen(true)
                   setActionsModalInitialFilter('all')
+                  setActionsModalInitialSegment(undefined)
+                  setActionsModalInitialSelectedActionId(undefined)
                 }}
                 onOpenSettings={() => id && navigate(`/network/${id}/settings`)}
                 showAccountRisk={mockAccount?.isRadarRuleMatch ?? false}
@@ -256,9 +272,11 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
               ? {
                   onRowClick: () => setPaymentDrawerOpen(true),
                   status,
-                  onOpenActionsModal: () => {
+                  onOpenActionsModal: (actionId?: string, segment?: 'blocking' | 'actions') => {
                     setActionsModalOpen(true)
                     setActionsModalInitialFilter('all')
+                    setActionsModalInitialSegment(segment ?? (actionId != null ? 'actions' : undefined))
+                    setActionsModalInitialSelectedActionId(actionId)
                   },
                   accountId: id,
                 }
@@ -282,6 +300,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                   onOpenActionsModal={() => {
                     setActionsModalOpen(true)
                     setActionsModalInitialFilter('all')
+                    setActionsModalInitialSegment(undefined)
                   }}
                   onOpenSettings={() => id && navigate(`/network/${id}/settings`)}
                   showAccountRisk={mockAccount?.isRadarRuleMatch ?? false}

@@ -22,18 +22,13 @@ const MOVE_MONEY_OPTIONS = [
 const iconSuccess = '#2B8700' // Figma Icon/Feedback Success
 const iconDefault = 'var(--color-icon-default)'
 
-/** Red circle with white X — Figma cancelCircleFilled / Icon/Feedback Critical (#E61947). For restricted Payouts/Payments. */
-function RestrictedCircleIcon({ size = 12 }: { size?: number }) {
+/** Red circle with white X — paused state (Icon/Feedback Critical). */
+function PausedCircleIcon({ size = 12 }: { size?: number }) {
   return (
     <span className="shrink-0 inline-flex" aria-hidden>
       <svg width={size} height={size} viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="6" cy="6" r="6" fill="var(--color-icon-feedback-critical)" />
-        <path
-          d="M4 4l4 4M8 4l-4 4"
-          stroke="white"
-          strokeWidth="1.25"
-          strokeLinecap="round"
-        />
+        <path d="M4 4l4 4M8 4l-4 4" stroke="white" strokeWidth="1.25" strokeLinecap="round" />
       </svg>
     </span>
   )
@@ -58,24 +53,32 @@ export type ActionBarVisibility = {
   showExpand?: boolean
   /** Show Settings icon. Default true. */
   showSettings?: boolean
+  /** Show Subscriptions ghost button (enabled instances only). Default true. */
+  showSubscriptions?: boolean
 }
 
 /**
  * Derive action bar visibility from account config.
- * - Configuration (customer vs merchant): customer has showPayouts/showCollectedFees false and no moneyMovement section → no Payouts, Payments, Move money.
- * - Status (enabled/restricted): only affects how Payouts/Payments look (outline vs restricted dropdown), not whether they show; pass status to the bar separately.
- * - High risk (Radar rule matches): options.isRadarRuleMatch is passed for future use (e.g. show/hide certain actions or risk-specific CTAs).
- * - Products (FA, multi-currency FA, Loans): options.products can override or narrow visibility when available (e.g. showMoveMoney only when financialAccounts true).
+ * - Every account with merchant config shows Payouts and Payments status (when enabled, both show as enabled).
+ * - Customer/borrower configs: no Payouts, Payments, Move money.
+ * - Status (enabled/restricted): only affects how Payouts/Payments look (ghost vs restricted), not whether they show.
+ * - High risk (Radar rule matches): options.isRadarRuleMatch is passed for future use.
+ * - Products (FA, multi-currency FA, Loans): options.products can override when available.
  */
-export function getActionBarVisibility(config: AccountConfig, _options?: { isRadarRuleMatch?: boolean; products?: { financialAccounts?: boolean; financialAccountsMultiCurrency?: boolean; loans?: boolean } }): ActionBarVisibility {
+export function getActionBarVisibility(
+  config: AccountConfig,
+  options?: { hasMerchantConfig?: boolean; isRadarRuleMatch?: boolean; products?: { financialAccounts?: boolean; financialAccountsMultiCurrency?: boolean; loans?: boolean } }
+): ActionBarVisibility {
   const hasMoneyMovement = config.sections.includes('moneyMovement')
+  const showPayoutsAndPayments = options?.hasMerchantConfig === true || config.showPayouts || config.showCollectedFees
   return {
-    showPayouts: config.showPayouts,
-    showPayments: config.showCollectedFees,
+    showPayouts: showPayoutsAndPayments,
+    showPayments: showPayoutsAndPayments,
     showMoveMoney: hasMoneyMovement,
     showMore: true,
     showExpand: true,
     showSettings: true,
+    showSubscriptions: true,
   }
 }
 
@@ -93,35 +96,79 @@ type AccountDetailActionBarProps = {
   /** When provided, actions-required modal is controlled by parent. Pass filter to open with that view (e.g. 'payouts' from Payouts dropdown). */
   actionsModalOpen?: boolean
   actionsModalInitialFilter?: ActionsRequiredFilter
+  /** When opening from paused Payouts/Payments/Subscriptions, pass 'actions' so segment is Actions required. */
+  actionsModalInitialSegment?: 'blocking' | 'actions'
+  /** When opening from sidebar list item click, pass that action's id to show in modal. */
+  actionsModalInitialSelectedActionId?: string
   onOpenActionsModal?: (filter?: ActionsRequiredFilter) => void
   onCloseActionsModal?: () => void
   /** When provided, Settings icon opens parent-controlled Settings modal (e.g. for deep link from profile Edit). */
   onOpenSettings?: () => void
+  /** When provided, status buttons (enabled) open Settings to this section (e.g. configurations). */
+  onOpenSettingsSection?: (sectionId: string) => void
 }
 
-/** Restricted Payouts/Payments button — click opens Actions required full page (no dropdown, no chevron). */
-function RestrictedActionButton({
-  label,
-  tooltipLabel,
-  tooltipId,
-  onClick,
+/** Payouts/Payments/Subscriptions: always ghost, same placement. Enabled → open Settings (configurations); restricted → open Actions required (filtered). */
+export function AccountDetailHeaderStatusButtons({
+  showPayouts,
+  showPayments,
+  showSubscriptions,
+  status,
+  onOpenSettingsSection,
+  onOpenActionsModal,
 }: {
-  label: string
-  tooltipLabel: string
-  tooltipId: string
-  onClick: () => void
+  showPayouts: boolean
+  showPayments: boolean
+  showSubscriptions?: boolean
+  status?: 'enabled' | 'restricted' | 'restricted_soon' | undefined
+  /** When enabled, status buttons open Settings to this section (e.g. configurations). */
+  onOpenSettingsSection?: (sectionId: string) => void
+  /** When restricted, status buttons open Actions required modal with this filter. */
+  onOpenActionsModal?: (filter?: ActionsRequiredFilter) => void
 }) {
+  const isRestricted = status === 'restricted' || status === 'restricted_soon'
+  const showSubs = showSubscriptions === true
+  if (!showPayouts && !showPayments && !showSubs) return null
+  const openEnabled = () => onOpenSettingsSection?.('configurations')
   return (
-    <ActionButton
-      label={tooltipLabel}
-      tooltipId={tooltipId}
-      variant="standard"
-      showChevron={false}
-      onClick={onClick}
-    >
-      <RestrictedCircleIcon size={12} />
-      {label}
-    </ActionButton>
+    <div className="flex items-center gap-0">
+      {showPayouts && (
+        <ActionButton
+          label={isRestricted ? 'Payouts paused — view actions required' : 'Payouts are enabled for this account.'}
+          tooltipId="payouts-tooltip"
+          tooltipPlacement="bottom"
+          variant="ghost"
+          onClick={isRestricted ? () => onOpenActionsModal?.('payouts') : openEnabled}
+        >
+          {isRestricted ? <PausedCircleIcon size={12} /> : <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />}
+          Payouts
+        </ActionButton>
+      )}
+      {showPayments && (
+        <ActionButton
+          label={isRestricted ? 'Payments paused — view actions required' : 'Payments are enabled for this account.'}
+          tooltipId="payments-tooltip"
+          tooltipPlacement="bottom"
+          variant="ghost"
+          onClick={isRestricted ? () => onOpenActionsModal?.('payments') : openEnabled}
+        >
+          {isRestricted ? <PausedCircleIcon size={12} /> : <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />}
+          Payments
+        </ActionButton>
+      )}
+      {showSubs && (
+        <ActionButton
+          label={isRestricted ? 'Subscriptions paused — view actions required' : 'Subscriptions are enabled for this account.'}
+          tooltipId="subscriptions-tooltip"
+          tooltipPlacement="bottom"
+          variant="ghost"
+          onClick={isRestricted ? () => onOpenActionsModal?.('all') : openEnabled}
+        >
+          {isRestricted ? <PausedCircleIcon size={12} /> : <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />}
+          Subscriptions
+        </ActionButton>
+      )}
+    </div>
   )
 }
 
@@ -130,6 +177,7 @@ function useVisibility(visibility: ActionBarVisibility | undefined) {
   return {
     showPayouts: visibility?.showPayouts !== false,
     showPayments: visibility?.showPayments !== false,
+    showSubscriptions: visibility?.showSubscriptions !== false,
     showMoveMoney: visibility?.showMoveMoney !== false,
     showMore: visibility?.showMore !== false,
     showExpand: visibility?.showExpand !== false,
@@ -137,37 +185,24 @@ function useVisibility(visibility: ActionBarVisibility | undefined) {
   }
 }
 
-export default function AccountDetailActionBar({
-  status,
+/** Move money, Settings, More, Expand — for use in header trailing (swapped placement). */
+export function AccountDetailMainActions({
   visibility,
   onOpenAccountDrawer,
   accountId,
-  accountName,
-  actionsModalOpen: controlledActionsModalOpen,
-  actionsModalInitialFilter,
-  onOpenActionsModal: controlledOnOpen,
-  onCloseActionsModal: controlledOnClose,
   onOpenSettings: onOpenSettingsProp,
-}: AccountDetailActionBarProps) {
+}: {
+  visibility?: ActionBarVisibility
+  onOpenAccountDrawer?: () => void
+  accountId?: string
+  onOpenSettings?: () => void
+}) {
   const navigate = useNavigate()
   const v = useVisibility(visibility)
   const [moveMoneyOpen, setMoveMoneyOpen] = useState(false)
-  const [internalActionsModalOpen, setInternalActionsModalOpen] = useState(false)
-  const [internalActionsModalFilter, setInternalActionsModalFilter] = useState<ActionsRequiredFilter>('all')
-  const openSettings =
-    onOpenSettingsProp ??
-    (accountId ? () => navigate(`/network/${accountId}/settings`) : () => {})
-  const isControlled = controlledOnOpen != null && controlledOnClose != null
-  const actionsModalOpen = isControlled ? (controlledActionsModalOpen ?? false) : internalActionsModalOpen
-  const openActionsModal = isControlled
-    ? (filter?: ActionsRequiredFilter) => controlledOnOpen!(filter)
-    : (filter?: ActionsRequiredFilter) => {
-        setInternalActionsModalFilter(filter ?? 'all')
-        setInternalActionsModalOpen(true)
-      }
-  const closeActionsModal = isControlled ? controlledOnClose! : () => setInternalActionsModalOpen(false)
   const moveMoneyRef = useRef<HTMLDivElement>(null)
-  const isRestricted = status === 'restricted' // customer-only (status undefined) → not restricted
+  const openSettings =
+    onOpenSettingsProp ?? (accountId ? () => navigate(`/network/${accountId}/settings`) : () => {})
 
   useEffect(() => {
     if (!moveMoneyOpen) return
@@ -180,56 +215,12 @@ export default function AccountDetailActionBar({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [moveMoneyOpen])
 
-  /** Consistent 8px gap between all action buttons. Only ghost variant should be grouped with gap-0 (no padding between). */
-  const bothPayoutsPaymentsEnabled = v.showPayouts && v.showPayments && !isRestricted
-
   return (
     <div
       className="flex flex-wrap items-center gap-[8px]"
       data-name="Home actions"
       data-node-id="2:6375"
     >
-      {bothPayoutsPaymentsEnabled ? (
-        <>
-          <ActionButton label="Payouts are enabled for this account." tooltipId="payouts-tooltip" variant="outline">
-            <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />
-            Payouts
-          </ActionButton>
-          <ActionButton label="Payments are enabled for this account." tooltipId="payments-tooltip" variant="outline">
-            <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />
-            Payments
-          </ActionButton>
-        </>
-      ) : (
-        <>
-          {v.showPayouts && (isRestricted ? (
-            <RestrictedActionButton
-              label="Payouts"
-              tooltipLabel="Payouts paused"
-              tooltipId="payouts-tooltip"
-              onClick={() => openActionsModal('payouts')}
-            />
-          ) : (
-            <ActionButton label="Payouts are enabled for this account." tooltipId="payouts-tooltip" variant="outline">
-              <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />
-              Payouts
-            </ActionButton>
-          ))}
-          {v.showPayments && (isRestricted ? (
-            <RestrictedActionButton
-              label="Payments"
-              tooltipLabel="Payments paused"
-              tooltipId="payments-tooltip"
-              onClick={() => openActionsModal('payments')}
-            />
-          ) : (
-            <ActionButton label="Payments are enabled for this account." tooltipId="payments-tooltip" variant="outline">
-              <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />
-              Payments
-            </ActionButton>
-          ))}
-        </>
-      )}
       {v.showMoveMoney && (
         <div className="relative" ref={moveMoneyRef}>
           <ActionButton
@@ -258,7 +249,6 @@ export default function AccountDetailActionBar({
                     onMouseDown={(e) => {
                       e.preventDefault()
                       setMoveMoneyOpen(false)
-                      // TODO: handle action (e.g. navigate or callback)
                     }}
                   >
                     {option}
@@ -268,6 +258,17 @@ export default function AccountDetailActionBar({
             </ul>
           )}
         </div>
+      )}
+      {v.showSettings && (
+        <ActionButton
+          label="Settings"
+          tooltipId="actionbar-settings-tooltip"
+          variant="standard"
+          onClick={openSettings}
+        >
+          <Icon name="settings" size={12} fill={iconDefault} />
+          Settings
+        </ActionButton>
       )}
       {v.showMore && (
         <IconButton label="More actions" tooltipId="actionbar-more-tooltip" roundedFull>
@@ -284,15 +285,58 @@ export default function AccountDetailActionBar({
           <Icon name="identityVerification" size={12} fill={iconDefault} />
         </IconButton>
       )}
-      {v.showSettings && (
-        <IconButton
-          label="Settings"
-          tooltipId="actionbar-settings-tooltip"
-          roundedFull
-          onClick={openSettings}
+    </div>
+  )
+}
+
+/** Payouts/Payments row + Actions required modal. Renders in the bar row (below header) when placement is swapped. */
+export default function AccountDetailActionBar({
+  status,
+  visibility,
+  onOpenAccountDrawer: _onOpenAccountDrawer,
+  accountId,
+  accountName,
+  actionsModalOpen: controlledActionsModalOpen,
+  actionsModalInitialFilter,
+  actionsModalInitialSegment,
+  actionsModalInitialSelectedActionId,
+  onOpenActionsModal: controlledOnOpen,
+  onCloseActionsModal: controlledOnClose,
+  onOpenSettings: _onOpenSettings,
+  onOpenSettingsSection,
+}: AccountDetailActionBarProps) {
+  const v = useVisibility(visibility)
+  const [internalActionsModalOpen, setInternalActionsModalOpen] = useState(false)
+  const [internalActionsModalFilter, setInternalActionsModalFilter] = useState<ActionsRequiredFilter>('all')
+  const isControlled = controlledOnOpen != null && controlledOnClose != null
+  const actionsModalOpen = isControlled ? (controlledActionsModalOpen ?? false) : internalActionsModalOpen
+  const openActionsModal = isControlled
+    ? (filter?: ActionsRequiredFilter) => controlledOnOpen!(filter)
+    : (filter?: ActionsRequiredFilter) => {
+        setInternalActionsModalFilter(filter ?? 'all')
+        setInternalActionsModalOpen(true)
+      }
+  const closeActionsModal = isControlled ? controlledOnClose! : () => setInternalActionsModalOpen(false)
+  /** Uncontrolled: opened only from paused buttons, so segment is always Actions required. */
+  const modalInitialSegment = isControlled ? actionsModalInitialSegment : 'actions'
+
+  const showStatus = v.showPayouts || v.showPayments || v.showSubscriptions
+  return (
+    <>
+      {showStatus && (
+        <div
+          className="-ml-3 flex flex-wrap items-center gap-[8px]"
+          data-name="Payouts Payments Subscriptions row"
         >
-          <Icon name="settings" size={12} fill={iconDefault} />
-        </IconButton>
+          <AccountDetailHeaderStatusButtons
+            showPayouts={v.showPayouts}
+            showPayments={v.showPayments}
+            showSubscriptions={v.showSubscriptions}
+            status={status}
+            onOpenSettingsSection={onOpenSettingsSection}
+            onOpenActionsModal={openActionsModal}
+          />
+        </div>
       )}
       <ActionsRequiredModal
         open={actionsModalOpen}
@@ -300,7 +344,9 @@ export default function AccountDetailActionBar({
         accountId={accountId}
         accountName={accountName}
         initialFilter={isControlled ? (actionsModalInitialFilter ?? 'all') : internalActionsModalFilter}
+        initialSegment={modalInitialSegment}
+        initialSelectedActionId={actionsModalInitialSelectedActionId}
       />
-    </div>
+    </>
   )
 }

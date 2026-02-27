@@ -20,6 +20,8 @@ type ListItemProps = {
   children?: React.ReactNode
   /** When true, show selected state (e.g. in Needs Attention list). */
   active?: boolean
+  /** Icon container: default = gray offset box; critical = no box (e.g. red circle X for blocking issues). */
+  iconVariant?: 'default' | 'critical'
 }
 
 export function ListItem({
@@ -30,14 +32,16 @@ export function ListItem({
   trailingContent,
   children,
   active = false,
+  iconVariant = 'default',
 }: ListItemProps) {
   const onAction = useListAction()
+  const iconWrapperClass =
+    iconVariant === 'critical'
+      ? 'flex h-fit w-fit shrink-0 items-start justify-start'
+      : 'flex h-fit w-fit shrink-0 items-start justify-start rounded-[length:var(--radius-small)] bg-offset text-icon-subdued'
   const content = (
     <>
-      <span
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[length:var(--radius-small)] bg-offset text-icon-subdued"
-        aria-hidden
-      >
+      <span className={iconWrapperClass} aria-hidden>
         {icon}
       </span>
       <div className="min-w-0 flex-1">

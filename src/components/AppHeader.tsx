@@ -18,7 +18,7 @@ export default function AppHeader() {
         </div>
         <div className="flex flex-col min-w-0">
           <span className="font-label-small uppercase tracking-wide text-subdued">
-            Network IA (onsite)
+            Network
           </span>
           <span className="font-title truncate text-default">
             Toybox Labs

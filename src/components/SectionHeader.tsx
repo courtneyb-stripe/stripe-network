@@ -86,7 +86,7 @@ export default function SectionHeader({
           <p className={`min-w-0 w-fit whitespace-pre-wrap ${SIZE_CLASSES[size]}`}>
             {title}
           </p>
-          {badge}
+          {badge != null && <span className="ml-auto shrink-0">{badge}</span>}
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {onEdit != null && (

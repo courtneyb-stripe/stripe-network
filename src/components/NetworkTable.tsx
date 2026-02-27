@@ -9,7 +9,7 @@ import { generateNetworkRows } from '../data/networkDummyData'
 import { MOCK_ACCOUNTS } from '../data/mockAccounts'
 import type { NetworkTabId } from './NetworkPageHeader'
 import { Icon } from '../icons/SailIcons'
-import { PillBadge, RestrictedIcon } from './PillBadge'
+import { PillBadge } from './PillBadge'
 
 const COLUMNS = [
   { key: 'account', label: 'Account', align: 'left', width: 'w-[184px]' },
@@ -171,7 +171,7 @@ function StatusBadge({ kind }: { kind: StatusKind }) {
     return <PillBadge label="Restricted soon" variant="attention" />
   }
   if (kind === 'restricted') {
-    return <PillBadge label="Restricted" variant="critical" icon={<RestrictedIcon />} />
+    return <PillBadge label="Restricted" variant="critical" />
   }
   return null
 }

@@ -16,7 +16,7 @@ import {
 } from '../data/componentRegistry'
 import { ViewChip } from '../components/NetworkFilterGroup'
 import SectionHeader from '../components/SectionHeader'
-import { PillBadge, RestrictedIcon } from '../components/PillBadge'
+import { PillBadge } from '../components/PillBadge'
 import { ActionButton } from '../components/ActionButton'
 import { IconButton } from '../components/IconButton'
 import { PageActionButton } from '../components/PageActionButton'
@@ -710,7 +710,7 @@ function ComponentVariants({ name, demoState }: { name: string; demoState: DemoS
           <PillBadge label="Attention" variant="attention" />
           <PillBadge label="Critical" variant="critical" />
           <PillBadge label="Neutral" variant="neutral" />
-          <PillBadge label="Restricted" variant="critical" icon={<RestrictedIcon />} />
+          <PillBadge label="Restricted" variant="critical" />
         </div>
       )
     case 'PropertyList':
