@@ -7,7 +7,7 @@
 
 import React from 'react'
 import ChevronDownIcon from '../icons/ChevronDownIcon'
-import LabelTooltip from './LabelTooltip'
+import LabelTooltip, { type TooltipPlacement } from './LabelTooltip'
 
 export type ActionButtonVariant = 'standard' | 'outline' | 'iconOnly' | 'ghost'
 
@@ -31,6 +31,8 @@ type ActionButtonProps = {
   label: string
   tooltipId: string
   variant?: ActionButtonVariant
+  /** Tooltip placement relative to button. Default: 'top'. */
+  tooltipPlacement?: TooltipPlacement
   /** When standard and not iconOnly: show down chevron after label (e.g. Move money, Payouts paused). */
   showChevron?: boolean
   /** When ghost: give the label text dashed light-gray underline and use light tooltip for description. */
@@ -43,6 +45,7 @@ export function ActionButton({
   label,
   tooltipId,
   variant = 'standard',
+  tooltipPlacement = 'top',
   showChevron = false,
   labelDottedTooltip = false,
   children,
@@ -88,7 +91,7 @@ export function ActionButton({
     <LabelTooltip
       label={label}
       tooltipId={tooltipId}
-      placement="top"
+      placement={tooltipPlacement}
       variant={useDottedLabel ? 'light' : 'dark'}
     >
       {button}

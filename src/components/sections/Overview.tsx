@@ -39,7 +39,6 @@ const SAVED_LIST_CHIPS = [
 type SavedListId = (typeof SAVED_LIST_CHIPS)[number]['id']
 
 const RECENT_ACTIVITY_TABS = [
-  { id: 'support-cases', label: 'Support cases' },
   { id: 'events', label: 'Events' },
   { id: 'logs', label: 'Logs' },
   { id: 'sent-emails', label: 'Sent emails' },
@@ -82,7 +81,7 @@ export default function Overview({
   const [financialTimeRange, setFinancialTimeRange] = useState<TimeRange>('Last 30 days')
   const [activeTransactionTab, setActiveTransactionTab] = useState<TransactionTabId>('payments')
   const [savedListId, setSavedListId] = useState<SavedListId>('shopify')
-  const [activeActivityTab, setActiveActivityTab] = useState<RecentActivityTabId>('support-cases')
+  const [activeActivityTab, setActiveActivityTab] = useState<RecentActivityTabId>('events')
 
   const transactionTabs = useMemo(
     () =>
@@ -112,7 +111,7 @@ export default function Overview({
 
   return (
     <div className="flex min-w-0 max-w-[1120px] flex-1 flex-col">
-      {showBalances && <BalancesAndMetricsSection onOpenMoneyMovement={onOpenMoneyMovement} />}
+      {showBalances && <BalancesAndMetricsSection accountId={accountId} onOpenMoneyMovement={onOpenMoneyMovement} />}
 
       {showBalances && iaVersion === 'v1-global-ia' && (
         <div className="flex flex-col gap-6 pt-6">

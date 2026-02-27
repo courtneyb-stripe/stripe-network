@@ -6,8 +6,10 @@
 
 import { useParams } from 'react-router-dom'
 import AccountDetailHeader from '../components/AccountDetailHeader'
+import { PillBadge } from '../components/PillBadge'
 import { getActionTitle } from '../data/actionsRequired'
 import { getAccountById } from '../data/mockAccounts'
+import type { AccountStatusKind } from '../components/AccountDetailsSidebar'
 import { slugToDisplayName } from '../utils/string'
 
 export default function ActionRequiredDetail() {
@@ -17,6 +19,26 @@ export default function ActionRequiredDetail() {
   const accountName =
     mockAccount?.name ?? (id ? slugToDisplayName(id) : '—')
   const actionTitle = actionId ? getActionTitle(actionId) : '—'
+  const hasMerchantConfig = mockAccount?.configurations?.includes('Merchant') ?? false
+  const status: AccountStatusKind | undefined = hasMerchantConfig ? (mockAccount?.status ?? 'enabled') : undefined
+
+  const headerStatusBadge =
+    status === 'restricted'
+      ? <PillBadge label="Restricted" variant="critical" />
+      : status === 'restricted_soon'
+        ? <PillBadge label="Restricted soon" variant="attention" />
+        : status === 'enabled'
+          ? <PillBadge label="Enabled" variant="success" />
+          : undefined
+  const headerBadge =
+    headerStatusBadge != null || mockAccount?.isRadarRuleMatch ? (
+      <div className="flex items-center gap-1">
+        {headerStatusBadge}
+        {mockAccount?.isRadarRuleMatch && (
+          <PillBadge label="High risk" variant="critical" />
+        )}
+      </div>
+    ) : undefined
 
   const breadcrumbs = [
     { label: 'Network', href: '/network' },
@@ -34,6 +56,7 @@ export default function ActionRequiredDetail() {
               accountName={accountName}
               breadcrumbs={breadcrumbs}
               heading={actionTitle}
+              badge={headerBadge}
             />
           </div>
         </div>

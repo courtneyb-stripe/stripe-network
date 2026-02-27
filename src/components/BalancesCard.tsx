@@ -4,6 +4,7 @@
  * Variants: default (standalone), payouts (standalone, same layout), stacked, stackedWithSparkline.
  */
 
+import { Link } from 'react-router-dom'
 import { Icon } from '../icons/SailIcons'
 import { IconButton } from './IconButton'
 import { RightArrowIcon } from './metrics/MetricCard'
@@ -48,6 +49,10 @@ export type BalancesCardProps = {
   iconRotate?: number
   /** Align value/amounts to the right. Use 'right' only when card is in a 2-per-row layout in main content or when the card is in the sidebar; otherwise default 'left'. */
   valueAlign?: 'left' | 'right'
+  /** When set, the whole card is a link to this href (e.g. /network/:id/financial-accounts). */
+  href?: string
+  /** Override icon container background (e.g. blurple: "bg-[#635BFF]"). When set, icon uses white for contrast. */
+  iconBoxClassName?: string
   className?: string
 }
 
@@ -69,6 +74,8 @@ export default function BalancesCard({
   compactRow = false,
   iconRotate,
   valueAlign = 'left',
+  href,
+  iconBoxClassName,
   className = '',
 }: BalancesCardProps) {
   const isStacked = variant === 'stacked' || variant === 'stackedWithSparkline'
@@ -123,15 +130,17 @@ export default function BalancesCard({
     </div>
   )
 
+  const iconBoxClass = iconBoxClassName ?? 'bg-offset'
+  const iconFill = iconBoxClassName != null ? 'white' : 'var(--color-icon-default)'
   const titleBlock = (
     <div className="flex min-w-0 items-center gap-[var(--spacing-small)] justify-start">
       <div
-        className="flex shrink-0 items-center justify-center rounded-[7px] bg-offset"
+        className={`flex shrink-0 items-center justify-center rounded-[7px] ${iconBoxClass}`}
         style={{ width: ICON_BOX_SIZE, height: ICON_BOX_SIZE }}
         data-node-id="23:8332"
       >
         {icon != null ? (
-          <span className="flex items-center justify-center text-icon-default">
+          <span className={`flex items-center justify-center ${iconBoxClassName != null ? '[&_*]:fill-white' : 'text-icon-default'}`}>
             {icon}
           </span>
         ) : (
@@ -139,7 +148,7 @@ export default function BalancesCard({
             <Icon
               name={iconName as 'balance'}
               size={16}
-              fill="var(--color-icon-default)"
+              fill={iconFill}
               aria-hidden
             />
           </span>
@@ -169,12 +178,9 @@ export default function BalancesCard({
     </div>
   )
 
-  return (
-    <div
-      className={`flex w-full items-center overflow-clip ${heightClass} ${roundedClass} ${borderClass} ${bgClass} ${paddingClass} ${className}`}
-      data-name="Balances card"
-      data-node-id={dataNodeId}
-    >
+  const cardClassName = `flex w-full items-center overflow-clip ${heightClass} ${roundedClass} ${borderClass} ${bgClass} ${paddingClass} ${className}`.trim()
+  const cardContent = (
+    <>
       {isAmountRight ? (
         <div className="flex min-w-0 flex-1 items-center gap-4">
           {/* Title fills available space; 16px gap (gap-4) before amount */}
@@ -234,6 +240,23 @@ export default function BalancesCard({
           {actionIcons}
         </>
       )}
+    </>
+  )
+  if (href != null && href !== '') {
+    return (
+      <Link
+        to={href}
+        className={`${cardClassName} transition-colors hover:bg-neutral-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary focus-visible:ring-offset-2`}
+        data-name="Balances card"
+        data-node-id={dataNodeId}
+      >
+        {cardContent}
+      </Link>
+    )
+  }
+  return (
+    <div className={cardClassName} data-name="Balances card" data-node-id={dataNodeId}>
+      {cardContent}
     </div>
   )
 }

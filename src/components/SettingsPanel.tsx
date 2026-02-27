@@ -3,58 +3,13 @@
  */
 
 import { useEffect, useState } from 'react'
-import { Icon } from '../icons/SailIcons'
-import { Accordion, AccordionItem } from './Accordion'
 import { IconButton } from './IconButton'
-import { PageActionButton } from './PageActionButton'
-import { PropertyListCapabilityItem } from './PropertyListCapabilityItem'
-import {
-  getActiveCapabilities,
-  getPausedCapabilities,
-  getPausedSoonCapabilities,
-  getInactiveCapabilities,
-} from '../data/capabilitiesList'
 import type { AccountStatusKind } from './AccountDetailsSidebar'
 
 function CloseIcon({ size = 12 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 12 12" fill="none" aria-hidden>
       <path d="M2 2l8 8M10 2L2 10" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function PausedIcon() {
-  return (
-    <svg width={12} height={12} viewBox="0 0 12 12" fill="none" aria-hidden>
-      <circle cx="6" cy="6" r="6" fill="var(--color-icon-feedback-critical)" />
-      <path d="M4 4l4 4M8 4l-4 4" stroke="white" strokeWidth="1.25" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function PausedSoonIcon() {
-  return (
-    <svg width={12} height={12} viewBox="0 0 12 12" fill="none" aria-hidden>
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M6 0C9.31371 0 12 2.68629 12 6C12 9.31371 9.31371 12 6 12C2.68629 12 0 9.31371 0 6C0 2.68629 2.68629 0 6 0ZM3.65625 5.34375C3.29381 5.34375 3 5.63756 3 6C3 6.36244 3.29381 6.65625 3.65625 6.65625L8.34375 6.65625C8.70619 6.65625 9 6.36244 9 6C9 5.63756 8.70619 5.34375 8.34375 5.34375L3.65625 5.34375Z"
-        fill="#CC4B00"
-      />
-    </svg>
-  )
-}
-
-function InactiveIcon() {
-  return (
-    <svg width={12} height={12} viewBox="0 0 12 12" fill="none" aria-hidden>
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M6 10.6875C8.58917 10.6875 10.6875 8.58917 10.6875 5.99999C10.6875 3.40964 8.59626 1.3125 6 1.3125C3.41083 1.3125 1.3125 3.41082 1.3125 5.99999C1.3125 8.58917 3.41083 10.6875 6 10.6875ZM6 12C9.31405 12 12 9.31404 12 5.99999C12 2.68595 9.32231 0 6 0C2.68595 0 0 2.68595 0 5.99999C0 9.31404 2.68595 12 6 12Z"
-        fill="#D8DEE4"
-      />
     </svg>
   )
 }
@@ -73,15 +28,6 @@ export const SETTINGS_NAV: { section: string; id: string; label: string }[] = [
 ]
 
 const SECTION_ORDER = ['Account', 'Financial']
-
-const CAPABILITY_STATUS_TOOLTIPS: Record<string, string> = {
-  Active: 'Capabilities that are currently enabled and in use.',
-  Paused: 'Capabilities that are temporarily disabled.',
-  'Paused soon': 'Capabilities that will be paused soon unless you take action.',
-  Inactive: 'Capabilities that are not yet enabled. Request to add them for this account.',
-}
-
-const CAPABILITIES_TAB_COUNT = 4
 
 export type SettingsPanelProps = {
   /** When opening, select this nav item. */
@@ -108,7 +54,6 @@ export default function SettingsPanel({
   hideHeader = false,
 }: SettingsPanelProps) {
   const [activeId, setActiveId] = useState<string>('contact-information')
-  const [capabilitiesTab, setCapabilitiesTab] = useState<number>(0)
 
   useEffect(() => {
     if (initialSectionId && SETTINGS_NAV.some((n) => n.id === initialSectionId)) {
@@ -186,113 +131,9 @@ export default function SettingsPanel({
           </div>
         )}
         <div className={`min-h-0 flex-1 overflow-auto px-6 pb-8 ${hideHeader ? 'pt-8' : 'pt-8'}`}>
-          {activeId === 'capabilities' && (
-            <>
-              <div className="flex w-full items-center gap-6 pb-4" role="tablist">
-                {Array.from({ length: CAPABILITIES_TAB_COUNT }, (_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    role="tab"
-                    aria-label={`Tab ${i + 1}`}
-                    aria-selected={capabilitiesTab === i}
-                    onClick={() => setCapabilitiesTab(i)}
-                    className="rounded-[length:var(--radius-action)] px-2 py-2 transition-colors hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary"
-                  >
-                    <span className="block h-4 w-12 rounded bg-neutral-100 animate-pulse" aria-hidden />
-                  </button>
-                ))}
-                <div className="h-px flex-1 shrink-0 bg-neutral-50" aria-hidden />
-              </div>
-              <Accordion>
-              <AccordionItem
-                title="Active"
-                tooltipLabel={CAPABILITY_STATUS_TOOLTIPS.Active}
-                tooltipId="settings-cap-active-tooltip"
-                defaultExpanded
-              >
-                <div className="flex flex-col gap-4">
-                  {getActiveCapabilities(accountStatus).map((cap) => (
-                    <PropertyListCapabilityItem
-                      key={cap.id}
-                      icon={<Icon name="checkCircleFilled" size={12} fill="var(--color-feedback-success-on)" />}
-                      title={cap.title}
-                      description={cap.description}
-                      linkHref={cap.linkLabel ? '#' : undefined}
-                      linkLabel={cap.linkLabel}
-                      action={<PageActionButton>Remove</PageActionButton>}
-                    />
-                  ))}
-                </div>
-              </AccordionItem>
-              <AccordionItem
-                title="Paused"
-                tooltipLabel={CAPABILITY_STATUS_TOOLTIPS.Paused}
-                tooltipId="settings-cap-paused-tooltip"
-                defaultExpanded
-              >
-                <div className="flex flex-col gap-4">
-                  {getPausedCapabilities(accountStatus).map((cap) => (
-                    <PropertyListCapabilityItem
-                      key={cap.id}
-                      icon={<PausedIcon />}
-                      title={cap.title}
-                      description={cap.description}
-                      linkHref={cap.linkLabel ? '#' : undefined}
-                      linkLabel={cap.linkLabel}
-                      action={<PageActionButton>Remove</PageActionButton>}
-                    />
-                  ))}
-                </div>
-              </AccordionItem>
-              <AccordionItem
-                title="Paused soon"
-                tooltipLabel={CAPABILITY_STATUS_TOOLTIPS['Paused soon']}
-                tooltipId="settings-cap-paused-soon-tooltip"
-                defaultExpanded
-              >
-                <div className="flex flex-col gap-4">
-                  {getPausedSoonCapabilities(accountStatus).map((cap) => (
-                    <PropertyListCapabilityItem
-                      key={cap.id}
-                      icon={<PausedSoonIcon />}
-                      title={cap.title}
-                      description={cap.description}
-                      linkHref={cap.linkLabel ? '#' : undefined}
-                      linkLabel={cap.linkLabel}
-                      action={<PageActionButton>Remove</PageActionButton>}
-                    />
-                  ))}
-                </div>
-              </AccordionItem>
-              <AccordionItem
-                title="Inactive"
-                tooltipLabel={CAPABILITY_STATUS_TOOLTIPS.Inactive}
-                tooltipId="settings-cap-inactive-tooltip"
-                defaultExpanded
-              >
-                <div className="flex flex-col gap-4">
-                  {getInactiveCapabilities(accountStatus).map((cap) => (
-                    <PropertyListCapabilityItem
-                      key={cap.id}
-                      icon={<InactiveIcon />}
-                      title={cap.title}
-                      description={cap.description}
-                      linkHref={cap.linkLabel ? '#' : undefined}
-                      linkLabel={cap.linkLabel}
-                      action={<PageActionButton>Request</PageActionButton>}
-                    />
-                  ))}
-                </div>
-              </AccordionItem>
-            </Accordion>
-            </>
-          )}
-          {activeId !== 'capabilities' && (
-            <p className="font-label-medium text-subdued">
-              {SETTINGS_NAV.find((n) => n.id === activeId)?.label ?? activeId} — placeholder
-            </p>
-          )}
+          <p className="font-label-medium text-subdued">
+            {SETTINGS_NAV.find((n) => n.id === activeId)?.label ?? activeId} — placeholder
+          </p>
         </div>
       </div>
     </div>

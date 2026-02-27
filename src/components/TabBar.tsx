@@ -43,7 +43,7 @@ export default function TabBar({
               style={
                 isPrimary
                   ? {
-                      color: isActive ? 'var(--color-action-primary)' : 'var(--color-subdued)',
+                      color: isActive ? 'var(--color-default)' : 'var(--color-subdued)',
                     }
                   : {
                       color: isActive ? 'var(--color-default)' : 'var(--color-subdued)',
@@ -54,7 +54,7 @@ export default function TabBar({
                 <span
                   className="absolute bottom-0 left-0 right-0 h-0.5"
                   style={{
-                    backgroundColor: isPrimary ? 'var(--color-action-primary)' : 'currentColor',
+                    backgroundColor: 'var(--color-default)',
                   }}
                   aria-hidden
                 />

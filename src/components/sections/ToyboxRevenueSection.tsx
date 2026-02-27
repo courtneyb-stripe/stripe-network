@@ -4,7 +4,6 @@
  */
 
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import AccountDrawer from '../AccountDrawer'
 import MetricCard from '../metrics/MetricCard'
 import { SimpleMetricCardSkeleton } from '../metrics/MetricCard'
@@ -14,13 +13,6 @@ import SectionHeader from '../SectionHeader'
 import TabBar from '../TabBar'
 import TableSkeleton from '../TableSkeleton'
 import { usePrototypeOptional } from '../../context/PrototypeContext'
-
-const TRANSACTION_TABS = [
-  { id: 'payments', label: 'Payments' },
-  { id: 'payouts', label: 'Payouts' },
-  { id: 'transfers', label: 'Transfers' },
-  { id: 'global-payouts-received', label: 'Global payouts received' },
-] as const
 
 function PlaceholderBox({ label, dataName }: { label: string; dataName?: string }) {
   return (
@@ -40,28 +32,14 @@ export type ToyboxRevenueSectionProps = {
   accountName?: string
 }
 
-const TOYBOX_LABS_ACCOUNT_ID = 'toybox-labs'
-const TOYBOX_LABS_ACCOUNT_NAME = 'Toybox Labs'
-
 export default function ToyboxRevenueSection({ onRowClick, accountName }: ToyboxRevenueSectionProps = {}) {
-  const navigate = useNavigate()
   const prototype = usePrototypeOptional()
   const isLowFidelity = prototype?.fidelity === 'low'
   const [timeRange, setTimeRange] = useState<TimeRange>('Last 30 days')
-  const [transactionsTab, setTransactionsTab] = useState<string>(TRANSACTION_TABS[0].id)
+  const [networkTab, setNetworkTab] = useState<string>('customer')
   const [invoiceDrawerOpen, setInvoiceDrawerOpen] = useState(false)
   const [productDrawerOpen, setProductDrawerOpen] = useState(false)
 
-  const openTransactionsFilteredByToyboxLabs = () => {
-    navigate('/transactions?tab=payments&savedList=toybox', {
-      state: {
-        tab: 'payments',
-        savedListId: 'toybox',
-        accountId: TOYBOX_LABS_ACCOUNT_ID,
-        accountName: TOYBOX_LABS_ACCOUNT_NAME,
-      },
-    })
-  }
   return (
     <div className="flex min-w-0 max-w-[1120px] flex-1 flex-col" style={{ gap: 40 }}>
       <div className="flex flex-col gap-0">
@@ -100,16 +78,9 @@ export default function ToyboxRevenueSection({ onRowClick, accountName }: Toybox
         <PlaceholderBox label="Subscriptions content placeholder" dataName="Placeholder: Subscriptions" />
       </div>
 
-      {/* Recent transactions */}
+      {/* Payments — View all shown but not clickable */}
       <div className="flex flex-col gap-2">
-        <SectionHeader title="Recent transactions" size="small" onAction={openTransactionsFilteredByToyboxLabs} actionLabel="View all" />
-        <TabBar
-          tabs={TRANSACTION_TABS.map((t) => ({ id: t.id, label: t.label }))}
-          activeId={transactionsTab}
-          onChange={setTransactionsTab}
-          variant="secondary"
-          gap={6}
-        />
+        <SectionHeader title="Payments" size="small" onAction={() => {}} actionLabel="View all" />
         <TableSkeleton rowCount={10} showCheckboxColumn={false} onRowClick={onRowClick} />
       </div>
 
@@ -124,6 +95,45 @@ export default function ToyboxRevenueSection({ onRowClick, accountName }: Toybox
         <SectionHeader title="Products" size="small" onAction={() => {}} onAdd={() => {}} actionLabel="View all" />
         <TableSkeleton rowCount={10} showCheckboxColumn={false} onRowClick={() => setProductDrawerOpen(true)} />
       </div>
+
+      {/* Network — Customer and Recipient tabs */}
+      <div className="flex flex-col gap-2">
+        <SectionHeader title="Network" size="small" onAction={() => {}} actionLabel="View all" />
+        <TabBar
+          tabs={[
+            { id: 'customer', label: 'Customer' },
+            { id: 'recipient', label: 'Recipient' },
+          ]}
+          activeId={networkTab}
+          onChange={setNetworkTab}
+          variant="secondary"
+          gap={6}
+        />
+        <TableSkeleton rowCount={10} showCheckboxColumn={false} onRowClick={onRowClick} />
+      </div>
+
+      {/* Support cases — at the bottom of Toybox Labs business tab */}
+      <div className="flex flex-col gap-2">
+        <SectionHeader title="Support cases" size="small" />
+        <TableSkeleton rowCount={5} showCheckboxColumn={false} onRowClick={onRowClick} />
+      </div>
+
+      {/* Tax forms and reports — bottom of third tab */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div
+          className="flex items-center rounded-[12px] bg-offset px-4 py-3 min-h-[48px]"
+          data-name="Tax forms placeholder"
+        >
+          <p className="text-[14px] text-subdued">Tax forms — placeholder</p>
+        </div>
+        <div
+          className="flex items-center rounded-[12px] bg-offset px-4 py-3 min-h-[48px]"
+          data-name="Reports placeholder"
+        >
+          <p className="text-[14px] text-subdued">Reports — placeholder</p>
+        </div>
+      </div>
+
       <AccountDrawer
         open={invoiceDrawerOpen}
         onClose={() => setInvoiceDrawerOpen(false)}

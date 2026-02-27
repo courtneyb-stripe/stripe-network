@@ -6,7 +6,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import AccountDetailHeader from '../components/AccountDetailHeader'
-import AccountDetailActionBar, { AccountDetailHeaderStatusButtons, getActionBarVisibility } from '../components/AccountDetailActionBar'
+import AccountDetailActionBar, { AccountDetailMainActions, getActionBarVisibility } from '../components/AccountDetailActionBar'
+import { PillBadge } from '../components/PillBadge'
 import type { ActionsRequiredFilter } from '../components/ActionsRequiredModal'
 import AccountDrawer from '../components/AccountDrawer'
 import AccountDetailsSidebar, { type AccountStatusKind } from '../components/AccountDetailsSidebar'
@@ -46,6 +47,8 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
   const [accountDrawerOpen, setAccountDrawerOpen] = useState(false)
   const [actionsModalOpen, setActionsModalOpen] = useState(false)
   const [actionsModalInitialFilter, setActionsModalInitialFilter] = useState<ActionsRequiredFilter>('all')
+  const [actionsModalInitialSegment, setActionsModalInitialSegment] = useState<'blocking' | 'actions' | undefined>(undefined)
+  const [actionsModalInitialSelectedActionId, setActionsModalInitialSelectedActionId] = useState<string | undefined>(undefined)
   const [paymentDrawerOpen, setPaymentDrawerOpen] = useState(false)
   const navigate = useNavigate()
   const prototype = usePrototypeOptional()
@@ -108,33 +111,47 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
     : firstSectionId
 
   const breadcrumbs = [{ label: 'Network', href: '/network' }]
-  const actionBarVisibility = getActionBarVisibility(config, { isRadarRuleMatch: mockAccount?.isRadarRuleMatch })
+  const actionBarVisibility = getActionBarVisibility(config, { hasMerchantConfig: hasMerchantConfig ?? false, isRadarRuleMatch: mockAccount?.isRadarRuleMatch })
+
+  const headerStatusBadge =
+    status === 'restricted'
+      ? <PillBadge label="Restricted" variant="critical" />
+      : status === 'restricted_soon'
+        ? <PillBadge label="Restricted soon" variant="attention" />
+        : status === 'enabled'
+          ? <PillBadge label="Enabled" variant="success" />
+          : undefined
+  const headerBadge =
+    headerStatusBadge != null || mockAccount?.isRadarRuleMatch ? (
+      <div className="flex items-center gap-1">
+        {headerStatusBadge}
+        {mockAccount?.isRadarRuleMatch && (
+          <PillBadge label="High risk" variant="critical" />
+        )}
+      </div>
+    ) : undefined
 
   return (
     <div className="flex h-full w-full flex-col" data-name="AccountDetail">
       {/* Header + action bar; top-aligned so header position is stable across detail and nested pages. */}
-      <div className="flex h-fit shrink-0 items-start gap-0 pl-10 pr-10 pt-5 pb-0 tracking-normal">
+      <div className="flex shrink-0 items-start gap-6 px-10 pt-6 pb-0">
         <div className="flex min-w-0 flex-1 flex-col">
           <div>
             <AccountDetailHeader
               accountName={accountName}
               breadcrumbs={breadcrumbs}
+              badge={headerBadge}
               trailing={
-                (actionBarVisibility.showPayouts || actionBarVisibility.showPayments) ? (
-                  <AccountDetailHeaderStatusButtons
-                    showPayouts={actionBarVisibility.showPayouts ?? false}
-                    showPayments={actionBarVisibility.showPayments ?? false}
-                    status={status}
-                    onOpenActionsModal={(filter) => {
-                      setActionsModalOpen(true)
-                      setActionsModalInitialFilter(filter ?? 'all')
-                    }}
-                  />
-                ) : null
+                <AccountDetailMainActions
+                  visibility={actionBarVisibility}
+                  onOpenAccountDrawer={() => setAccountDrawerOpen(true)}
+                  accountId={id}
+                  onOpenSettings={id ? () => navigate(`/network/${id}/settings`) : undefined}
+                />
               }
             />
           </div>
-          <div className="pt-2">
+          <div className="-ml-10 pl-10 pt-1">
             <AccountDetailActionBar
               status={status}
               visibility={actionBarVisibility}
@@ -143,12 +160,17 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
               accountName={accountName}
               actionsModalOpen={actionsModalOpen}
               actionsModalInitialFilter={actionsModalInitialFilter}
+              actionsModalInitialSegment={actionsModalInitialSegment}
+              actionsModalInitialSelectedActionId={actionsModalInitialSelectedActionId}
               onOpenActionsModal={(filter) => {
                 setActionsModalOpen(true)
                 setActionsModalInitialFilter(filter ?? 'all')
+                setActionsModalInitialSegment('actions')
+                setActionsModalInitialSelectedActionId(undefined)
               }}
               onCloseActionsModal={() => setActionsModalOpen(false)}
               onOpenSettings={() => id && navigate(`/network/${id}/settings`)}
+              onOpenSettingsSection={(sectionId) => id && navigate(`/network/${id}/settings`, { state: { sectionId } })}
             />
           </div>
         </div>
@@ -198,6 +220,8 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                 onOpenActionsModal={() => {
                   setActionsModalOpen(true)
                   setActionsModalInitialFilter('all')
+                  setActionsModalInitialSegment(undefined)
+                  setActionsModalInitialSelectedActionId(undefined)
                 }}
                 onOpenSettings={() => id && navigate(`/network/${id}/settings`)}
                 showAccountRisk={mockAccount?.isRadarRuleMatch ?? false}
@@ -244,9 +268,21 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
           if (!SectionComponent) return null
           const isFirstV2Tab = effectiveSectionId === 'financialSnapshot'
           const sectionProps =
-            effectiveSectionId === 'myRevenue' || effectiveSectionId === 'toyboxRevenue'
-              ? { onRowClick: () => setPaymentDrawerOpen(true), accountName }
-              : { onRowClick: () => setPaymentDrawerOpen(true) }
+            effectiveSectionId === 'financialSnapshot'
+              ? {
+                  onRowClick: () => setPaymentDrawerOpen(true),
+                  status,
+                  onOpenActionsModal: (actionId?: string, segment?: 'blocking' | 'actions') => {
+                    setActionsModalOpen(true)
+                    setActionsModalInitialFilter('all')
+                    setActionsModalInitialSegment(segment ?? (actionId != null ? 'actions' : undefined))
+                    setActionsModalInitialSelectedActionId(actionId)
+                  },
+                  accountId: id,
+                }
+              : effectiveSectionId === 'myRevenue' || effectiveSectionId === 'toyboxRevenue'
+                ? { onRowClick: () => setPaymentDrawerOpen(true), accountName }
+                : { onRowClick: () => setPaymentDrawerOpen(true) }
           return (
             <div className="flex w-full items-stretch gap-10">
               <div className="min-w-0 flex-1 flex-col gap-6 flex">
@@ -264,6 +300,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                   onOpenActionsModal={() => {
                     setActionsModalOpen(true)
                     setActionsModalInitialFilter('all')
+                    setActionsModalInitialSegment(undefined)
                   }}
                   onOpenSettings={() => id && navigate(`/network/${id}/settings`)}
                   showAccountRisk={mockAccount?.isRadarRuleMatch ?? false}

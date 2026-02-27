@@ -15,7 +15,6 @@ import {
 } from '../data/actionsRequired'
 import { ActionRequiredDescriptionRow } from './ActionRequiredDescriptionRow'
 import { List, ListItem } from './List'
-import { Icon } from '../icons/SailIcons'
 import { RightArrowIcon } from './metrics/MetricCard'
 import { IconButton } from './IconButton'
 import BabySegmentedControl from './BabySegmentedControl'
@@ -33,6 +32,23 @@ function CloseIcon({ size = 12 }: { size?: number }) {
         strokeLinecap="round"
       />
     </svg>
+  )
+}
+
+/** Red circle with white X — same as paused Payouts/Payments (Icon/Feedback Critical). */
+function RestrictedCircleIcon({ size = 16 }: { size?: number }) {
+  return (
+    <span className="shrink-0 inline-flex" aria-hidden>
+      <svg width={size} height={size} viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="6" cy="6" r="6" fill="var(--color-icon-feedback-critical)" />
+        <path
+          d="M4 4l4 4M8 4l-4 4"
+          stroke="white"
+          strokeWidth="1.25"
+          strokeLinecap="round"
+        />
+      </svg>
+    </span>
   )
 }
 
@@ -56,6 +72,10 @@ type ActionsRequiredModalProps = {
   accountName?: string
   /** When opening from Payouts dropdown use 'payouts'; from Payments dropdown use 'payments'; otherwise 'all'. */
   initialFilter?: ActionsRequiredFilter
+  /** When opening from paused Payouts/Payments/Subscriptions buttons, pass 'actions' so segment selects Actions required. */
+  initialSegment?: 'blocking' | 'actions'
+  /** When opening from sidebar list item click, pass that action's id to show its detail. */
+  initialSelectedActionId?: string
 }
 
 const SEGMENT_OPTIONS = [
@@ -142,6 +162,8 @@ export default function ActionsRequiredModal({
   accountId,
   accountName,
   initialFilter = 'all',
+  initialSegment,
+  initialSelectedActionId,
 }: ActionsRequiredModalProps) {
   const prototype = usePrototypeOptional()
   const isLowFidelity = prototype?.fidelity === 'low'
@@ -150,7 +172,9 @@ export default function ActionsRequiredModal({
   const [impactsFilter, setImpactsFilter] = useState<ActionsRequiredFilter>(initialFilter)
   const [impactsDropdownOpen, setImpactsDropdownOpen] = useState(false)
   const impactsDropdownRef = useRef<HTMLDivElement>(null)
-  const filteredList = filterActionsRequired(impactsFilter)
+  /** Blocking issues: no filter (always "all"). Actions required: use impacts dropdown (All / Impacts payments / Impacts payouts). */
+  const listFilter = segment === 'blocking' ? 'all' : impactsFilter
+  const filteredList = filterActionsRequired(listFilter)
   /** Blocking: 2 items only; Actions required: full list. */
   const displayList = segment === 'blocking' ? filteredList.slice(0, 2) : filteredList
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null)
@@ -162,8 +186,9 @@ export default function ActionsRequiredModal({
   useEffect(() => {
     if (!open) return
     setImpactsFilter(initialFilter)
-    setSelectedActionId(null)
-  }, [open, initialFilter])
+    if (initialSegment != null) setSegment(initialSegment)
+    setSelectedActionId(initialSelectedActionId ?? null)
+  }, [open, initialFilter, initialSegment, initialSelectedActionId])
 
   useEffect(() => {
     if (!open) return
@@ -228,58 +253,63 @@ export default function ActionsRequiredModal({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-row">
-        {/* Left sidebar: segment control + filter chips + list */}
+        {/* Left sidebar: segment control + filter chips + list (8px between segment area and list) */}
         <aside
-          className="flex w-[320px] shrink-0 flex-col border-r border-neutral-50 bg-surface overflow-hidden"
+          className="flex w-[320px] shrink-0 flex-col gap-2 border-r border-neutral-50 bg-surface overflow-hidden"
           aria-label="Needs attention list"
         >
           <div className="flex shrink-0 flex-col gap-3 p-4">
             <BabySegmentedControl
               options={SEGMENT_OPTIONS}
               selectedId={segment}
-              onChange={setSegment}
+              onChange={(id) => {
+                setSegment(id)
+                if (id === 'blocking') setImpactsDropdownOpen(false)
+              }}
               aria-label="Category"
             />
-            <div className="relative shrink-0" ref={impactsDropdownRef}>
-              <button
-                type="button"
-                onClick={() => setImpactsDropdownOpen((o) => !o)}
-                className="flex h-8 min-h-8 shrink-0 items-center gap-2 overflow-clip rounded-[8px] border border-solid border-neutral-100 bg-surface px-2 py-1.5 text-left transition-colors hover:border-neutral-100 hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-action-primary"
-                aria-haspopup="listbox"
-                aria-expanded={impactsDropdownOpen}
-                aria-label="Filter by impact"
-              >
-                <span className="shrink-0 truncate text-[14px] leading-5 tracking-[-0.15px] font-[500] text-subdued">
-                  {impactsFilterLabel}
-                </span>
-                <ChevronDownIcon size={8} fill="var(--color-icon-subdued)" className="shrink-0" />
-              </button>
-              {impactsDropdownOpen && (
-                <div
-                  className="absolute left-0 top-full z-50 mt-1 min-w-[160px] rounded-[6px] border border-neutral-100 bg-surface py-1 shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
-                  role="listbox"
+            {segment === 'actions' && (
+              <div className="relative shrink-0" ref={impactsDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setImpactsDropdownOpen((o) => !o)}
+                  className="flex h-8 min-h-8 shrink-0 items-center gap-2 overflow-clip rounded-[8px] border border-solid border-neutral-100 bg-surface px-2 py-1.5 text-left transition-colors hover:border-neutral-100 hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-action-primary"
+                  aria-haspopup="listbox"
+                  aria-expanded={impactsDropdownOpen}
                   aria-label="Filter by impact"
                 >
-                  {IMPACTS_CHIPS.map((chip) => (
-                    <button
-                      key={chip.id}
-                      type="button"
-                      role="option"
-                      aria-selected={impactsFilter === chip.id}
-                      onClick={() => {
-                        setImpactsFilter(chip.id)
-                        setImpactsDropdownOpen(false)
-                      }}
-                      className={`w-full px-3 py-2 text-left font-label-medium transition-colors hover:bg-offset focus:bg-offset focus:outline-none ${
-                        impactsFilter === chip.id ? 'bg-offset text-default' : 'text-subdued'
-                      }`}
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                  <span className="shrink-0 truncate text-[14px] leading-5 tracking-[-0.15px] font-[500] text-subdued">
+                    {impactsFilterLabel}
+                  </span>
+                  <ChevronDownIcon size={8} fill="var(--color-icon-subdued)" className="shrink-0" />
+                </button>
+                {impactsDropdownOpen && (
+                  <div
+                    className="absolute left-0 top-full z-50 mt-1 min-w-[160px] rounded-[6px] border border-neutral-100 bg-surface py-1 shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
+                    role="listbox"
+                    aria-label="Filter by impact"
+                  >
+                    {IMPACTS_CHIPS.map((chip) => (
+                      <button
+                        key={chip.id}
+                        type="button"
+                        role="option"
+                        aria-selected={impactsFilter === chip.id}
+                        onClick={() => {
+                          setImpactsFilter(chip.id)
+                          setImpactsDropdownOpen(false)
+                        }}
+                        className={`w-full px-3 py-2 text-left font-label-medium transition-colors hover:bg-offset focus:bg-offset focus:outline-none ${
+                          impactsFilter === chip.id ? 'bg-offset text-default' : 'text-subdued'
+                        }`}
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div className="min-h-0 flex-1 overflow-auto px-4 pb-4">
             {isLowFidelity ? (
@@ -294,13 +324,8 @@ export default function ActionsRequiredModal({
                   <ListItem
                     key={action.id}
                     id={action.id}
-                    icon={
-                      <Icon
-                        name="identityVerification"
-                        size={16}
-                        fill="var(--color-icon-subdued)"
-                      />
-                    }
+                    icon={<RestrictedCircleIcon size={16} />}
+                    iconVariant="critical"
                     title={action.title}
                     active={selectedActionId === action.id}
                     trailingContent={
