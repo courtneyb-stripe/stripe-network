@@ -47,6 +47,7 @@ export default function MyRevenueSection({ onRowClick, accountName }: MyRevenueS
   const isLowFidelity = prototype?.fidelity === 'low'
   const [timeRange, setTimeRange] = useState<TimeRange>('Last 30 days')
   const [transactionsTab, setTransactionsTab] = useState<string>(TRANSACTION_TABS[0].id)
+  const [recentActivityTab, setRecentActivityTab] = useState<string>('activity')
   const [invoiceDrawerOpen, setInvoiceDrawerOpen] = useState(false)
   const [productDrawerOpen, setProductDrawerOpen] = useState(false)
 
@@ -122,6 +123,30 @@ export default function MyRevenueSection({ onRowClick, accountName }: MyRevenueS
         <SectionHeader title="Products" size="small" onAction={() => {}} onAdd={() => {}} actionLabel="View all" />
         <TableSkeleton rowCount={10} showCheckboxColumn={false} onRowClick={() => setProductDrawerOpen(true)} />
       </div>
+
+      {/* Customers */}
+      <div className="flex flex-col gap-2">
+        <SectionHeader title="Customers" size="small" onAction={() => {}} actionLabel="View all" />
+        <TableSkeleton rowCount={10} showCheckboxColumn={false} onRowClick={onRowClick} />
+      </div>
+
+      {/* Recent Activity — at the very bottom of Account relationship */}
+      <div className="flex flex-col gap-2">
+        <SectionHeader title="Recent Activity" size="small" onAction={() => {}} actionLabel="View all" />
+        <TabBar
+          tabs={[
+            { id: 'activity', label: 'Activity' },
+            { id: 'events-and-logs', label: 'Events and logs' },
+            { id: 'sent-emails', label: 'Sent emails' },
+          ]}
+          activeId={recentActivityTab}
+          onChange={setRecentActivityTab}
+          variant="secondary"
+          gap={6}
+        />
+        <TableSkeleton rowCount={7} showCheckboxColumn={false} onRowClick={onRowClick} />
+      </div>
+
       <AccountDrawer
         open={invoiceDrawerOpen}
         onClose={() => setInvoiceDrawerOpen(false)}

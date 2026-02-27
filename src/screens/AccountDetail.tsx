@@ -252,9 +252,19 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
           if (!SectionComponent) return null
           const isFirstV2Tab = effectiveSectionId === 'financialSnapshot'
           const sectionProps =
-            effectiveSectionId === 'myRevenue' || effectiveSectionId === 'toyboxRevenue'
-              ? { onRowClick: () => setPaymentDrawerOpen(true), accountName }
-              : { onRowClick: () => setPaymentDrawerOpen(true) }
+            effectiveSectionId === 'financialSnapshot'
+              ? {
+                  onRowClick: () => setPaymentDrawerOpen(true),
+                  status,
+                  onOpenActionsModal: () => {
+                    setActionsModalOpen(true)
+                    setActionsModalInitialFilter('all')
+                  },
+                  accountId: id,
+                }
+              : effectiveSectionId === 'myRevenue' || effectiveSectionId === 'toyboxRevenue'
+                ? { onRowClick: () => setPaymentDrawerOpen(true), accountName }
+                : { onRowClick: () => setPaymentDrawerOpen(true) }
           return (
             <div className="flex w-full items-stretch gap-10">
               <div className="min-w-0 flex-1 flex-col gap-6 flex">

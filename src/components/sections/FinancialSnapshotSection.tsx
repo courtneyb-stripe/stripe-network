@@ -16,6 +16,8 @@ import type { TransactionListRow } from '../TransactionListCard'
 import { BrandIcon } from '../../icons/SailIcons'
 import { usePrototypeOptional } from '../../context/PrototypeContext'
 import { TIME_RANGE_OPTIONS, type TimeRange } from '../metrics/constants'
+import ActionsRequiredSidebarSection from '../ActionsRequiredSidebarSection'
+import type { AccountStatusKind } from '../AccountDetailsSidebar'
 
 function LowFidelityBox({ className = '' }: { className?: string }) {
   return (
@@ -86,25 +88,23 @@ const RECENT_TRANSACTION_TABS = [
   { id: 'collected-fees', label: 'Collected fees' },
 ] as const
 
-const RECENT_ACTIVITY_TABS = [
-  { id: 'support-cases', label: 'Support cases' },
-  { id: 'activity', label: 'Activity' },
-  { id: 'events-and-logs', label: 'Events and logs' },
-  { id: 'sent-emails', label: 'Sent emails' },
-] as const
-
 export type FinancialSnapshotSectionProps = {
   /** When set, skeleton table rows are clickable and call this (e.g. open preview drawer). */
   onRowClick?: () => void
+  /** When 'restricted', Needs attention is shown above Balances in main. */
+  status?: AccountStatusKind
+  /** Opens the fullscreen Actions required modal; required when status is restricted to show Needs attention. */
+  onOpenActionsModal?: () => void
+  /** Account id for action detail links. */
+  accountId?: string
 }
 
-export default function FinancialSnapshotSection({ onRowClick }: FinancialSnapshotSectionProps = {}) {
+export default function FinancialSnapshotSection({ onRowClick, status, onOpenActionsModal, accountId }: FinancialSnapshotSectionProps = {}) {
   const navigate = useNavigate()
   const prototype = usePrototypeOptional()
   const isLowFidelity = prototype?.fidelity === 'low'
   const [timeRange, setTimeRange] = useState<TimeRange>('Last 30 days')
   const [recentTransactionsTab, setRecentTransactionsTab] = useState<string>(RECENT_TRANSACTION_TABS[0].id)
-  const [recentActivityTab, setRecentActivityTab] = useState<string>(RECENT_ACTIVITY_TABS[0].id)
 
   const openTransactionsFilteredByToyboxLabs = () => {
     navigate('/transactions?tab=payments&savedList=toybox', {
@@ -116,20 +116,29 @@ export default function FinancialSnapshotSection({ onRowClick }: FinancialSnapsh
       },
     })
   }
+  const showFinancialSnapshot = false
+  const showNeedsAttention = status === 'restricted' && onOpenActionsModal
+
   return (
     <div className="flex min-w-0 max-w-[1120px] flex-1 flex-col" style={{ gap: 40 }}>
-      {/* Financial snapshot — full when high fi, grayscale low-fi variant when low fi */}
-      <div className="flex flex-col gap-2">
-        <FinancialSnapshot
-          moneyIn="$84,200.00"
-          moneyOut="$36,800.00"
-          netFlow="$47,400"
-          timeRangeValue={timeRange}
-          timeRangeOptions={TIME_RANGE_OPTIONS}
-          onTimeRangeChange={setTimeRange}
-          lowFidelity={isLowFidelity}
-        />
-      </div>
+      {showNeedsAttention && (
+        <div className="flex flex-col gap-2">
+          <ActionsRequiredSidebarSection onOpenActionsModal={onOpenActionsModal} accountId={accountId} />
+        </div>
+      )}
+      {showFinancialSnapshot && (
+        <div className="flex flex-col gap-2">
+          <FinancialSnapshot
+            moneyIn="$84,200.00"
+            moneyOut="$36,800.00"
+            netFlow="$47,400"
+            timeRangeValue={timeRange}
+            timeRangeOptions={TIME_RANGE_OPTIONS}
+            onTimeRangeChange={setTimeRange}
+            lowFidelity={isLowFidelity}
+          />
+        </div>
+      )}
 
       {/* Balances — Figma 2085:46771: single white card in gray area; header shows total in FinancialSnapshot value style */}
       <div className="flex flex-col gap-2">
@@ -195,37 +204,6 @@ export default function FinancialSnapshotSection({ onRowClick }: FinancialSnapsh
               rows={UPCOMING_PAYOUT_ROWS}
             />
           )}
-        </div>
-      </div>
-
-      {/* Recent activity — under Payout info sections */}
-      <div className="flex flex-col gap-2 pt-2">
-        <SectionHeader title="Recent activity" size="small" onAction={() => {}} actionLabel="View all" />
-        <div className="flex w-full">
-          <TabBar
-            tabs={RECENT_ACTIVITY_TABS.map((t) => ({ id: t.id, label: t.label }))}
-            activeId={recentActivityTab}
-            onChange={setRecentActivityTab}
-            variant="secondary"
-            gap={6}
-          />
-        </div>
-        <TableSkeleton rowCount={7} showCheckboxColumn={false} onRowClick={onRowClick} />
-      </div>
-
-      {/* Tax forms + Reports — same width as Payout information / Upcoming payouts columns */}
-      <div className="grid grid-cols-1 gap-6 pt-2 lg:grid-cols-2">
-        <div
-          className="flex items-center rounded-[12px] bg-offset px-4 py-3 min-h-[48px]"
-          data-name="Tax forms placeholder"
-        >
-          <p className="text-[14px] text-subdued">Tax forms — placeholder</p>
-        </div>
-        <div
-          className="flex items-center rounded-[12px] bg-offset px-4 py-3 min-h-[48px]"
-          data-name="Reports placeholder"
-        >
-          <p className="text-[14px] text-subdued">Reports — placeholder</p>
         </div>
       </div>
     </div>

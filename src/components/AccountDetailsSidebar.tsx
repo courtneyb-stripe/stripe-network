@@ -6,59 +6,11 @@
  * When showAccountRisk (e.g. radar rule matches), show Account risk + View risk analysis below ID (Figma 1966:24837).
  */
 
-import { Link } from 'react-router-dom'
 import { Icon } from '../icons/SailIcons'
 import { ArrowsOutwardIcon } from '../icons/ArrowsOutwardIcon'
 import SectionHeader from './SectionHeader'
 import { PillBadge, RestrictedIcon } from './PillBadge'
-import { PropertyList, PropertyListItem } from './PropertyList'
-import ActionsRequiredSidebarSection from './ActionsRequiredSidebarSection'
-import { DescriptionTooltipTrigger } from './DescriptionTooltipTrigger'
-import { usePrototypeOptional } from '../context/PrototypeContext'
-import { ROW_HEIGHT } from '../constants/table'
-
-/** Skeleton row for Profile property list (low fidelity): label and value both skeleton bars, same height as table rows. */
-function ProfilePropertySkeletonRow() {
-  return (
-    <div
-      className="flex max-w-[85%] flex-col justify-center gap-0.5 w-full shrink-0"
-      data-name="PropertyListItem"
-      style={{ minHeight: ROW_HEIGHT, height: ROW_HEIGHT }}
-    >
-      <div className="h-3 w-16 rounded-[3px] bg-neutral-100" aria-hidden />
-      <div className="h-3 w-full max-w-[70%] rounded-[3px] bg-neutral-100" aria-hidden />
-    </div>
-  )
-}
-
-const ACCOUNT_DETAILS = {
-  id: 'acct_Ly5pN5pGDWgtpa',
-  email: 'contact@example.com',
-  created: 'Jul 10, 2021',
-  configurations: 'Merchant, Customer',
-  country: 'United States',
-}
-
-/** Configurations value with Merchant/Customer as dotted tooltip triggers (Figma 33:11880). Same row. */
-function ConfigurationsValue() {
-  return (
-    <span className="inline-flex items-baseline flex-nowrap gap-0 whitespace-nowrap">
-      <DescriptionTooltipTrigger
-        tooltipLabel="Accounts that can receive payments and pay out to bank accounts."
-        tooltipId="profile-config-merchant-tooltip"
-      >
-        Merchant
-      </DescriptionTooltipTrigger>
-      ,{' '}
-      <DescriptionTooltipTrigger
-        tooltipLabel="Accounts that can make payments (e.g. pay for products)."
-        tooltipId="profile-config-customer-tooltip"
-      >
-        Customer
-      </DescriptionTooltipTrigger>
-    </span>
-  )
-}
+import ProfileSectionContent from './ProfileSectionContent'
 
 const ENABLED_BADGE = (
   <PillBadge
@@ -77,7 +29,7 @@ type AccountDetailsSidebarProps = {
   accountDrawerOpen?: boolean
   onOpenAccountDrawer?: () => void
   onCloseAccountDrawer?: () => void
-  /** When restricted, opens the fullscreen Actions required modal (from section header expand / "N actions required"). */
+  /** When restricted, opens the fullscreen Actions required modal (from action bar). Kept for API compatibility; Needs attention is shown in main when restricted. */
   onOpenActionsModal?: () => void
   /** When provided, Profile header shows Edit (ghost) button left of expand; opens Settings (deep link). */
   onOpenSettings?: () => void
@@ -86,8 +38,6 @@ type AccountDetailsSidebarProps = {
   /** Account id for View risk analysis link. */
   accountId?: string
 }
-
-const PROFILE_SKELETON_ROW_COUNT = 4
 
 export default function AccountDetailsSidebar({
   status,
@@ -99,8 +49,6 @@ export default function AccountDetailsSidebar({
   showAccountRisk = false,
   accountId,
 }: AccountDetailsSidebarProps) {
-  const prototype = usePrototypeOptional()
-  const isLowFidelity = prototype?.fidelity === 'low'
   const statusBadge =
     status === 'restricted'
       ? <PillBadge label="Restricted" variant="critical" icon={<RestrictedIcon />} />
@@ -120,20 +68,9 @@ export default function AccountDetailsSidebar({
     ) : status === undefined ? (
       <span className="font-label-medium text-subdued">–</span>
     ) : undefined
-  const isRestricted = status === 'restricted'
-
   return (
     <>
       <div className="flex min-w-[320px] w-full shrink-0 flex-col">
-        {isRestricted && onOpenActionsModal && (
-          <>
-            <ActionsRequiredSidebarSection
-              onOpenActionsModal={onOpenActionsModal}
-              accountId={accountId}
-            />
-            <div className="h-[40px] shrink-0" aria-hidden />
-          </>
-        )}
         <div
           className="flex w-full flex-col gap-2 overflow-hidden rounded-[12px] bg-surface px-4 pb-4 pt-0"
           data-name="baby/card/prop-list_vertical"
@@ -151,47 +88,7 @@ export default function AccountDetailsSidebar({
             actionLabel="View details"
           />
         </div>
-      <div className="flex flex-col gap-4 w-full shrink-0" data-name="Subs" data-node-id="2:6704">
-        <PropertyList>
-          <PropertyListItem label="ID" value={ACCOUNT_DETAILS.id} />
-          {isLowFidelity ? (
-            <>
-              {showAccountRisk && <ProfilePropertySkeletonRow />}
-              {Array.from({ length: PROFILE_SKELETON_ROW_COUNT }, (_, i) => (
-                <ProfilePropertySkeletonRow key={i} />
-              ))}
-            </>
-          ) : (
-            <>
-              {showAccountRisk && accountId && (
-                <PropertyListItem
-                  label="Account risk"
-                  value={
-                    <>
-                      <p className="font-label-medium leading-5 tracking-[-0.15px]" style={{ color: 'var(--color-feedback-critical-on)' }}>
-                        High
-                      </p>
-                      <Link
-                        to={`/network/${accountId}/risk-analysis`}
-                        className="font-label-medium text-subdued underline hover:text-default hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[length:var(--radius-xsmall)] w-fit"
-                      >
-                        View risk analysis
-                      </Link>
-                    </>
-                  }
-                />
-              )}
-              <PropertyListItem label="Email" value={ACCOUNT_DETAILS.email} />
-              <PropertyListItem label="Created" value={ACCOUNT_DETAILS.created} />
-              <PropertyListItem
-                label="Configurations"
-                value={<ConfigurationsValue />}
-              />
-              <PropertyListItem label="Country" value={ACCOUNT_DETAILS.country} />
-            </>
-          )}
-        </PropertyList>
-        </div>
+        <ProfileSectionContent showAccountRisk={showAccountRisk} accountId={accountId} />
         </div>
 
         {/* 40px gap then placeholder sections */}
@@ -208,6 +105,12 @@ export default function AccountDetailsSidebar({
             data-name="Sidebar placeholder: Metadata"
           >
             <p className="text-[14px] text-subdued">Metadata — placeholder</p>
+          </div>
+          <div
+            className="flex items-center rounded-[12px] bg-offset px-4 py-3"
+            data-name="Sidebar placeholder: Payment methods"
+          >
+            <p className="text-[14px] text-subdued">Payment methods — placeholder</p>
           </div>
         </div>
       </div>
