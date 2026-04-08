@@ -7,7 +7,7 @@
 import { useState } from 'react'
 import { ROW_HEIGHT } from '../constants/table'
 import { ViewChip } from '../components/NetworkFilterGroup'
-import { PillBadge } from '../components/PillBadge'
+import { PillBadge, type PillBadgeVariant } from '../components/PillBadge'
 import {
   PROTOTYPES,
   type PrototypeRow,
@@ -31,16 +31,21 @@ const COLUMNS = [
 
 const FILTER_CHIPS: { id: HubFilterId; label: string }[] = [
   { id: 'all', label: 'All' },
-  { id: 'm0', label: 'Demo' },
+  { id: 'working', label: 'Working' },
   { id: 'resources', label: 'Resources' },
   { id: 'archived', label: 'Archived' },
 ]
 
+function statusPillVariant(status: string): PillBadgeVariant {
+  if (status === 'Archived') return 'neutral'
+  return 'attention'
+}
+
 function splitByCategory(rows: PrototypeRow[]) {
-  const m0 = rows.filter((r) => r.category === 'm0')
+  const working = rows.filter((r) => r.category === 'working')
   const resources = rows.filter((r) => r.category === 'resources')
   const archived = rows.filter((r) => r.category === 'archived')
-  return { m0, resources, archived }
+  return { working, resources, archived }
 }
 
 function TableHeader() {
@@ -78,7 +83,7 @@ function PrototypeRowLink({
   const content = (
     <>
       <div className={`${cellClass} ${COLUMNS[0].width}`}>
-        <PillBadge label="In progress" variant="attention" />
+        <PillBadge label={row.status} variant={statusPillVariant(row.status)} />
       </div>
       <div className={`${cellClass} ${COLUMNS[1].width}`}>
         <span className={`truncate font-label-medium-emphasized ${textClass}`}>
@@ -169,7 +174,7 @@ function FilterChipsRow({
 }: {
   activeFilter: HubFilterId
   onFilterChange: (id: HubFilterId) => void
-  counts: { all: number; m0: number; resources: number; archived: number }
+  counts: { all: number; working: number; resources: number; archived: number }
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -188,12 +193,12 @@ function FilterChipsRow({
 }
 
 export default function PrototypeHub() {
-  const [activeFilter, setActiveFilter] = useState<HubFilterId>('m0')
+  const [activeFilter, setActiveFilter] = useState<HubFilterId>('working')
   const displayPrototypes = PROTOTYPES
-  const { m0, resources, archived } = splitByCategory(displayPrototypes)
+  const { working, resources, archived } = splitByCategory(displayPrototypes)
   const counts = {
     all: displayPrototypes.length,
-    m0: m0.length,
+    working: working.length,
     resources: resources.length,
     archived: archived.length,
   }
@@ -201,8 +206,8 @@ export default function PrototypeHub() {
   const filteredRows: PrototypeRow[] =
     activeFilter === 'all'
       ? displayPrototypes
-      : activeFilter === 'm0'
-        ? m0
+      : activeFilter === 'working'
+        ? working
         : activeFilter === 'resources'
           ? resources
           : archived
@@ -298,7 +303,7 @@ export default function PrototypeHub() {
           <div className="flex flex-col">
             {showSectionDividers ? (
               <>
-                <TableSection rows={m0} isMuted={false} />
+                <TableSection rows={working} isMuted={false} />
                 {resources.length > 0 && (
                   <>
                     <SectionDivider label="Resources" />
