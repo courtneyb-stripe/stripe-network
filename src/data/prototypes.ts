@@ -34,7 +34,7 @@ const PROTOTYPES_ALL: PrototypeRow[] = [
     owner: '@courtneyb',
     status: 'In progress',
     lastUpdated: 'Feb 24, 2025, 2:34 PM',
-    url: '/network',
+    url: 'https://stripe-network-midnkg82u.vercelapp.stripe.dev',
   },
   {
     id: 'onsite-ia-rev',
@@ -45,7 +45,7 @@ const PROTOTYPES_ALL: PrototypeRow[] = [
     owner: '@courtneyb',
     status: 'Archived',
     lastUpdated: 'Feb 25, 2025',
-    url: '/network',
+    url: 'https://stripe-network-git-onsite-ia-rev.vercelapp.stripe.dev',
   },
   {
     id: 'pre-onsite-backup',
@@ -56,7 +56,7 @@ const PROTOTYPES_ALL: PrototypeRow[] = [
     owner: '@courtneyb',
     status: 'Archived',
     lastUpdated: 'Feb 25, 2025',
-    url: '/network',
+    url: 'https://stripe-network-git-pre-onsite-backup.vercelapp.stripe.dev',
   },
   {
     id: 'network-detail-comp-model',
@@ -67,7 +67,7 @@ const PROTOTYPES_ALL: PrototypeRow[] = [
     owner: '@courtneyb',
     status: 'In progress',
     lastUpdated: 'Feb 25, 2025',
-    url: '/network',
+    url: 'https://stripe-network-git-network-detail-comp-model.vercelapp.stripe.dev',
   },
   {
     id: 'component-library',
