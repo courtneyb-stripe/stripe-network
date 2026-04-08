@@ -27,14 +27,14 @@ export type PrototypeRow = {
 const PROTOTYPES_ALL: PrototypeRow[] = [
   {
     id: 'network-wip',
-    category: 'working',
+    category: 'archived',
     name: 'Network WIP',
     description: 'Main Network prototype branch.',
     branch: 'main',
     owner: '@courtneyb',
     status: 'In progress',
     lastUpdated: 'Feb 24, 2025, 2:34 PM',
-    url: 'https://stripe-network-midnkg82u.vercelapp.stripe.dev',
+    url: 'https://stripe-network-midnkg82u.vercelapp.stripe.dev/network',
   },
   {
     id: 'onsite-ia-rev',
@@ -45,7 +45,7 @@ const PROTOTYPES_ALL: PrototypeRow[] = [
     owner: '@courtneyb',
     status: 'Archived',
     lastUpdated: 'Feb 25, 2025',
-    url: 'https://stripe-network-git-onsite-ia-rev.vercelapp.stripe.dev',
+    url: 'https://stripe-network-git-onsite-ia-rev.vercelapp.stripe.dev/network',
   },
   {
     id: 'pre-onsite-backup',
@@ -56,7 +56,7 @@ const PROTOTYPES_ALL: PrototypeRow[] = [
     owner: '@courtneyb',
     status: 'Archived',
     lastUpdated: 'Feb 25, 2025',
-    url: 'https://stripe-network-git-pre-onsite-backup.vercelapp.stripe.dev',
+    url: 'https://stripe-network-git-pre-onsite-backup.vercelapp.stripe.dev/network',
   },
   {
     id: 'network-detail-comp-model',
@@ -67,7 +67,7 @@ const PROTOTYPES_ALL: PrototypeRow[] = [
     owner: '@courtneyb',
     status: 'In progress',
     lastUpdated: 'Feb 25, 2025',
-    url: 'https://stripe-network-git-network-detail-comp-model.vercelapp.stripe.dev',
+    url: 'https://stripe-network-git-network-detail-comp-model.vercelapp.stripe.dev/network',
   },
   {
     id: 'component-library',
