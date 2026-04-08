@@ -1,12 +1,11 @@
 /**
  * Financial snapshot section for V2 (Money movement) account detail tab.
- * Snapshot + placeholder sections: Balances, Recent transactions, Payouts.
- * Low fidelity: Financial snapshot, Balances, Payout information, Upcoming payouts are gray boxes (headings kept).
+ * Metrics row (“Financial snapshot”) above Balances; then payouts, recent transactions.
+ * Low fidelity: metric cards and other blocks use skeletons / gray placeholders where noted.
  */
 
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import FinancialSnapshot from '../FinancialSnapshot'
 import { PropertyList, PropertyListItem } from '../PropertyList'
 import SectionHeader from '../SectionHeader'
 import TabBar from '../TabBar'
@@ -15,6 +14,9 @@ import TransactionListCard from '../TransactionListCard'
 import type { TransactionListRow } from '../TransactionListCard'
 import { BrandIcon } from '../../icons/SailIcons'
 import { usePrototypeOptional } from '../../context/PrototypeContext'
+import MetricCard from '../metrics/MetricCard'
+import { SimpleMetricCardSkeleton } from '../metrics/MetricCard'
+import MetricDropdown from '../metrics/MetricDropdown'
 import { TIME_RANGE_OPTIONS, type TimeRange } from '../metrics/constants'
 import ActionsRequiredSidebarSection from '../ActionsRequiredSidebarSection'
 import type { AccountStatusKind } from '../AccountDetailsSidebar'
@@ -130,8 +132,39 @@ export default function FinancialSnapshotSection({ onRowClick, status, onOpenAct
       },
     })
   }
-  const showFinancialSnapshot = false
   const showNeedsAttention = status === 'restricted' && onOpenActionsModal
+
+  const financialSnapshotMetricsBlock = (
+    <div className="flex flex-col gap-0">
+      <SectionHeader
+        title="Financial snapshot"
+        size="small"
+        trailing={
+          <MetricDropdown
+            value={timeRange}
+            options={TIME_RANGE_OPTIONS}
+            onChange={(v) => setTimeRange(v)}
+            ariaLabel="Time range"
+          />
+        }
+      />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {isLowFidelity ? (
+          <>
+            <SimpleMetricCardSkeleton />
+            <SimpleMetricCardSkeleton />
+            <SimpleMetricCardSkeleton />
+          </>
+        ) : (
+          <>
+            <MetricCard variant="simple" label="Money in" value="$84.2K" />
+            <MetricCard variant="simple" label="Money out" value="$36.8K" />
+            <MetricCard variant="simple" label="Net flow" value="$47.4K" />
+          </>
+        )}
+      </div>
+    </div>
+  )
 
   const balancesBlock = (
     <div className="flex flex-col gap-2">
@@ -155,27 +188,14 @@ export default function FinancialSnapshotSection({ onRowClick, status, onOpenAct
           <div className="flex w-full min-w-0 flex-col gap-2">
             <ActionsRequiredSidebarSection onOpenActionsModal={onOpenActionsModal} accountId={accountId} />
           </div>
+          {financialSnapshotMetricsBlock}
           {balancesBlock}
         </div>
       ) : (
-        showFinancialSnapshot ? (
-          <>
-            <div className="flex flex-col gap-2">
-              <FinancialSnapshot
-                moneyIn="$84,200.00"
-                moneyOut="$36,800.00"
-                netFlow="$47,400"
-                timeRangeValue={timeRange}
-                timeRangeOptions={TIME_RANGE_OPTIONS}
-                onTimeRangeChange={setTimeRange}
-                lowFidelity={isLowFidelity}
-              />
-            </div>
-            {balancesBlock}
-          </>
-        ) : (
-          balancesBlock
-        )
+        <>
+          {financialSnapshotMetricsBlock}
+          {balancesBlock}
+        </>
       )}
 
       {/* Payout information + Upcoming payouts — just below Balances */}
