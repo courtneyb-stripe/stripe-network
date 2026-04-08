@@ -3,7 +3,7 @@
  * configType from account drives which sections render (see accountConfigs.ts).
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import AccountDetailHeader from '../components/AccountDetailHeader'
 import AccountDetailActionBar, { AccountDetailMainActions, getActionBarVisibility } from '../components/AccountDetailActionBar'
@@ -29,7 +29,9 @@ import {
 
 const V2_SECTION_IDS = new Set(V2_SECTIONS)
 import { getAccountById } from '../data/mockAccounts'
+import { deriveAccountStatus, resolveCapabilityGroups } from '../data/uadVisibility'
 import { slugToDisplayName } from '../utils/string'
+import PrototypeFloatie from '../components/PrototypeFloatie'
 
 export type AccountDetailStatus = 'enabled' | 'restricted' | 'restricted_soon'
 
@@ -50,6 +52,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
   const [actionsModalInitialSegment, setActionsModalInitialSegment] = useState<'blocking' | 'actions' | undefined>(undefined)
   const [actionsModalInitialSelectedActionId, setActionsModalInitialSelectedActionId] = useState<string | undefined>(undefined)
   const [paymentDrawerOpen, setPaymentDrawerOpen] = useState(false)
+  const [configureModalOpen, setConfigureModalOpen] = useState(false)
   const navigate = useNavigate()
   const prototype = usePrototypeOptional()
   const activityFilter = prototype?.activityFilter ?? 'viewChip'
@@ -65,9 +68,35 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
       : undefined
   /** Only merchant configs get a status; customer-only accounts have no status (undefined). */
   const hasMerchantConfig = mockAccount?.configurations?.includes('Merchant') ?? false
-  const status: AccountStatusKind | undefined = hasMerchantConfig
+  const mockAccountStatus: AccountStatusKind | undefined = hasMerchantConfig
     ? (statusProp ?? statusFromRoute ?? mockAccount?.status ?? 'enabled')
     : undefined
+  /** Floatie roles + capabilities drive badge, action bar, drawer, and V2 “Needs attention” (when prototype context exists). */
+  const status: AccountStatusKind | undefined = useMemo(() => {
+    if (!hasMerchantConfig) return undefined
+    if (prototype == null) return mockAccountStatus
+    const groups = resolveCapabilityGroups(new Set(prototype.activeRoles), prototype.hasBilling)
+    const d = deriveAccountStatus(prototype.capabilityStatuses, groups)
+    if (d == null) return undefined
+    return d
+  }, [hasMerchantConfig, prototype, mockAccountStatus])
+
+  const showHighRiskUi =
+    (mockAccount?.isRadarRuleMatch ?? false) || prototype?.riskLevel === 'high'
+
+  const prototypeRiskHeaderBadge =
+    prototype?.riskLevel === 'high' ? (
+      <PillBadge label="High risk" variant="critical" />
+    ) : prototype?.riskLevel === 'elevated' ? (
+      <PillBadge label="Elevated risk" variant="attention" />
+    ) : null
+
+  const radarOnlyRiskHeaderBadge =
+    prototype == null && (mockAccount?.isRadarRuleMatch ?? false) ? (
+      <PillBadge label="High risk" variant="critical" />
+    ) : null
+
+  const riskHeaderBadge = prototypeRiskHeaderBadge ?? radarOnlyRiskHeaderBadge
   const configType: ConfigType = mockAccount?.configType ?? 'merchant'
   const config = configTemplates[configType]
   const iaVersion: IaVersionId = prototype?.iaVersion ?? 'v2-money-movement'
@@ -122,12 +151,10 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
           ? <PillBadge label="Enabled" variant="success" />
           : undefined
   const headerBadge =
-    headerStatusBadge != null || mockAccount?.isRadarRuleMatch ? (
+    headerStatusBadge != null || riskHeaderBadge != null ? (
       <div className="flex items-center gap-1">
         {headerStatusBadge}
-        {mockAccount?.isRadarRuleMatch && (
-          <PillBadge label="High risk" variant="critical" />
-        )}
+        {riskHeaderBadge}
       </div>
     ) : undefined
 
@@ -151,7 +178,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
               }
             />
           </div>
-          <div className="-ml-10 pl-10 pt-1">
+          <div className="-ml-10 pl-10">
             <AccountDetailActionBar
               status={status}
               visibility={actionBarVisibility}
@@ -195,9 +222,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
         {effectiveSectionId === 'overview' && (
           <div className="flex w-full items-stretch gap-10">
             <div className="flex min-w-0 flex-1 flex-col gap-6">
-              {mockAccount?.isRadarRuleMatch && (
-                <RadarHighRiskCard accountId={id} />
-              )}
+              {showHighRiskUi && <RadarHighRiskCard accountId={id} />}
               {(() => {
                 const OverviewSection = SECTION_COMPONENTS.overview
                 return (
@@ -224,7 +249,6 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                   setActionsModalInitialSelectedActionId(undefined)
                 }}
                 onOpenSettings={() => id && navigate(`/network/${id}/settings`)}
-                showAccountRisk={mockAccount?.isRadarRuleMatch ?? false}
                 accountId={id}
                 />
             </div>
@@ -286,9 +310,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
           return (
             <div className="flex w-full items-stretch gap-10">
               <div className="min-w-0 flex-1 flex-col gap-6 flex">
-                {isFirstV2Tab && mockAccount?.isRadarRuleMatch && (
-                  <RadarHighRiskCard accountId={id} />
-                )}
+                {isFirstV2Tab && showHighRiskUi && <RadarHighRiskCard accountId={id} />}
                 <SectionComponent {...sectionProps} />
               </div>
               <div className="min-w-[320px] w-[30%] shrink-0">
@@ -303,7 +325,6 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                     setActionsModalInitialSegment(undefined)
                   }}
                   onOpenSettings={() => id && navigate(`/network/${id}/settings`)}
-                  showAccountRisk={mockAccount?.isRadarRuleMatch ?? false}
                   accountId={id}
                 />
               </div>
@@ -339,7 +360,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
         open={accountDrawerOpen}
         onClose={() => setAccountDrawerOpen(false)}
         status={status}
-        showAccountRisk={mockAccount?.isRadarRuleMatch ?? false}
+        showAccountRisk={showHighRiskUi}
         accountId={id}
         variant="account"
         onOpenEdit={(section) => {
@@ -355,6 +376,15 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
         onClose={() => setPaymentDrawerOpen(false)}
         variant="payment-details"
       />
+      <button
+        type="button"
+        onClick={() => setConfigureModalOpen(true)}
+        className="pointer-events-auto fixed bottom-6 left-6 z-[9999] rounded-[6px] border border-neutral-100 bg-surface px-3 py-2 font-label-medium-emphasized text-[14px] leading-5 text-default shadow-[0px_1px_1px_rgba(26,27,37,0.16)] transition-colors hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary"
+        data-name="ConfigurePrototype"
+      >
+        Configure
+      </button>
+      <PrototypeFloatie open={configureModalOpen} onClose={() => setConfigureModalOpen(false)} />
     </div>
   )
 }

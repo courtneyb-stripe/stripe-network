@@ -1,6 +1,6 @@
 /**
  * Needs Attention — Full-screen view (like Settings): left sidebar = actions list,
- * main content = selected issue detail (first issue by default). Segment: Blocking issues | Actions required.
+ * main content = selected issue detail (first issue by default). Segment: Actions required | Blocking issues (default: Actions required).
  * Filter by impacted capabilities: All, Impacts payments, Impacts payouts. Low-fi: skeletons throughout.
  */
 
@@ -79,8 +79,8 @@ type ActionsRequiredModalProps = {
 }
 
 const SEGMENT_OPTIONS = [
-  { id: 'blocking' as const, label: 'Blocking issues' },
   { id: 'actions' as const, label: 'Actions required' },
+  { id: 'blocking' as const, label: 'Blocking issues' },
 ] as const
 type SegmentId = (typeof SEGMENT_OPTIONS)[number]['id']
 
@@ -168,7 +168,7 @@ export default function ActionsRequiredModal({
   const prototype = usePrototypeOptional()
   const isLowFidelity = prototype?.fidelity === 'low'
 
-  const [segment, setSegment] = useState<SegmentId>('blocking')
+  const [segment, setSegment] = useState<SegmentId>('actions')
   const [impactsFilter, setImpactsFilter] = useState<ActionsRequiredFilter>(initialFilter)
   const [impactsDropdownOpen, setImpactsDropdownOpen] = useState(false)
   const impactsDropdownRef = useRef<HTMLDivElement>(null)
@@ -186,7 +186,7 @@ export default function ActionsRequiredModal({
   useEffect(() => {
     if (!open) return
     setImpactsFilter(initialFilter)
-    if (initialSegment != null) setSegment(initialSegment)
+    setSegment(initialSegment ?? 'actions')
     setSelectedActionId(initialSelectedActionId ?? null)
   }, [open, initialFilter, initialSegment, initialSelectedActionId])
 

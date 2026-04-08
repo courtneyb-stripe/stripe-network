@@ -734,7 +734,7 @@ function ComponentVariants({ name, demoState }: { name: string; demoState: DemoS
             <ConvertIcon size={12} fill="var(--color-icon-default)" />
             Move money
           </ActionButton>
-          <ActionButton label="Payouts are enabled." tooltipId="inv-action-payouts" variant="outline">
+          <ActionButton label="Payouts are active." tooltipId="inv-action-payouts" variant="outline">
             <Icon name="checkCircleFilled" size={12} fill="#2B8700" />
             Payouts
           </ActionButton>
@@ -742,7 +742,7 @@ function ComponentVariants({ name, demoState }: { name: string; demoState: DemoS
             <Icon name="cancelCircleFilled" size={12} fill="#E61947" />
             Payouts paused
           </ActionButton>
-          <ActionButton label="Payouts are enabled for this account." tooltipId="inv-action-ghost" variant="ghost" labelDottedTooltip>
+          <ActionButton label="Payouts are active for this account." tooltipId="inv-action-ghost" variant="ghost" labelDottedTooltip>
             <Icon name="checkCircleFilled" size={12} fill="#2B8700" />
             Payouts
           </ActionButton>

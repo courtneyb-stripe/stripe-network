@@ -1,5 +1,5 @@
 /**
- * My revenue section for V2 (Money movement) account detail tab.
+ * "As your customer" tab content for V2 (Money movement) account detail.
  * Section headers and placeholders: Subscriptions, Transactions, Invoices, Products.
  */
 

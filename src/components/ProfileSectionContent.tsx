@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom'
 import { PropertyList, PropertyListItem } from './PropertyList'
 import { DescriptionTooltipTrigger } from './DescriptionTooltipTrigger'
 import { usePrototypeOptional } from '../context/PrototypeContext'
+import type { RiskLevel } from '../data/configMatrix'
 const ACCOUNT_DETAILS = {
   id: 'acct_Ly5pN5pGDWgtpa',
   email: 'contact@example.com',
@@ -53,49 +54,62 @@ const SKELETON_ROWS_BEFORE_RISK = 4
 /** One skeleton row after Risk level so Risk level is second to last. */
 const SKELETON_ROWS_AFTER_RISK = 1
 
+function riskLevelLabel(level: RiskLevel): 'Low' | 'Elevated' | 'High' {
+  if (level === 'high') return 'High'
+  if (level === 'elevated') return 'Elevated'
+  return 'Low'
+}
+
 function RiskLevelValue({
-  isHighRisk,
+  riskLevel,
   accountId,
 }: {
-  isHighRisk: boolean
+  riskLevel: RiskLevel | undefined
   accountId: string | undefined
 }) {
-  if (!accountId) {
-    return <span className="font-label-medium">{isHighRisk ? 'High' : 'Low'}</span>
-  }
-  return (
-    <div className="flex flex-col gap-0.5 items-start">
-      <span
-        className="font-label-medium leading-5 tracking-[-0.15px]"
-        style={
-          isHighRisk
-            ? { color: 'var(--color-feedback-critical-on)' }
-            : undefined
-        }
-      >
-        {isHighRisk ? 'High' : 'Low'}
-      </span>
-      <Link
-        to={`/network/${accountId}/risk-analysis`}
-        className="font-label-medium text-subdued underline hover:text-default hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[length:var(--radius-xsmall)] w-fit"
-      >
-        View risk analysis
+  const effective: RiskLevel = riskLevel ?? 'low'
+  const text = riskLevelLabel(effective)
+  const isHigh = effective === 'high'
+  const isElevated = effective === 'elevated'
+
+  const valueStyle =
+    isHigh
+      ? { color: 'var(--color-feedback-critical-on)' }
+      : isElevated
+        ? { color: 'var(--color-feedback-attention-on)' }
+        : undefined
+
+  const riskNestedPath =
+    accountId != null ? `/network/${accountId}/risk-analysis` : null
+
+  const linkClassName =
+    'font-label-medium leading-5 tracking-[-0.15px] underline hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[length:var(--radius-xsmall)] w-fit'
+
+  if (riskNestedPath != null && (isHigh || isElevated)) {
+    return (
+      <Link to={riskNestedPath} className={linkClassName} style={valueStyle}>
+        {text}
       </Link>
-    </div>
+    )
+  }
+
+  return (
+    <span className="font-label-medium leading-5 tracking-[-0.15px]" style={valueStyle}>
+      {text}
+    </span>
   )
 }
 
 type ProfileSectionContentProps = {
-  showAccountRisk?: boolean
   accountId?: string
 }
 
 export default function ProfileSectionContent({
-  showAccountRisk = false,
   accountId,
 }: ProfileSectionContentProps) {
   const prototype = usePrototypeOptional()
   const isLowFidelity = prototype?.fidelity === 'low'
+  const contextRiskLevel = prototype?.riskLevel
 
   return (
     <div
@@ -113,10 +127,7 @@ export default function ProfileSectionContent({
             <PropertyListItem
               label="Risk level"
               value={
-                <RiskLevelValue
-                  isHighRisk={showAccountRisk}
-                  accountId={accountId}
-                />
+                <RiskLevelValue riskLevel={contextRiskLevel} accountId={accountId} />
               }
             />
             {Array.from({ length: SKELETON_ROWS_AFTER_RISK }, (_, i) => (
@@ -128,10 +139,7 @@ export default function ProfileSectionContent({
             <PropertyListItem
               label="Risk level"
               value={
-                <RiskLevelValue
-                  isHighRisk={showAccountRisk}
-                  accountId={accountId}
-                />
+                <RiskLevelValue riskLevel={contextRiskLevel} accountId={accountId} />
               }
             />
             <PropertyListItem label="Email" value={ACCOUNT_DETAILS.email} />

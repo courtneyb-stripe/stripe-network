@@ -55,8 +55,8 @@ function ActionsRequiredSkeletonRow({ onClick, actionId }: { onClick?: (actionId
 }
 
 const SEGMENT_OPTIONS = [
-  { id: 'blocking' as const, label: 'Blocking issues' },
   { id: 'actions' as const, label: 'Actions required' },
+  { id: 'blocking' as const, label: 'Blocking issues' },
 ] as const
 type SegmentId = (typeof SEGMENT_OPTIONS)[number]['id']
 
@@ -87,7 +87,7 @@ function getDaysPastDue(due: Date): number {
 }
 
 type ActionsRequiredSidebarSectionProps = {
-  /** Opens the fullscreen Actions required modal. Pass (actionId, segment) when a list item is clicked so the modal opens with that item and segment (Blocking issues / Actions required) selected. */
+  /** Opens the fullscreen Actions required modal. Pass (actionId, segment) when a list item is clicked so the modal opens with that item and segment (Actions required / Blocking issues) selected. */
   onOpenActionsModal: (actionId?: string, segment?: SegmentId) => void
   /** Account id for action detail link in modal. */
   accountId?: string
@@ -98,7 +98,7 @@ type ActionsRequiredSidebarSectionProps = {
 export default function ActionsRequiredSidebarSection({ onOpenActionsModal, accountId, copyLinkUrl }: ActionsRequiredSidebarSectionProps) {
   const prototype = usePrototypeOptional()
   const isLowFidelity = prototype?.fidelity === 'low'
-  const [segment, setSegment] = useState<SegmentId>('blocking')
+  const [segment, setSegment] = useState<SegmentId>('actions')
   const filteredForSidebar = filterActionsRequired('all')
   /** Blocking: 2 items only; Actions required: full preview list. */
   const sidebarActions =

@@ -36,8 +36,24 @@ function PausedCircleIcon({ size = 12 }: { size?: number }) {
 
 import { ActionButton } from './ActionButton'
 import { IconButton } from './IconButton'
-import LabelTooltip from './LabelTooltip'
 import type { AccountConfig } from '../data/accountConfigs'
+import CapabilityStatusIcon from '../icons/CapabilityStatusIcon'
+import { usePrototypeOptional } from '../context/PrototypeContext'
+import { formatBillingProductsTooltip, type CapabilityStatus } from '../data/configMatrix'
+
+const PAYOUTS_TOOLTIP_BY_CAPABILITY: Record<CapabilityStatus, string> = {
+  active: 'Payouts are active for this account.',
+  pausing_soon: 'Payouts will be paused soon — view actions required.',
+  limited: 'Payouts partially paused — view actions required.',
+  paused: 'Payouts paused — view actions required.',
+}
+
+const PAYMENTS_TOOLTIP_BY_CAPABILITY: Record<CapabilityStatus, string> = {
+  active: 'Payments are active for this account.',
+  pausing_soon: 'Payments will be paused soon — view actions required.',
+  limited: 'Payments partially paused — view actions required.',
+  paused: 'Payments paused — view actions required.',
+}
 
 /** Visibility flags for action bar. When not passed, all actions are shown (backward compatible). Derive from config/status/products for customer vs merchant. */
 export type ActionBarVisibility = {
@@ -53,7 +69,7 @@ export type ActionBarVisibility = {
   showExpand?: boolean
   /** Show Settings icon. Default true. */
   showSettings?: boolean
-  /** Show Subscriptions ghost button (enabled instances only). Default true. */
+  /** When true, a third ghost slot may show “Billing” if prototype billing is enabled. Default true. */
   showSubscriptions?: boolean
 }
 
@@ -96,7 +112,7 @@ type AccountDetailActionBarProps = {
   /** When provided, actions-required modal is controlled by parent. Pass filter to open with that view (e.g. 'payouts' from Payouts dropdown). */
   actionsModalOpen?: boolean
   actionsModalInitialFilter?: ActionsRequiredFilter
-  /** When opening from paused Payouts/Payments/Subscriptions, pass 'actions' so segment is Actions required. */
+  /** When opening from paused Payouts/Payments, pass 'actions' so segment is Actions required. */
   actionsModalInitialSegment?: 'blocking' | 'actions'
   /** When opening from sidebar list item click, pass that action's id to show in modal. */
   actionsModalInitialSelectedActionId?: string
@@ -108,64 +124,99 @@ type AccountDetailActionBarProps = {
   onOpenSettingsSection?: (sectionId: string) => void
 }
 
-/** Payouts/Payments/Subscriptions: always ghost, same placement. Enabled → open Settings (configurations); restricted → open Actions required (filtered). */
+/** Payouts/Payments/Billing: always ghost, same placement. Billing is always shown as enabled (no compliance status). Payouts/Payments: enabled → Settings; restricted → Actions required (filtered). */
 export function AccountDetailHeaderStatusButtons({
   showPayouts,
   showPayments,
-  showSubscriptions,
+  showBilling,
   status,
   onOpenSettingsSection,
   onOpenActionsModal,
 }: {
   showPayouts: boolean
   showPayments: boolean
-  showSubscriptions?: boolean
+  /** True when prototype “Uses billing” is on (third chip). */
+  showBilling?: boolean
   status?: 'enabled' | 'restricted' | 'restricted_soon' | undefined
   /** When enabled, status buttons open Settings to this section (e.g. configurations). */
   onOpenSettingsSection?: (sectionId: string) => void
   /** When restricted, status buttons open Actions required modal with this filter. */
   onOpenActionsModal?: (filter?: ActionsRequiredFilter) => void
 }) {
+  const prototype = usePrototypeOptional()
   const isRestricted = status === 'restricted' || status === 'restricted_soon'
-  const showSubs = showSubscriptions === true
-  if (!showPayouts && !showPayments && !showSubs) return null
+  const showBillingChip = showBilling === true
+  if (!showPayouts && !showPayments && !showBillingChip) return null
   const openEnabled = () => onOpenSettingsSection?.('configurations')
+
+  const payoutsCapability = prototype?.capabilityStatuses.payouts
+  const paymentsCapability = prototype?.capabilityStatuses.payments
+
+  const payoutsNeedsAttention =
+    payoutsCapability != null ? payoutsCapability !== 'active' : isRestricted
+  const paymentsNeedsAttention =
+    paymentsCapability != null ? paymentsCapability !== 'active' : isRestricted
+
   return (
     <div className="flex items-center gap-0">
       {showPayouts && (
         <ActionButton
-          label={isRestricted ? 'Payouts paused — view actions required' : 'Payouts are enabled for this account.'}
+          label={
+            payoutsCapability != null
+              ? PAYOUTS_TOOLTIP_BY_CAPABILITY[payoutsCapability]
+              : isRestricted
+                ? 'Payouts paused — view actions required'
+                : 'Payouts are active for this account.'
+          }
           tooltipId="payouts-tooltip"
           tooltipPlacement="bottom"
           variant="ghost"
-          onClick={isRestricted ? () => onOpenActionsModal?.('payouts') : openEnabled}
+          onClick={payoutsNeedsAttention ? () => onOpenActionsModal?.('payouts') : openEnabled}
         >
-          {isRestricted ? <PausedCircleIcon size={12} /> : <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />}
+          {payoutsCapability != null ? (
+            <CapabilityStatusIcon status={payoutsCapability} />
+          ) : isRestricted ? (
+            <PausedCircleIcon size={12} />
+          ) : (
+            <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />
+          )}
           Payouts
         </ActionButton>
       )}
       {showPayments && (
         <ActionButton
-          label={isRestricted ? 'Payments paused — view actions required' : 'Payments are enabled for this account.'}
+          label={
+            paymentsCapability != null
+              ? PAYMENTS_TOOLTIP_BY_CAPABILITY[paymentsCapability]
+              : isRestricted
+                ? 'Payments paused — view actions required'
+                : 'Payments are active for this account.'
+          }
           tooltipId="payments-tooltip"
           tooltipPlacement="bottom"
           variant="ghost"
-          onClick={isRestricted ? () => onOpenActionsModal?.('payments') : openEnabled}
+          onClick={paymentsNeedsAttention ? () => onOpenActionsModal?.('payments') : openEnabled}
         >
-          {isRestricted ? <PausedCircleIcon size={12} /> : <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />}
+          {paymentsCapability != null ? (
+            <CapabilityStatusIcon status={paymentsCapability} />
+          ) : isRestricted ? (
+            <PausedCircleIcon size={12} />
+          ) : (
+            <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />
+          )}
           Payments
         </ActionButton>
       )}
-      {showSubs && (
+      {showBillingChip && (
         <ActionButton
-          label={isRestricted ? 'Subscriptions paused — view actions required' : 'Subscriptions are enabled for this account.'}
-          tooltipId="subscriptions-tooltip"
+          label={formatBillingProductsTooltip(prototype?.billingFlavors ?? new Set())}
+          tooltipId="billing-products-tooltip"
           tooltipPlacement="bottom"
           variant="ghost"
-          onClick={isRestricted ? () => onOpenActionsModal?.('all') : openEnabled}
+          onClick={openEnabled}
         >
-          {isRestricted ? <PausedCircleIcon size={12} /> : <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />}
-          Subscriptions
+          <Icon name="checkCircleFilled" size={12} fill={iconSuccess} />
+          Billing
         </ActionButton>
       )}
     </div>
@@ -305,7 +356,9 @@ export default function AccountDetailActionBar({
   onOpenSettings: _onOpenSettings,
   onOpenSettingsSection,
 }: AccountDetailActionBarProps) {
+  const prototype = usePrototypeOptional()
   const v = useVisibility(visibility)
+  const showBillingButton = Boolean(prototype?.hasBilling && v.showSubscriptions)
   const [internalActionsModalOpen, setInternalActionsModalOpen] = useState(false)
   const [internalActionsModalFilter, setInternalActionsModalFilter] = useState<ActionsRequiredFilter>('all')
   const isControlled = controlledOnOpen != null && controlledOnClose != null
@@ -317,21 +370,21 @@ export default function AccountDetailActionBar({
         setInternalActionsModalOpen(true)
       }
   const closeActionsModal = isControlled ? controlledOnClose! : () => setInternalActionsModalOpen(false)
-  /** Uncontrolled: opened only from paused buttons, so segment is always Actions required. */
-  const modalInitialSegment = isControlled ? actionsModalInitialSegment : 'actions'
+  /** Default Actions required; pass `blocking` when a flow should open on Blocking issues. */
+  const modalInitialSegment = isControlled ? (actionsModalInitialSegment ?? 'actions') : 'actions'
 
-  const showStatus = v.showPayouts || v.showPayments || v.showSubscriptions
+  const showStatus = v.showPayouts || v.showPayments || showBillingButton
   return (
     <>
       {showStatus && (
         <div
           className="-ml-3 flex flex-wrap items-center gap-[8px]"
-          data-name="Payouts Payments Subscriptions row"
+          data-name="Payouts Payments Billing row"
         >
           <AccountDetailHeaderStatusButtons
             showPayouts={v.showPayouts}
             showPayments={v.showPayments}
-            showSubscriptions={v.showSubscriptions}
+            showBilling={showBillingButton}
             status={status}
             onOpenSettingsSection={onOpenSettingsSection}
             onOpenActionsModal={openActionsModal}

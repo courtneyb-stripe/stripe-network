@@ -89,6 +89,6 @@ export const V2_SECTIONS = ['financialSnapshot', 'myRevenue', 'toyboxRevenue'] a
 
 export const V2_SECTION_LABELS: Record<(typeof V2_SECTIONS)[number], string> = {
   financialSnapshot: 'Financial overview',
-  myRevenue: 'Your business',
-  toyboxRevenue: 'Toybox Labs business',
+  myRevenue: 'As your customer',
+  toyboxRevenue: 'As a business',
 }

@@ -3,10 +3,12 @@
  * status drives the header badge (Enabled vs Restricted) and action bar (Payouts/Payments paused when restricted).
  * configType drives which sections render (see accountConfigs.ts).
  * isRadarRuleMatch: when true, show Account risk section in sidebar/drawer (any config).
+ * riskLevel: optional; omit for Low. Radar matches use riskLevel 'high' (syncs prototype risk when route account id changes).
  * Rule: getAccountById must resolve for any id from the network list so status is consistent (no reliance on link state only).
  */
 
 import type { ConfigType } from './accountConfigs'
+import type { RiskLevel } from './configMatrix'
 import { generateNetworkRows } from './networkDummyData'
 
 export type AccountStatus = 'enabled' | 'restricted' | 'restricted_soon'
@@ -18,6 +20,8 @@ export type MockAccount = {
   configType: ConfigType
   /** When true, account appears under Radar rule match — show Account risk + View risk analysis regardless of configType. */
   isRadarRuleMatch?: boolean
+  /** When set, seeds prototype risk for this account (e.g. high for Radar matches). Omit for Low. */
+  riskLevel?: RiskLevel
   email: string
   configurations: string
 }
@@ -53,6 +57,7 @@ export const MOCK_ACCOUNTS: MockAccount[] = [
     status: 'enabled',
     configType: 'merchant',
     isRadarRuleMatch: true,
+    riskLevel: 'high',
     email: 'risk@example.com',
     configurations: 'Merchant',
   },
@@ -62,6 +67,7 @@ export const MOCK_ACCOUNTS: MockAccount[] = [
     status: 'enabled',
     configType: 'merchant',
     isRadarRuleMatch: true,
+    riskLevel: 'high',
     email: 'atlas@example.com',
     configurations: 'Merchant',
   },
@@ -85,6 +91,7 @@ const ACCOUNTS_BY_ID = ((): Map<string, MockAccount> => {
         status: toStatus(row.status),
         configType: configType(row.configurations),
         isRadarRuleMatch: row.isRadarRuleMatch || undefined,
+        riskLevel: row.isRadarRuleMatch ? 'high' : undefined,
         email: row.email,
         configurations: row.configurations,
       })

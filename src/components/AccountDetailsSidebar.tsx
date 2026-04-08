@@ -3,7 +3,7 @@
  * When restricted: Actions required section (Figma 18-7608) first, then 40px gap, then Account card.
  * Account heading (SectionHeader with expand icon), optional badge, and property list.
  * Expand opens half-screen drawer (Figma 16:6868).
- * When showAccountRisk (e.g. radar rule matches), show Account risk + View risk analysis below ID (Figma 1966:24837).
+ * Risk level in the profile list follows PrototypeContext (synced from mock account riskLevel, default Low).
  */
 
 import { ArrowsOutwardIcon } from '../icons/ArrowsOutwardIcon'
@@ -23,8 +23,6 @@ type AccountDetailsSidebarProps = {
   onOpenActionsModal?: () => void
   /** When provided, Profile header shows Edit (ghost) button left of expand; opens Settings (deep link). */
   onOpenSettings?: () => void
-  /** When true (e.g. radar rule matches), show Account risk (High) + View risk analysis below ID. */
-  showAccountRisk?: boolean
   /** Account id for View risk analysis link. */
   accountId?: string
 }
@@ -36,7 +34,6 @@ export default function AccountDetailsSidebar({
   onCloseAccountDrawer,
   onOpenActionsModal,
   onOpenSettings,
-  showAccountRisk = false,
   accountId,
 }: AccountDetailsSidebarProps) {
   return (
@@ -58,7 +55,7 @@ export default function AccountDetailsSidebar({
             actionLabel="View details"
           />
         </div>
-        <ProfileSectionContent showAccountRisk={showAccountRisk} accountId={accountId} />
+        <ProfileSectionContent accountId={accountId} />
         </div>
 
         {/* 40px gap then placeholder sections */}

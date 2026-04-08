@@ -179,10 +179,10 @@ const PROFILE_TABS = [
 ] as const
 
 const CAPABILITY_STATUS_TOOLTIPS: Record<string, string> = {
-  Active: 'Capabilities that are currently enabled and in use.',
+  Active: 'Capabilities that are currently active and in use.',
   Paused: 'Capabilities that are temporarily disabled.',
   'Paused soon': 'Capabilities that will be paused soon unless you take action.',
-  Inactive: 'Capabilities that are not yet enabled. Request to add them for this account.',
+  Inactive: 'Capabilities that are not yet active. Request to add them for this account.',
 }
 
 const OBJECT_DETAIL_PAGE_URL =

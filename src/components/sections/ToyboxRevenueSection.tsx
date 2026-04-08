@@ -1,5 +1,5 @@
 /**
- * Toybox Lab's revenue section for V2 (Money movement) account detail tab.
+ * "As a business" tab content for V2 (Money movement) account detail.
  * Same sections as My revenue except no Monetization; Transactions tabs: Payments, Payouts, Transfers, Global payouts received.
  */
 
@@ -112,7 +112,7 @@ export default function ToyboxRevenueSection({ onRowClick, accountName }: Toybox
         <TableSkeleton rowCount={10} showCheckboxColumn={false} onRowClick={onRowClick} />
       </div>
 
-      {/* Support cases — at the bottom of Toybox Labs business tab */}
+      {/* Support cases — at the bottom of As a business tab */}
       <div className="flex flex-col gap-2">
         <SectionHeader title="Support cases" size="small" />
         <TableSkeleton rowCount={5} showCheckboxColumn={false} onRowClick={onRowClick} />
