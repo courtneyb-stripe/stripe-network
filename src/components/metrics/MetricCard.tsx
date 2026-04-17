@@ -97,7 +97,7 @@ const SIMPLE_METRIC_CARD_MIN_HEIGHT = 'min-h-[80px]'
 export function SimpleMetricCardSkeleton({ className = '' }: { className?: string }) {
   return (
     <div
-      className={`flex min-w-0 flex-col rounded-[12px] border border-neutral-50 bg-surface justify-center gap-1.5 p-[8px] shadow-[0px_1px_2px_-0.5px_rgba(0,0,0,0.05)] ${SIMPLE_METRIC_CARD_MIN_HEIGHT} ${className}`.trim()}
+      className={`flex min-w-0 flex-col rounded-[16px] border border-neutral-50 bg-surface justify-center gap-1.5 py-[8px] px-[12px] shadow-[0px_1px_2px_-0.5px_rgba(0,0,0,0.05)] ${SIMPLE_METRIC_CARD_MIN_HEIGHT} ${className}`.trim()}
       data-name="Metric card (simple) skeleton"
     >
       <div className="h-3 w-20 rounded-[3px] bg-neutral-100" aria-hidden />

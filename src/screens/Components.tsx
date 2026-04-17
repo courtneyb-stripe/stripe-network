@@ -49,6 +49,8 @@ import FinancialSnapshot from '../components/FinancialSnapshot'
 import FinancialAccountsSidebar from '../components/FinancialAccountsSidebar'
 import { TIME_RANGE_OPTIONS, type TimeRange } from '../components/metrics/constants'
 import { PaymentMethods, LoanDetails, Repayments } from '../components/sections'
+import SignalGroupPopover from '../components/SignalGroupPopover'
+import PaymentsPopoverPanel from '../components/PaymentsPopoverPanel'
 
 // --- Constants ---
 const STATUS_ORDER: ComponentStatus[] = ['ready', 'in_progress', 'placeholder']
@@ -101,6 +103,128 @@ function MetricDropdownDemo() {
       onChange={setValue}
       ariaLabel="Time range"
     />
+  )
+}
+
+function SignalGroupPopoverDemo() {
+  const defaultAnchorRef = useRef<HTMLButtonElement>(null)
+  const paymentsAnchorRef = useRef<HTMLButtonElement>(null)
+  const [defaultOpen, setDefaultOpen] = useState(false)
+  const [paymentsOpen, setPaymentsOpen] = useState(false)
+
+  return (
+    <div className="flex max-w-xl flex-col gap-10">
+      <div>
+        <p className="mb-2 text-sm text-subdued">Payments capability panel (body only, Figma 113:50564)</p>
+        <div className="flex flex-col gap-4">
+          <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
+            <PaymentsPopoverPanel status="active" />
+          </div>
+          <p className="text-sm text-subdued">Limited group (Active methods + Zip paused)</p>
+          <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
+            <PaymentsPopoverPanel status="limited" />
+          </div>
+          <p className="text-sm text-subdued">Payouts — same shell, single “Payouts” capability</p>
+          <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
+            <PaymentsPopoverPanel variant="payouts" status="active" onEditCapabilities={() => {}} />
+          </div>
+          <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
+            <PaymentsPopoverPanel variant="payouts" status="limited" onEditCapabilities={() => {}} />
+          </div>
+          <p className="text-sm text-subdued">Financial accounts — Figma 113:49956 (chip row)</p>
+          <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
+            <PaymentsPopoverPanel
+              variant="financialAccounts"
+              status="active"
+              onEditCapabilities={() => {}}
+            />
+          </div>
+          <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
+            <PaymentsPopoverPanel
+              variant="financialAccounts"
+              status="limited"
+              onEditCapabilities={() => {}}
+            />
+          </div>
+          <p className="text-sm text-subdued">Financing — chips follow Configure (Loan / Cash advance)</p>
+          <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
+            <PaymentsPopoverPanel
+              variant="financing"
+              financingProducts={{ loan: true, cashAdvance: false }}
+              status="active"
+              onEditCapabilities={() => {}}
+            />
+          </div>
+          <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
+            <PaymentsPopoverPanel
+              variant="financing"
+              financingProducts={{ loan: false, cashAdvance: true }}
+              status="active"
+              onEditCapabilities={() => {}}
+            />
+          </div>
+          <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
+            <PaymentsPopoverPanel
+              variant="financing"
+              financingProducts={{ loan: true, cashAdvance: true }}
+              status="active"
+              onEditCapabilities={() => {}}
+            />
+          </div>
+          <p className="text-sm text-subdued">Card issuing — single capability chip</p>
+          <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
+            <PaymentsPopoverPanel
+              variant="cardIssuing"
+              status="active"
+              onEditCapabilities={() => {}}
+            />
+          </div>
+          <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
+            <PaymentsPopoverPanel
+              variant="cardIssuing"
+              status="limited"
+              onEditCapabilities={() => {}}
+            />
+          </div>
+        </div>
+      </div>
+      <div>
+        <p className="mb-2 text-sm text-subdued">Anchored — default title + placeholder</p>
+        <button
+          ref={defaultAnchorRef}
+          type="button"
+          className="inline-flex h-6 min-h-6 items-center rounded-full border border-transparent bg-transparent px-1.5 font-label-medium text-default hover:border-neutral-100"
+          onClick={() => setDefaultOpen((o) => !o)}
+        >
+          Toggle sample popover
+        </button>
+        <SignalGroupPopover
+          open={defaultOpen}
+          anchorEl={defaultAnchorRef.current}
+          onClose={() => setDefaultOpen(false)}
+          title="Sample title"
+        />
+      </div>
+      <div>
+        <p className="mb-2 text-sm text-subdued">Anchored — custom body (Payments)</p>
+        <button
+          ref={paymentsAnchorRef}
+          type="button"
+          className="inline-flex h-6 min-h-6 items-center rounded-full border border-transparent bg-transparent px-1.5 font-label-medium text-default hover:border-neutral-100"
+          onClick={() => setPaymentsOpen((o) => !o)}
+        >
+          Payments
+        </button>
+        <SignalGroupPopover
+          open={paymentsOpen}
+          anchorEl={paymentsAnchorRef.current}
+          onClose={() => setPaymentsOpen(false)}
+          title="Payments"
+        >
+          <PaymentsPopoverPanel status="active" />
+        </SignalGroupPopover>
+      </div>
+    </div>
   )
 }
 
@@ -683,6 +807,8 @@ function ComponentVariants({ name, demoState }: { name: string; demoState: DemoS
           <TabBar tabs={[{ id: 'payments', label: 'Payments' }, { id: 'payouts', label: 'Payouts' }, { id: 'collected-fees', label: 'Platform fees' }]} activeId={tabSecondary} onChange={setTabSecondary} variant="secondary" gap={6} />
         </div>
       )
+    case 'SignalGroupPopover':
+      return <SignalGroupPopoverDemo />
     case 'SectionHeader':
       return (
         <div className="flex flex-col gap-4">

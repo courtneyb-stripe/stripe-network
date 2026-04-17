@@ -9,7 +9,7 @@ import AccountDetailHeader from '../components/AccountDetailHeader'
 import AccountDetailActionBar, { AccountDetailMainActions, getActionBarVisibility } from '../components/AccountDetailActionBar'
 import { PillBadge } from '../components/PillBadge'
 import type { ActionsRequiredFilter } from '../components/ActionsRequiredModal'
-import AccountDrawer from '../components/AccountDrawer'
+import AccountDrawer, { type ProfileDrawerTabId } from '../components/AccountDrawer'
 import AccountDetailsSidebar, { type AccountStatusKind } from '../components/AccountDetailsSidebar'
 import TabBar from '../components/TabBar'
 import { SECTION_COMPONENTS, BillingSidebar, CommerceSidebar } from '../components/sections'
@@ -32,6 +32,7 @@ import { getAccountById } from '../data/mockAccounts'
 import { deriveAccountStatus, resolveCapabilityGroups } from '../data/uadVisibility'
 import { slugToDisplayName } from '../utils/string'
 import PrototypeFloatie from '../components/PrototypeFloatie'
+import PrototypeWorkbenchBar from '../components/PrototypeWorkbenchBar'
 
 export type AccountDetailStatus = 'enabled' | 'restricted' | 'restricted_soon'
 
@@ -47,6 +48,12 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
   const { id } = useParams<{ id: string }>()
   const location = useLocation()
   const [accountDrawerOpen, setAccountDrawerOpen] = useState(false)
+  const [accountDrawerProfileTab, setAccountDrawerProfileTab] = useState<ProfileDrawerTabId>('details')
+
+  const openAccountDrawer = (opts?: { profileTab?: ProfileDrawerTabId }) => {
+    setAccountDrawerProfileTab(opts?.profileTab ?? 'details')
+    setAccountDrawerOpen(true)
+  }
   const [actionsModalOpen, setActionsModalOpen] = useState(false)
   const [actionsModalInitialFilter, setActionsModalInitialFilter] = useState<ActionsRequiredFilter>('all')
   const [actionsModalInitialSegment, setActionsModalInitialSegment] = useState<'blocking' | 'actions' | undefined>(undefined)
@@ -162,7 +169,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
     <div className="flex h-full w-full flex-col" data-name="AccountDetail">
       {/* Header + action bar; top-aligned so header position is stable across detail and nested pages. */}
       <div className="flex shrink-0 items-start gap-6 px-10 pt-6 pb-0">
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div>
             <AccountDetailHeader
               accountName={accountName}
@@ -171,18 +178,18 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
               trailing={
                 <AccountDetailMainActions
                   visibility={actionBarVisibility}
-                  onOpenAccountDrawer={() => setAccountDrawerOpen(true)}
+                  onOpenAccountDrawer={openAccountDrawer}
                   accountId={id}
                   onOpenSettings={id ? () => navigate(`/network/${id}/settings`) : undefined}
                 />
               }
             />
           </div>
-          <div className="-ml-10 pl-10">
+          <div className="-ml-8 pl-10">
             <AccountDetailActionBar
               status={status}
               visibility={actionBarVisibility}
-              onOpenAccountDrawer={() => setAccountDrawerOpen(true)}
+              onOpenAccountDrawer={openAccountDrawer}
               accountId={id}
               accountName={accountName}
               actionsModalOpen={actionsModalOpen}
@@ -240,7 +247,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                 <AccountDetailsSidebar
                 status={status}
                 accountDrawerOpen={accountDrawerOpen}
-                onOpenAccountDrawer={() => setAccountDrawerOpen(true)}
+                onOpenAccountDrawer={openAccountDrawer}
                 onCloseAccountDrawer={() => setAccountDrawerOpen(false)}
                 onOpenActionsModal={() => {
                   setActionsModalOpen(true)
@@ -317,7 +324,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                 <AccountDetailsSidebar
                   status={status}
                   accountDrawerOpen={accountDrawerOpen}
-                  onOpenAccountDrawer={() => setAccountDrawerOpen(true)}
+                  onOpenAccountDrawer={openAccountDrawer}
                   onCloseAccountDrawer={() => setAccountDrawerOpen(false)}
                   onOpenActionsModal={() => {
                     setActionsModalOpen(true)
@@ -359,6 +366,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
       <AccountDrawer
         open={accountDrawerOpen}
         onClose={() => setAccountDrawerOpen(false)}
+        initialProfileTabId={accountDrawerProfileTab}
         status={status}
         showAccountRisk={showHighRiskUi}
         accountId={id}
@@ -376,14 +384,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
         onClose={() => setPaymentDrawerOpen(false)}
         variant="payment-details"
       />
-      <button
-        type="button"
-        onClick={() => setConfigureModalOpen(true)}
-        className="pointer-events-auto fixed bottom-6 left-6 z-[9999] rounded-[6px] border border-neutral-100 bg-surface px-3 py-2 font-label-medium-emphasized text-[14px] leading-5 text-default shadow-[0px_1px_1px_rgba(26,27,37,0.16)] transition-colors hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary"
-        data-name="ConfigurePrototype"
-      >
-        Configure
-      </button>
+      <PrototypeWorkbenchBar onConfigureClick={() => setConfigureModalOpen(true)} />
       <PrototypeFloatie open={configureModalOpen} onClose={() => setConfigureModalOpen(false)} />
     </div>
   )

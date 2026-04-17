@@ -135,6 +135,8 @@ type AccountDrawerProps = {
   onOpenEdit?: (section: ProfileEditSection) => void
   /** Called when Edit is clicked on Capabilities section header. Opens Settings modal to Capabilities. */
   onOpenCapabilitiesEdit?: () => void
+  /** When the drawer opens, select this Profile tab (e.g. capabilities from payments popover overflow). */
+  initialProfileTabId?: ProfileDrawerTabId
 }
 
 const PAYMENT_DETAIL_SKELETON_LABELS = [
@@ -178,6 +180,8 @@ const PROFILE_TABS = [
   { id: 'capabilities', label: 'Capabilities' },
 ] as const
 
+export type ProfileDrawerTabId = (typeof PROFILE_TABS)[number]['id']
+
 const CAPABILITY_STATUS_TOOLTIPS: Record<string, string> = {
   Active: 'Capabilities that are currently active and in use.',
   Paused: 'Capabilities that are temporarily disabled.',
@@ -198,8 +202,15 @@ export default function AccountDrawer({
   variant = 'account',
   onOpenEdit,
   onOpenCapabilitiesEdit,
+  initialProfileTabId,
 }: AccountDrawerProps) {
   const [profileTabId, setProfileTabId] = useState<string>(PROFILE_TABS[0].id)
+
+  useEffect(() => {
+    if (open) {
+      setProfileTabId(initialProfileTabId ?? 'details')
+    }
+  }, [open, initialProfileTabId])
   const isPaymentDetails = variant === 'payment-details'
   const isInvoiceDetails = variant === 'invoice-details'
   const isProductDetails = variant === 'product-details'

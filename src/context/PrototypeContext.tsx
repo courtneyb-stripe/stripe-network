@@ -15,10 +15,12 @@ import {
 } from 'react'
 import { useLocation } from 'react-router-dom'
 import {
+  DEFAULT_FINANCING_POPOVER,
   type AccountRoleId,
   type BillingFlavor,
   type CapabilityGroupId,
   type CapabilityStatus,
+  type FinancingProductSelection,
   type RelationshipFlags,
   type RiskLevel,
 } from '../data/configMatrix'
@@ -110,6 +112,9 @@ type PrototypeState = {
   setRelationship: Dispatch<SetStateAction<RelationshipFlags>>
   capabilityStatuses: Record<CapabilityGroupId, CapabilityStatus>
   setCapabilityStatus: (groupId: CapabilityGroupId, status: CapabilityStatus) => void
+  /** Configure account → Financing: Loan / Cash advance (drives Financing popover chips). */
+  financingProducts: FinancingProductSelection
+  setFinancingProducts: Dispatch<SetStateAction<FinancingProductSelection>>
 }
 
 const PrototypeContext = createContext<PrototypeState | null>(null)
@@ -131,6 +136,9 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
   const [billingEnabled, setBillingEnabled] = useState(false)
   const [billingFlavors, setBillingFlavors] = useState<Set<BillingFlavor>>(() => new Set())
   const [relationship, setRelationship] = useState<RelationshipFlags>({ ...DEFAULT_RELATIONSHIP })
+  const [financingProducts, setFinancingProducts] = useState<FinancingProductSelection>(
+    () => ({ ...DEFAULT_FINANCING_POPOVER })
+  )
   const [capabilityStatuses, setCapabilityStatuses] = useState<
     Record<CapabilityGroupId, CapabilityStatus>
   >(() =>
@@ -201,6 +209,8 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
       setRelationship,
       capabilityStatuses,
       setCapabilityStatus,
+      financingProducts,
+      setFinancingProducts,
     }),
     [
       activityFilter,
@@ -216,6 +226,7 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
       capabilityStatuses,
       setCapabilityStatus,
       setHasBilling,
+      financingProducts,
     ]
   )
 

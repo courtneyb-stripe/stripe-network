@@ -2,15 +2,18 @@
  * PrototypeFloatie — Configure account modal (UAD composition). Trigger lives on AccountDetail.
  */
 
-import { Fragment, useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import ChevronDownIcon from '../icons/ChevronDownIcon'
 import { Icon } from '../icons/SailIcons'
 import { PillBadge } from './PillBadge'
 import { usePrototypeOptional } from '../context/PrototypeContext'
 import {
-  BILLING_FLAVOR_LABELS,
+  CAPABILITY_GROUP_DISPLAY_LABELS,
+  CAPABILITY_GROUP_DISPLAY_ORDER,
   COMPLIANCE_ROLES,
+  ROLE_AUTO_SELECT,
+  SIGNAL_GROUP_DEFAULTS,
   type AccountRoleId,
   type BillingFlavor,
   type CapabilityGroupId,
@@ -22,6 +25,7 @@ import {
   capabilityGroupsWithStatus,
   deriveAccountStatus,
   resolveCapabilityGroups,
+  signalGroupsForConfigureModal,
 } from '../data/uadVisibility'
 
 const ROLE_LABELS: Record<AccountRoleId, string> = {
@@ -31,27 +35,24 @@ const ROLE_LABELS: Record<AccountRoleId, string> = {
   storer: 'Storer',
   borrower: 'Borrower',
   issuer: 'Issuer',
+  card_holder: 'Card issuer',
 }
 
-/** Figma row order: Merchant, Customer, Recipient, Storer, Borrower, Issuer */
+/** Role pill order */
 const PILL_ROLE_ORDER: AccountRoleId[] = [
   'merchant',
   'customer',
   'recipient',
   'storer',
   'borrower',
-  'issuer',
+  'card_holder',
 ]
 
-const CAPABILITY_GROUP_LABELS: Record<CapabilityGroupId, string> = {
-  payments: 'Payments',
-  payouts: 'Payouts',
-  transfers: 'Transfers',
-  billing: 'Billing',
-  treasury: 'Treasury',
-  capital: 'Capital',
-  issuing: 'Issuing',
-}
+/** Real borders only (no inset box-shadow) — same 2px box on every pill; only `border-color` changes. Avoids WebKit/subpixel glitches that can hit one chip in a row. */
+const ROLE_PILL_BASE =
+  'relative shrink-0 rounded-[8px] border-2 border-solid bg-white px-3 py-2 font-label-medium text-[14px] leading-5 tracking-[-0.15px] transition-[color,border-color] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action-primary)]'
+
+const CAPABILITY_GROUP_LABELS = CAPABILITY_GROUP_DISPLAY_LABELS
 
 const CAPABILITY_STATUS_OPTIONS: { id: CapabilityStatus; label: string }[] = [
   { id: 'active', label: 'Active' },
@@ -60,24 +61,27 @@ const CAPABILITY_STATUS_OPTIONS: { id: CapabilityStatus; label: string }[] = [
   { id: 'paused', label: 'Paused' },
 ]
 
-const CAPABILITY_GROUP_ORDER: CapabilityGroupId[] = [
-  'payments',
-  'payouts',
-  'transfers',
-  'billing',
-  'treasury',
-  'capital',
-  'issuing',
-]
+const CAPABILITY_GROUP_ORDER = CAPABILITY_GROUP_DISPLAY_ORDER
 
 const SELECT_FIELD =
   'w-full rounded-[8px] border border-neutral-100 bg-surface py-2 pl-[12px] pr-[32px] text-[14px] leading-5 text-default shadow-none appearance-none focus:border-action-primary focus:outline-none focus:ring-1 focus:ring-action-primary [color-scheme:light]'
+
+const BILLING_FLAVOR_LABELS: Record<BillingFlavor, string> = {
+  invoicing: 'Invoicing',
+  subscriptions: 'Subscriptions',
+  metered_billing: 'Metered billing',
+}
 
 const BILLING_FLAVOR_OPTIONS: { id: BillingFlavor; label: string }[] = [
   { id: 'invoicing', label: BILLING_FLAVOR_LABELS.invoicing },
   { id: 'subscriptions', label: BILLING_FLAVOR_LABELS.subscriptions },
   { id: 'metered_billing', label: BILLING_FLAVOR_LABELS.metered_billing },
 ]
+
+const GROUP_SUBHEAD_CLASS = 'text-[13px] font-medium leading-5 text-subdued'
+
+const SECTION_HEADING_CLASS =
+  'm-0 px-4 pt-4 font-label-medium-emphasized text-[14px] leading-5 tracking-[-0.15px] text-default'
 
 const RISK_LEVEL_OPTIONS: { id: RiskLevel; label: string }[] = [
   { id: 'low', label: 'Low' },
@@ -99,10 +103,28 @@ function cloneRoleSet(roles: ReadonlySet<AccountRoleId>): Set<AccountRoleId> {
   return new Set(roles)
 }
 
+/** Storer implies Recipient — keep invariant when loading draft roles. */
+function ensureStorerRequiresRecipient(roles: ReadonlySet<AccountRoleId>): Set<AccountRoleId> {
+  const next = new Set(roles)
+  if (next.has('storer')) next.add('recipient')
+  return next
+}
+
+/** Issuer is not a selectable pill; Card Issuing is tied to Card issuer only — strip legacy issuer from role sets. */
+function rolesForPrototypeUi(roles: ReadonlySet<AccountRoleId>): Set<AccountRoleId> {
+  const next = ensureStorerRequiresRecipient(new Set(roles))
+  next.delete('issuer')
+  return ensureStorerRequiresRecipient(next)
+}
+
 function cloneCapabilityStatuses(
   src: Record<CapabilityGroupId, CapabilityStatus>
 ): Record<CapabilityGroupId, CapabilityStatus> {
   return { ...src }
+}
+
+function isCustomerOnly(roles: ReadonlySet<AccountRoleId>): boolean {
+  return roles.size === 1 && roles.has('customer')
 }
 
 function CloseIcon({ size = 12 }: { size?: number }) {
@@ -166,25 +188,73 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
   const [draftCapabilityStatuses, setDraftCapabilityStatuses] = useState<
     Record<CapabilityGroupId, CapabilityStatus>
   >(() => ({} as Record<CapabilityGroupId, CapabilityStatus>))
-  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [riskSettingsOpen, setRiskSettingsOpen] = useState(false)
   const [pendingRiskLevel, setPendingRiskLevel] = useState<RiskLevel>('low')
   const [draftRelationship, setDraftRelationship] = useState<RelationshipFlags>(
     () => ({ ...DEFAULT_RELATIONSHIP_DRAFT })
   )
+  const [draftPaymentMethodOnFile, setDraftPaymentMethodOnFile] = useState(true)
+  const [draftPayoutSchedule, setDraftPayoutSchedule] = useState(true)
+  const [draftFinancialAccounts, setDraftFinancialAccounts] = useState(true)
+  const [draftBusinessFinancing, setDraftBusinessFinancing] = useState(true)
+  const [draftFinancingLoan, setDraftFinancingLoan] = useState(true)
+  const [draftFinancingCashAdvance, setDraftFinancingCashAdvance] = useState(false)
+  const [draftParticipatesCardProgram, setDraftParticipatesCardProgram] = useState(false)
+
+  /**
+   * Stable snapshot of prototype fields we hydrate from — NOT the context object identity.
+   * The Provider `value` object changes whenever any field updates; depending on `prototype`
+   * in useEffect re-ran the sync on every context churn and caused a setState loop / stuck tab.
+   */
+  const prototypeSyncKey = prototype
+    ? [
+        [...prototype.activeRoles].sort().join(','),
+        String(prototype.hasBilling),
+        [...prototype.billingFlavors].sort().join(','),
+        prototype.riskLevel,
+        JSON.stringify(prototype.relationship),
+        JSON.stringify(prototype.capabilityStatuses),
+      ].join('|')
+    : ''
+
+  const pendingRolesKey = [...pendingRoles].sort().join(',')
 
   useEffect(() => {
     if (!open) {
-      setAdvancedOpen(false)
+      setRiskSettingsOpen(false)
       return
     }
     if (!prototype) return
-    setPendingRoles(cloneRoleSet(prototype.activeRoles))
+    setPendingRoles(rolesForPrototypeUi(prototype.activeRoles))
     setPendingBilling(prototype.hasBilling)
     setPendingBillingFlavors(new Set(prototype.billingFlavors))
     setDraftCapabilityStatuses(cloneCapabilityStatuses(prototype.capabilityStatuses))
     setPendingRiskLevel(prototype.riskLevel)
     setDraftRelationship({ ...prototype.relationship })
-  }, [open, prototype])
+    setDraftPaymentMethodOnFile(!!SIGNAL_GROUP_DEFAULTS.merchant?.hasPaymentMethodOnFile)
+    setDraftPayoutSchedule(!!SIGNAL_GROUP_DEFAULTS.recipient?.hasPayoutSchedule)
+    setDraftFinancialAccounts(!!SIGNAL_GROUP_DEFAULTS.storer?.hasFinancialAccounts)
+    const financingOn = !!SIGNAL_GROUP_DEFAULTS.borrower?.hasBusinessFinancing
+    setDraftBusinessFinancing(financingOn)
+    setDraftFinancingLoan(prototype.financingProducts.loan)
+    setDraftFinancingCashAdvance(prototype.financingProducts.cashAdvance)
+    setDraftParticipatesCardProgram(prototype.activeRoles.has('card_holder'))
+    // prototype intentionally omitted from deps — see prototypeSyncKey note above
+  }, [open, prototypeSyncKey])
+
+  useEffect(() => {
+    if (!open) return
+    if (pendingRoles.has('card_holder')) setDraftParticipatesCardProgram(true)
+    else setDraftParticipatesCardProgram(false)
+  }, [open, pendingRolesKey])
+
+  /** Nested financing checkboxes: default first option (Loan) when toggle is on and none selected. */
+  useEffect(() => {
+    if (!open || !draftBusinessFinancing) return
+    if (!draftFinancingLoan && !draftFinancingCashAdvance) {
+      setDraftFinancingLoan(true)
+    }
+  }, [open, draftBusinessFinancing, draftFinancingLoan, draftFinancingCashAdvance])
 
   const resolvedGroups = useMemo(() => {
     const g = resolveCapabilityGroups(pendingRoles, pendingBilling)
@@ -213,7 +283,8 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
   )
 
   const showComplianceSections = hasComplianceRole(pendingRoles)
-  const showBillingToggle = pendingRoles.has('merchant')
+  const signalGroupKeys = useMemo(() => signalGroupsForConfigureModal(pendingRoles), [pendingRoles])
+  const customerOnly = useMemo(() => isCustomerOnly(pendingRoles), [pendingRoles])
 
   const updateDisabled =
     prototype == null ||
@@ -236,12 +307,17 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
     setPendingRoles((prev) => {
       const next = new Set(prev)
       if (next.has(id)) {
+        if (id === 'recipient' && next.has('storer')) return prev
         if (next.size <= 1) return prev
         next.delete(id)
       } else {
         next.add(id)
+        const auto = ROLE_AUTO_SELECT[id]
+        if (auto) {
+          for (const r of auto) next.add(r)
+        }
       }
-      return next
+      return ensureStorerRequiresRecipient(next)
     })
   }
 
@@ -256,16 +332,21 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
   const handleUpdate = () => {
     if (!prototype || pendingRoles.size === 0) return
     if (pendingBilling && pendingBillingFlavors.size === 0) return
-    prototype.applyActiveRoles(new Set(pendingRoles))
+    const rolesToApply = rolesForPrototypeUi(pendingRoles)
+    prototype.applyActiveRoles(rolesToApply)
     prototype.setHasBilling(pendingBilling)
     prototype.setBillingFlavors(pendingBilling ? new Set(pendingBillingFlavors) : new Set())
     for (const g of capabilityGroupsWithStatus(
-      resolveCapabilityGroups(pendingRoles, pendingBilling)
+      resolveCapabilityGroups(rolesToApply, pendingBilling)
     )) {
       prototype.setCapabilityStatus(g, draftCapabilityStatuses[g] ?? 'active')
     }
     prototype.setRiskLevel(pendingRiskLevel)
     prototype.setRelationship({ ...draftRelationship })
+    prototype.setFinancingProducts({
+      loan: draftFinancingLoan,
+      cashAdvance: draftFinancingCashAdvance,
+    })
     onClose()
   }
 
@@ -279,6 +360,32 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
     }
     return <PillBadge label="Enabled" variant="success" />
   })()
+
+  const renderCapabilityStatus = (groupId: CapabilityGroupId) => (
+    <div className="flex flex-col gap-1">
+      <span className="text-[12px] leading-4 text-subdued">Capability group status</span>
+      <span className="relative block w-full">
+        <select
+          id={`configure-cap-${groupId}`}
+          value={draftCapabilityStatuses[groupId] ?? 'active'}
+          onChange={(e) => setDraftStatus(groupId, e.target.value as CapabilityStatus)}
+          className={SELECT_FIELD}
+        >
+          {CAPABILITY_STATUS_OPTIONS.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDownIcon
+          size={8}
+          fill="var(--color-icon-subdued)"
+          className="pointer-events-none absolute right-[12px] top-1/2 -translate-y-1/2"
+          aria-hidden
+        />
+      </span>
+    </div>
+  )
 
   if (!open) return null
 
@@ -297,16 +404,16 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
         role="dialog"
         aria-modal="true"
         aria-labelledby="configure-modal-title"
-        className="relative z-[1] flex h-[min(90vh,640px)] w-full max-w-[640px] flex-col overflow-hidden rounded-[8px] bg-surface shadow-[0px_15px_35px_rgba(48,49,61,0.08),0px_5px_15px_rgba(0,0,0,0.12)]"
+        className="relative z-[1] flex h-[min(90vh,720px)] w-full max-w-[720px] flex-col overflow-hidden rounded-[8px] bg-surface shadow-[0px_15px_35px_rgba(48,49,61,0.08),0px_5px_15px_rgba(0,0,0,0.12)]"
         data-name="PrototypeConfigureModal"
         onMouseDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex shrink-0 flex-col gap-4 border-b border-neutral-100 p-4">
-          <div className="flex items-start gap-1">
+          <div className="flex items-center gap-1">
             <h2
               id="configure-modal-title"
-              className="min-h-[28px] flex-1 font-label-medium-emphasized text-[16px] leading-6 tracking-[-0.31px] text-default"
+              className="flex min-h-[28px] flex-1 items-center align-middle font-label-medium-emphasized text-[16px] !leading-[22px] tracking-[-0.31px] text-default"
             >
               Configure account
             </h2>
@@ -335,12 +442,9 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
                     <button
                       key={id}
                       type="button"
+                      data-state={selected ? 'selected' : 'default'}
                       onClick={() => togglePendingRole(id)}
-                      className={`relative shrink-0 rounded-[8px] px-3 py-2 text-[14px] leading-5 tracking-[-0.15px] shadow-none transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary ${
-                        selected
-                          ? 'border-2 border-[#353a44] bg-white font-label-medium-emphasized text-default'
-                          : 'border border-neutral-50 bg-white font-label-medium text-subdued'
-                      }`}
+                      className={`${ROLE_PILL_BASE} ${selected ? 'border-default text-default' : 'border-neutral-50 text-subdued'}`}
                     >
                       {ROLE_LABELS[id]}
                     </button>
@@ -348,101 +452,221 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
                 })}
               </div>
 
-              {showComplianceSections && (
+              {signalGroupKeys.length > 0 && (
                 <>
-                  <p className="m-0 px-4 py-2 font-label-medium-emphasized text-[14px] leading-5 tracking-[-0.15px] text-subdued">
-                    Capability status
-                  </p>
-                  {statusCapabilityGroups.map((groupId, i) => (
-                    <Fragment key={groupId}>
-                      <label
-                        htmlFor={`configure-cap-${groupId}`}
-                        className={`mb-1 block px-4 font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default ${i === 0 ? 'pt-0' : 'pt-2'}`}
+                  <p className={`${SECTION_HEADING_CLASS} pb-2`}>Signal group chips</p>
+                  <div className="flex flex-col">
+                    {signalGroupKeys.map((groupId) => (
+                      <div
+                        key={groupId}
+                        className="border-b border-neutral-100 px-4 py-4 last:border-b-0"
                       >
-                        {CAPABILITY_GROUP_LABELS[groupId]}
-                      </label>
-                      <span className="relative mx-4 mb-2 block max-w-[240px]">
-                        <select
-                          id={`configure-cap-${groupId}`}
-                          value={draftCapabilityStatuses[groupId] ?? 'active'}
-                          onChange={(e) =>
-                            setDraftStatus(groupId, e.target.value as CapabilityStatus)
-                          }
-                          className={SELECT_FIELD}
-                        >
-                          {CAPABILITY_STATUS_OPTIONS.map((o) => (
-                            <option key={o.id} value={o.id}>
-                              {o.label}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDownIcon
-                          size={8}
-                          fill="var(--color-icon-subdued)"
-                          className="pointer-events-none absolute right-[12px] top-1/2 -translate-y-1/2"
-                          aria-hidden
-                        />
-                      </span>
-                    </Fragment>
-                  ))}
-                  {showBillingToggle && (
-                    <>
-                      <span className="flex max-w-[240px] items-start gap-2 px-4 py-2">
-                        <CharcoalSwitch
-                          id="configure-uses-billing"
-                          checked={pendingBilling}
-                          onChange={(on) => {
-                            setPendingBilling(on)
-                            if (!on) setPendingBillingFlavors(new Set())
-                          }}
-                          className="mt-px"
-                        />
-                        <label
-                          htmlFor="configure-uses-billing"
-                          className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
-                        >
-                          Uses Billing
-                        </label>
-                      </span>
-                      {pendingBilling && (
-                        <div
-                          className="flex flex-wrap items-start gap-x-5 gap-y-2 pb-2 pl-[58px] pr-4"
-                          role="group"
-                          aria-label="Billing flavors"
-                        >
-                          {BILLING_FLAVOR_OPTIONS.map(({ id: flavorId, label }) => (
-                            <label
-                              key={flavorId}
-                              className="flex cursor-pointer items-start gap-2 font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={pendingBillingFlavors.has(flavorId)}
-                                onChange={() => {
-                                  setPendingBillingFlavors((prev) => {
-                                    const next = new Set(prev)
-                                    if (next.has(flavorId)) next.delete(flavorId)
-                                    else next.add(flavorId)
-                                    return next
-                                  })
-                                }}
-                                className="mt-[3px] h-3.5 w-3.5 shrink-0 rounded-[4px] border border-neutral-100 text-action-primary focus:ring-action-primary"
-                              />
-                              {label}
-                            </label>
-                          ))}
+                        <h3 className={GROUP_SUBHEAD_CLASS}>{CAPABILITY_GROUP_LABELS[groupId]}</h3>
+                        <div className="mt-4 flex max-w-[240px] flex-col gap-3">
+                          {groupId === 'payments' && (
+                            <>
+                              {renderCapabilityStatus('payments')}
+                              <span className="flex items-start gap-2">
+                                <CharcoalSwitch
+                                  id="configure-payments-pm"
+                                  checked={draftPaymentMethodOnFile}
+                                  onChange={setDraftPaymentMethodOnFile}
+                                  className="mt-px"
+                                />
+                                <label
+                                  htmlFor="configure-payments-pm"
+                                  className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
+                                >
+                                  Has payment method on file
+                                </label>
+                              </span>
+                            </>
+                          )}
+                          {groupId === 'payouts' && (
+                            <>
+                              {renderCapabilityStatus('payouts')}
+                              <span className="flex items-start gap-2">
+                                <CharcoalSwitch
+                                  id="configure-payouts-schedule"
+                                  checked={draftPayoutSchedule}
+                                  onChange={setDraftPayoutSchedule}
+                                  className="mt-px"
+                                />
+                                <label
+                                  htmlFor="configure-payouts-schedule"
+                                  className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
+                                >
+                                  Has payout schedule
+                                </label>
+                              </span>
+                            </>
+                          )}
+                          {groupId === 'billing' && (
+                            <>
+                              <span className="flex items-start gap-2">
+                                <CharcoalSwitch
+                                  id="configure-uses-billing"
+                                  checked={pendingBilling}
+                                  onChange={(on) => {
+                                    setPendingBilling(on)
+                                    if (!on) setPendingBillingFlavors(new Set())
+                                    else
+                                      setPendingBillingFlavors((prev) =>
+                                        prev.size === 0
+                                          ? new Set([BILLING_FLAVOR_OPTIONS[0].id])
+                                          : prev
+                                      )
+                                  }}
+                                  className="mt-px"
+                                />
+                                <label
+                                  htmlFor="configure-uses-billing"
+                                  className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
+                                >
+                                  Uses billing
+                                </label>
+                              </span>
+                              {pendingBilling && (
+                                <div
+                                  className="ml-4 flex flex-col gap-3 border-l border-neutral-100 pl-4"
+                                  role="group"
+                                  aria-label="Billing flavors"
+                                >
+                                  {BILLING_FLAVOR_OPTIONS.map(({ id: flavorId, label }) => (
+                                    <label
+                                      key={flavorId}
+                                      className="flex cursor-pointer items-start gap-2 font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={pendingBillingFlavors.has(flavorId)}
+                                        onChange={() => {
+                                          setPendingBillingFlavors((prev) => {
+                                            const next = new Set(prev)
+                                            if (next.has(flavorId)) next.delete(flavorId)
+                                            else next.add(flavorId)
+                                            return next
+                                          })
+                                        }}
+                                        className="mt-[3px] h-3.5 w-3.5 shrink-0 rounded-[4px] border border-neutral-100 text-action-primary focus:ring-action-primary"
+                                      />
+                                      {label}
+                                    </label>
+                                  ))}
+                                </div>
+                              )}
+                              <span className="flex items-start gap-2">
+                                <CharcoalSwitch
+                                  id="configure-rel-subs"
+                                  checked={draftRelationship.hasActiveSubscriptions}
+                                  onChange={(v) =>
+                                    setDraftRelationship((r) => ({ ...r, hasActiveSubscriptions: v }))
+                                  }
+                                  className="mt-px"
+                                />
+                                <label
+                                  htmlFor="configure-rel-subs"
+                                  className="w-fit whitespace-nowrap cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
+                                >
+                                  Has active subscriptions with Platform
+                                </label>
+                              </span>
+                            </>
+                          )}
+                          {groupId === 'transfers' && renderCapabilityStatus('transfers')}
+                          {groupId === 'treasury' && (
+                            <>
+                              {renderCapabilityStatus('treasury')}
+                              <span className="flex items-start gap-2">
+                                <CharcoalSwitch
+                                  id="configure-treasury-fa"
+                                  checked={draftFinancialAccounts}
+                                  onChange={setDraftFinancialAccounts}
+                                  className="mt-px"
+                                />
+                                <label
+                                  htmlFor="configure-treasury-fa"
+                                  className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
+                                >
+                                  Has financial accounts
+                                </label>
+                              </span>
+                            </>
+                          )}
+                          {groupId === 'capital' && (
+                            <>
+                              {renderCapabilityStatus('capital')}
+                              <span className="flex items-start gap-2">
+                                <CharcoalSwitch
+                                  id="configure-capital-fin"
+                                  checked={draftBusinessFinancing}
+                                  onChange={setDraftBusinessFinancing}
+                                  className="mt-px"
+                                />
+                                <label
+                                  htmlFor="configure-capital-fin"
+                                  className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
+                                >
+                                  Has business financing
+                                </label>
+                              </span>
+                              {draftBusinessFinancing && (
+                                <div
+                                  className="ml-4 flex flex-col gap-3 border-l border-neutral-100 pl-4"
+                                  role="group"
+                                  aria-label="Financing types"
+                                >
+                                  <label className="flex cursor-pointer items-start gap-2 font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default">
+                                    <input
+                                      type="checkbox"
+                                      checked={draftFinancingLoan}
+                                      onChange={() => setDraftFinancingLoan((v) => !v)}
+                                      className="mt-[3px] h-3.5 w-3.5 shrink-0 rounded-[4px] border border-neutral-100 text-action-primary focus:ring-action-primary"
+                                    />
+                                    Loan
+                                  </label>
+                                  <label className="flex cursor-pointer items-start gap-2 font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default">
+                                    <input
+                                      type="checkbox"
+                                      checked={draftFinancingCashAdvance}
+                                      onChange={() => setDraftFinancingCashAdvance((v) => !v)}
+                                      className="mt-[3px] h-3.5 w-3.5 shrink-0 rounded-[4px] border border-neutral-100 text-action-primary focus:ring-action-primary"
+                                    />
+                                    Cash advance
+                                  </label>
+                                </div>
+                              )}
+                            </>
+                          )}
+                          {groupId === 'issuing' && (
+                            <>
+                              {renderCapabilityStatus('issuing')}
+                              <span className="flex items-start gap-2">
+                                <CharcoalSwitch
+                                  id="configure-issuing-card"
+                                  checked={draftParticipatesCardProgram}
+                                  onChange={setDraftParticipatesCardProgram}
+                                  className="mt-px"
+                                />
+                                <label
+                                  htmlFor="configure-issuing-card"
+                                  className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
+                                >
+                                  Participates in card program
+                                </label>
+                              </span>
+                            </>
+                          )}
                         </div>
-                      )}
-                    </>
-                  )}
+                      </div>
+                    ))}
+                  </div>
                 </>
               )}
 
-              {showComplianceSections && accountStatusBadge != null && (
+              {!customerOnly && showComplianceSections && accountStatusBadge != null && (
                 <>
-                  <p className="m-0 px-4 pt-4 font-label-medium-emphasized text-[14px] leading-5 tracking-[-0.15px] text-default">
-                    Account status
-                  </p>
+                  <p className={`${SECTION_HEADING_CLASS} pb-2`}>Account status</p>
                   <span className="mx-4 mb-4 mt-1 inline-flex flex-wrap items-center gap-1">
                     {accountStatusBadge}
                     {pendingRiskLevel === 'elevated' && (
@@ -455,21 +679,21 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
                 </>
               )}
 
-              {advancedOpen && (
+              {riskSettingsOpen && (
                 <div
-                  id="configure-advanced-panel"
+                  id="configure-risk-settings-panel"
                   className="border-t border-neutral-100 px-4 pb-4 pt-4"
                   role="region"
-                  aria-label="Advanced settings"
+                  aria-label="Risk settings"
                 >
-                  <div className="flex max-w-[240px] flex-col gap-1 py-2">
+                  <div className="flex max-w-[240px] flex-col gap-1">
                     <label
                       htmlFor="configure-risk-level"
                       className="font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
                     >
                       Risk level
                     </label>
-                    <span className="relative block w-full max-w-[240px]">
+                    <span className="relative block w-full">
                       <select
                         id="configure-risk-level"
                         value={pendingRiskLevel}
@@ -490,60 +714,6 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
                       />
                     </span>
                   </div>
-
-                  <p className="m-0 px-0 py-2 font-label-medium-emphasized text-[14px] leading-5 tracking-[-0.15px] text-subdued">
-                    Relationship with your Platform
-                  </p>
-                  <div className="flex flex-col gap-0">
-                    <span className="flex max-w-[min(100%,400px)] items-start gap-2 px-0 py-2">
-                      <CharcoalSwitch
-                        id="configure-rel-subs"
-                        checked={draftRelationship.hasActiveSubscriptions}
-                        onChange={(v) =>
-                          setDraftRelationship((r) => ({ ...r, hasActiveSubscriptions: v }))
-                        }
-                        className="mt-px"
-                      />
-                      <label
-                        htmlFor="configure-rel-subs"
-                        className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
-                      >
-                        Has active subscriptions with Platform
-                      </label>
-                    </span>
-                    <span className="flex max-w-[min(100%,400px)] items-start gap-2 px-0 py-2">
-                      <CharcoalSwitch
-                        id="configure-rel-card"
-                        checked={draftRelationship.hasIssuedCard}
-                        onChange={(v) =>
-                          setDraftRelationship((r) => ({ ...r, hasIssuedCard: v }))
-                        }
-                        className="mt-px"
-                      />
-                      <label
-                        htmlFor="configure-rel-card"
-                        className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
-                      >
-                        Has issued card with Platform
-                      </label>
-                    </span>
-                    <span className="flex max-w-[min(100%,400px)] items-start gap-2 px-0 py-2">
-                      <CharcoalSwitch
-                        id="configure-rel-expired"
-                        checked={draftRelationship.expiredPaymentMethod}
-                        onChange={(v) =>
-                          setDraftRelationship((r) => ({ ...r, expiredPaymentMethod: v }))
-                        }
-                        className="mt-px"
-                      />
-                      <label
-                        htmlFor="configure-rel-expired"
-                        className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
-                      >
-                        Expired default payment method with Platform
-                      </label>
-                    </span>
-                  </div>
                 </div>
               )}
             </>
@@ -554,13 +724,13 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
           {hasContext ? (
             <button
               type="button"
-              onClick={() => setAdvancedOpen((o) => !o)}
+              onClick={() => setRiskSettingsOpen((o) => !o)}
               className="inline-flex items-center gap-1 rounded-[4px] font-label-medium text-[14px] leading-5 text-action-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary"
-              aria-expanded={advancedOpen}
-              aria-controls={advancedOpen ? 'configure-advanced-panel' : undefined}
+              aria-expanded={riskSettingsOpen}
+              aria-controls={riskSettingsOpen ? 'configure-risk-settings-panel' : undefined}
             >
               <Icon name="settings" size={12} fill="var(--color-action-primary)" />
-              {advancedOpen ? 'Hide advanced settings' : 'Show advanced settings'}
+              {riskSettingsOpen ? 'Hide risk settings' : 'Risk settings'}
             </button>
           ) : (
             <span aria-hidden className="min-w-0 shrink" />
@@ -569,7 +739,7 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
             <button
               type="button"
               onClick={handleCancel}
-              className="inline-flex h-7 items-center justify-center rounded-[6px] border border-neutral-100 bg-surface px-2 py-1 font-label-medium-emphasized text-[14px] leading-5 text-default shadow-[0px_1px_1px_rgba(26,27,37,0.16)] transition-colors hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary"
+              className="inline-flex h-7 items-center justify-center rounded-[6px] border border-neutral-100 bg-surface px-2 py-1 font-label-medium-emphasized text-[14px] leading-5 text-default transition-colors hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary"
             >
               Cancel
             </button>
@@ -577,7 +747,7 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
               type="button"
               disabled={updateDisabled}
               onClick={handleUpdate}
-              className="inline-flex h-7 items-center justify-center rounded-[6px] border border-[#625afa] bg-[var(--color-icon-action)] px-2 py-1 font-label-medium-emphasized text-[14px] leading-5 text-white shadow-[0px_1px_1px_rgba(20,19,78,0.32)] transition-colors hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-7 items-center justify-center rounded-[6px] border border-[#625afa] bg-[var(--color-icon-action)] px-2 py-1 font-label-medium-emphasized text-[14px] leading-5 text-white transition-colors hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary disabled:cursor-not-allowed disabled:opacity-40"
             >
               Update
             </button>

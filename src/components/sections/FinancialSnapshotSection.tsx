@@ -65,7 +65,7 @@ function BalancesCardPlaceholder({ accountId }: { accountId?: string }) {
   )
   return (
     <div
-      className="flex w-full flex-col gap-2 rounded-[12px] bg-offset p-3"
+      className="flex w-full flex-col gap-2 rounded-[16px] bg-offset p-[8px]"
       data-name="Balances"
       data-node-id="2085-46771"
     >

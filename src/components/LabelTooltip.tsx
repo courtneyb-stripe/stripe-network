@@ -10,7 +10,8 @@ import { createPortal } from 'react-dom'
 export type TooltipPlacement = 'top' | 'bottom' | 'right' | 'left'
 
 const TOOLTIP_OFFSET = 4
-const TOOLTIP_Z_INDEX = 9999
+/** Above high-z overlays (e.g. SignalGroupPopover `z-[10000]`) so labels aren’t hidden behind panels. */
+const TOOLTIP_Z_INDEX = 10100
 
 type LabelTooltipProps = {
   children: React.ReactNode

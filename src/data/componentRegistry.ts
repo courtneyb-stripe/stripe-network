@@ -32,6 +32,13 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
   { name: 'Badge', description: 'Status badge. Success, attention, critical, neutral. Restricted = critical + icon.', status: 'ready', source: 'sail' },
   { name: 'PropertyList', description: 'Key-value display. Vertical (sidebar) or horizontal (drawer).', status: 'ready', source: 'sail' },
   { name: 'SectionHeader', description: 'Section title with optional action link (View all) and add.', status: 'in_progress', source: 'sail_riff' },
+  {
+    name: 'SignalGroupPopover',
+    description:
+      'Fixed popover anchored below a signal group chip (portal). Default: title + placeholder; optional children replace shell (e.g. PaymentsPopoverPanel). Escape and outside click close.',
+    status: 'in_progress',
+    source: 'custom',
+  },
   { name: 'SubscriptionCard', description: 'Billing subscription summary. Badges, plan name, invoice frequency, next invoice.', status: 'in_progress', source: 'borrowed', borrowedSourceLabel: 'Customer detail' },
   { name: 'TabBar', description: 'Horizontal tab navigation. Primary and secondary variants.', status: 'in_progress', source: 'sail_riff' },
   { name: 'ViewChip', description: 'Toggle chip for filtering. Default and compact sizes.', status: 'in_progress', source: 'borrowed', borrowedSourceLabel: 'List view' },
