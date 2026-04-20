@@ -38,7 +38,10 @@ import { ActionButton } from './ActionButton'
 import HeaderSignalGroupButton from './HeaderSignalGroupButton'
 import SignalGroup from './SignalGroup'
 import SignalGroupPopover, { SIGNAL_GROUP_POPOVER_ANCHOR_GAP_PX } from './SignalGroupPopover'
-import PaymentsPopoverPanel from './PaymentsPopoverPanel'
+import PaymentsPopoverPanel, {
+  SIGNAL_GROUP_POPOVER_INNER_CLASS,
+  SIGNAL_GROUP_POPOVER_SHELL_CLASS,
+} from './PaymentsPopoverPanel'
 import type { ProfileDrawerTabId } from './AccountDrawer'
 import { IconButton } from './IconButton'
 import type { AccountConfig } from '../data/accountConfigs'
@@ -50,6 +53,7 @@ import {
   HEADER_CAPABILITY_ACTIVE_TOOLTIP,
   HEADER_EXTRA_ACTIVE_CAPABILITY_ORDER,
   formatBillingProductsTooltip,
+  type BillingFlavor,
   type CapabilityGroupId,
   type CapabilityStatus,
 } from '../data/configMatrix'
@@ -163,11 +167,12 @@ export function AccountDetailHeaderStatusButtons({
 }: {
   showPayouts: boolean
   showPayments: boolean
-  /** True when prototype “Uses billing” is on (third chip). */
+  /** True when prototype shows the Billing chip (Uses billing and/or active subscriptions with platform). */
   showBilling?: boolean
   /**
-   * Resolved capability groups (excl. payments/payouts/billing) whose compliance status is Active
-   * in the configure modal — shown as additional ghost chips after Billing.
+   * Resolved capability groups (excl. payments/payouts/billing) for the current roles — same
+   * eligibility as Configure. Shown as ghost chips after Billing; per-group status only affects
+   * the leading status icon (and account badge via `deriveAccountStatus`), not chip visibility.
    */
   extraActiveCapabilityChips?: CapabilityGroupId[]
   status?: 'enabled' | 'restricted' | 'restricted_soon' | undefined
@@ -286,6 +291,14 @@ export function AccountDetailHeaderStatusButtons({
   const payoutsNeedsAttention = signalOpensActionsModal(payoutsCapability)
   const paymentsNeedsAttention = signalOpensActionsModal(paymentsCapability)
 
+  const billingUsesFlavors = prototype?.billingFlavors ?? new Set<BillingFlavor>()
+  const showBillingSubscriptionsWell =
+    billingUsesFlavors.has('subscriptions') ||
+    (prototype?.relationship?.hasActiveSubscriptions ?? false)
+  /** Uses billing off but subscriptions well still on — popover is well-only (no status / product line). */
+  const billingOmitCapabilitySection =
+    !(prototype?.hasBilling ?? false) && showBillingSubscriptionsWell
+
   const renderSignalPopoverBody = useCallback(
     (id: string) => {
       switch (id) {
@@ -293,6 +306,8 @@ export function AccountDetailHeaderStatusButtons({
           return (
             <PaymentsPopoverPanel
               status={prototype?.capabilityStatuses.payments ?? 'active'}
+              hasPaymentMethodOnFile={prototype?.hasPaymentMethodOnFile ?? false}
+              paymentMethodsPlatformLabel="Shopify"
               onViewAllCapabilities={
                 onOpenAccountDrawer
                   ? () => {
@@ -318,6 +333,7 @@ export function AccountDetailHeaderStatusButtons({
             <PaymentsPopoverPanel
               variant="payouts"
               status={prototype?.capabilityStatuses.payouts ?? 'active'}
+              hasPayoutSchedule={prototype?.hasPayoutSchedule ?? false}
               onEditCapabilities={
                 onOpenSettingsSection
                   ? () => {
@@ -334,6 +350,8 @@ export function AccountDetailHeaderStatusButtons({
             <PaymentsPopoverPanel
               variant="financialAccounts"
               status={prototype?.capabilityStatuses.treasury ?? 'active'}
+              hasFinancialAccounts={prototype?.hasFinancialAccounts ?? false}
+              financialAccountsPlatformLabel="Shopify"
               onEditCapabilities={
                 onOpenSettingsSection
                   ? () => {
@@ -350,6 +368,7 @@ export function AccountDetailHeaderStatusButtons({
             <PaymentsPopoverPanel
               variant="financing"
               financingProducts={prototype?.financingProducts ?? DEFAULT_FINANCING_POPOVER}
+              financingPlatformLabel="Shopify"
               status={prototype?.capabilityStatuses.capital ?? 'active'}
               onEditCapabilities={
                 onOpenSettingsSection
@@ -366,6 +385,7 @@ export function AccountDetailHeaderStatusButtons({
           return (
             <PaymentsPopoverPanel
               variant="cardIssuing"
+              cardIssuingPlatformLabel="Shopify"
               status={prototype?.capabilityStatuses.issuing ?? 'active'}
               onEditCapabilities={
                 onOpenSettingsSection
@@ -380,23 +400,25 @@ export function AccountDetailHeaderStatusButtons({
           )
         case 'billing':
           return (
-            <>
-              <h3 className="m-0 font-label-medium-emphasized text-[14px] leading-5 text-default">Billing</h3>
-              <p className="mb-0 mt-2 font-label-medium text-[14px] leading-5 text-subdued">
-                Popover content coming soon
-              </p>
-            </>
+            <PaymentsPopoverPanel
+              variant="billing"
+              status={prototype?.capabilityStatuses.billing ?? 'active'}
+              billingFlavors={billingUsesFlavors}
+              showBillingSubscriptionsWell={showBillingSubscriptionsWell}
+              billingOmitCapabilitySection={billingOmitCapabilitySection}
+              billingSubscriptionsPlatformLabel="Shopify"
+            />
           )
         default:
           if (id.startsWith('extra:')) {
             const heading = signalPopoverHeading(id)
             return (
-              <>
-                <h3 className="m-0 font-label-medium-emphasized text-[14px] leading-5 text-default">{heading}</h3>
-                <p className="mb-0 mt-2 font-label-medium text-[14px] leading-5 text-subdued">
-                  Popover content coming soon
-                </p>
-              </>
+              <div className={SIGNAL_GROUP_POPOVER_SHELL_CLASS}>
+                <div className={SIGNAL_GROUP_POPOVER_INNER_CLASS}>
+                  <h3 className="m-0 font-label-medium text-[14px] leading-5 text-default">{heading}</h3>
+                  <p className="m-0 mt-1 font-label-small leading-4 text-[#50617a]">Popover content coming soon</p>
+                </div>
+              </div>
             )
           }
           return null
@@ -405,6 +427,14 @@ export function AccountDetailHeaderStatusButtons({
     [
       prototype?.capabilityStatuses,
       prototype?.financingProducts,
+      prototype?.hasPaymentMethodOnFile,
+      prototype?.hasPayoutSchedule,
+      prototype?.hasFinancialAccounts,
+      prototype?.billingFlavors,
+      prototype?.relationship?.hasActiveSubscriptions,
+      prototype?.hasBilling,
+      showBillingSubscriptionsWell,
+      billingOmitCapabilitySection,
       onOpenAccountDrawer,
       onOpenSettingsSection,
       clearPopoverHoverCloseTimer,
@@ -490,7 +520,7 @@ export function AccountDetailHeaderStatusButtons({
       {showBillingChip && (
         <HeaderSignalGroupButton
           ref={billingRef}
-          tooltipLabel={formatBillingProductsTooltip(prototype?.billingFlavors ?? new Set())}
+          tooltipLabel={formatBillingProductsTooltip(billingUsesFlavors)}
           tooltipId="billing-products-tooltip"
           aria-expanded={openPopoverId === 'billing'}
           onMouseEnter={() => openPopoverOnHover('billing')}
@@ -696,20 +726,19 @@ export default function AccountDetailActionBar({
 }: AccountDetailActionBarProps) {
   const prototype = usePrototypeOptional()
   const v = useVisibility(visibility)
-  const showBillingButton = Boolean(prototype?.hasBilling && v.showSubscriptions)
+  const showBillingButton = Boolean(
+    prototype &&
+      v.showSubscriptions &&
+      (prototype.hasBilling || prototype.relationship.hasActiveSubscriptions)
+  )
 
   const activeRolesKey = prototype ? [...prototype.activeRoles].sort().join(',') : ''
-  const capabilityStatusKey = prototype ? JSON.stringify(prototype.capabilityStatuses) : ''
   const extraActiveCapabilityChips = useMemo(() => {
     if (!prototype) return []
-    /** Same visibility as configure modal — Transfers hidden when Storer rolls up to Financial accounts. */
+    /** Same groups as Configure modal — Transfers omitted when Storer (treasury) is active. */
     const modalGroupSet = new Set(signalGroupsForConfigureModal(prototype.activeRoles))
-    return HEADER_EXTRA_ACTIVE_CAPABILITY_ORDER.filter((id) => {
-      if (!modalGroupSet.has(id)) return false
-      const s = prototype.capabilityStatuses[id]
-      return s === 'active' || s === 'limited'
-    })
-  }, [activeRolesKey, capabilityStatusKey])
+    return HEADER_EXTRA_ACTIVE_CAPABILITY_ORDER.filter((id) => modalGroupSet.has(id))
+  }, [activeRolesKey])
 
   const [internalActionsModalOpen, setInternalActionsModalOpen] = useState(false)
   const [internalActionsModalFilter, setInternalActionsModalFilter] = useState<ActionsRequiredFilter>('all')

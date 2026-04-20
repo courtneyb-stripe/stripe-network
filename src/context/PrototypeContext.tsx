@@ -115,6 +115,15 @@ type PrototypeState = {
   /** Configure account → Financing: Loan / Cash advance (drives Financing popover chips). */
   financingProducts: FinancingProductSelection
   setFinancingProducts: Dispatch<SetStateAction<FinancingProductSelection>>
+  /** Configure account → Payments: show payment methods block in Payments popover. */
+  hasPaymentMethodOnFile: boolean
+  setHasPaymentMethodOnFile: (v: boolean) => void
+  /** Configure account → Payouts: show payout schedule / bank destinations well in Payouts popover. */
+  hasPayoutSchedule: boolean
+  setHasPayoutSchedule: (v: boolean) => void
+  /** Configure account → Treasury: show financial accounts well in Financial accounts popover. */
+  hasFinancialAccounts: boolean
+  setHasFinancialAccounts: (v: boolean) => void
 }
 
 const PrototypeContext = createContext<PrototypeState | null>(null)
@@ -139,6 +148,9 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
   const [financingProducts, setFinancingProducts] = useState<FinancingProductSelection>(
     () => ({ ...DEFAULT_FINANCING_POPOVER })
   )
+  const [hasPaymentMethodOnFile, setHasPaymentMethodOnFile] = useState(true)
+  const [hasPayoutSchedule, setHasPayoutSchedule] = useState(true)
+  const [hasFinancialAccounts, setHasFinancialAccounts] = useState(true)
   const [capabilityStatuses, setCapabilityStatuses] = useState<
     Record<CapabilityGroupId, CapabilityStatus>
   >(() =>
@@ -211,6 +223,12 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
       setCapabilityStatus,
       financingProducts,
       setFinancingProducts,
+      hasPaymentMethodOnFile,
+      setHasPaymentMethodOnFile,
+      hasPayoutSchedule,
+      setHasPayoutSchedule,
+      hasFinancialAccounts,
+      setHasFinancialAccounts,
     }),
     [
       activityFilter,
@@ -227,6 +245,9 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
       setCapabilityStatus,
       setHasBilling,
       financingProducts,
+      hasPaymentMethodOnFile,
+      hasPayoutSchedule,
+      hasFinancialAccounts,
     ]
   )
 

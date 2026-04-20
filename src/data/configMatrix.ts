@@ -178,6 +178,7 @@ export const BILLING_FLAVOR_LABELS: Record<BillingFlavor, string> = {
  * Financial accounts signal-group popover — capability chips only (Figma 113:49956).
  * Border tokens: align with `border-neutral-100` / Border default (#d8dee4).
  */
+/** Treasury / financial-accounts popover — comma list (first row); +N is separate (see overflow). */
 export const FINANCIAL_ACCOUNTS_POPOVER_CHIPS = [
   'Transfers',
   'Inbound transfers',
@@ -186,6 +187,9 @@ export const FINANCIAL_ACCOUNTS_POPOVER_CHIPS = [
   'Financial addresses',
   'Holds multi-currencies',
 ] as const
+
+/** Additional capabilities implied after the comma list (`+N` in popover). */
+export const FINANCIAL_ACCOUNTS_POPOVER_OVERFLOW_EXTRA = 3
 
 /** Configure account → Financing: Loan / Cash advance checkboxes (popover chips follow selection). */
 export type FinancingProductSelection = {
@@ -196,16 +200,13 @@ export type FinancingProductSelection = {
 export const DEFAULT_FINANCING_POPOVER: FinancingProductSelection = { loan: true, cashAdvance: false }
 
 /**
- * Capability chips for Financing popover — matches “Loan” / “Cash advance” in Configure account.
- * If both off, defaults to loan (same as configure modal nudge).
+ * Capability line for Financing popover — matches “Loan” / “Cash advance” in Configure account.
+ * Omits entries when the corresponding checkbox is off (no implicit default).
  */
 export function financingPopoverChipLabels(
   selection: FinancingProductSelection
 ): string[] {
-  let { loan, cashAdvance } = selection
-  if (!loan && !cashAdvance) {
-    loan = true
-  }
+  const { loan, cashAdvance } = selection
   const out: string[] = []
   if (loan) out.push('Loans')
   if (cashAdvance) out.push('Cash advances')
@@ -235,8 +236,9 @@ export const CAPABILITY_GROUP_DISPLAY_ORDER: CapabilityGroupId[] = [
 ]
 
 /**
- * Header chips after Payouts/Payments/Billing: shown when the group is resolved for roles and
- * capability status is active. Excludes payments/payouts (dedicated buttons) and billing (own chip).
+ * Header chips after Payouts/Payments/Billing: shown when the group is resolved for roles (same
+ * set as Configure). Status does not hide these — it only updates each chip’s status icon and
+ * `deriveAccountStatus` for the account badge. Excludes payments/payouts/billing (their own controls).
  */
 export const HEADER_EXTRA_ACTIVE_CAPABILITY_ORDER: CapabilityGroupId[] = [
   'transfers',
@@ -253,7 +255,8 @@ export const HEADER_CAPABILITY_ACTIVE_TOOLTIP: Partial<Record<CapabilityGroupId,
   issuing: 'Card issuing is active for this account.',
 }
 
-const BILLING_FLAVOR_ORDER: BillingFlavor[] = ['invoicing', 'subscriptions', 'metered_billing']
+/** Stable chip / tooltip order for billing flavors. */
+export const BILLING_FLAVOR_ORDER: BillingFlavor[] = ['invoicing', 'subscriptions', 'metered_billing']
 
 /** Billing chip hover: lists active products, stable order. */
 export function formatBillingProductsTooltip(flavors: ReadonlySet<BillingFlavor>): string {

@@ -51,6 +51,7 @@ import { TIME_RANGE_OPTIONS, type TimeRange } from '../components/metrics/consta
 import { PaymentMethods, LoanDetails, Repayments } from '../components/sections'
 import SignalGroupPopover from '../components/SignalGroupPopover'
 import PaymentsPopoverPanel from '../components/PaymentsPopoverPanel'
+import type { BillingFlavor } from '../data/configMatrix'
 
 // --- Constants ---
 const STATUS_ORDER: ComponentStatus[] = ['ready', 'in_progress', 'placeholder']
@@ -124,6 +125,10 @@ function SignalGroupPopoverDemo() {
           <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
             <PaymentsPopoverPanel status="limited" />
           </div>
+          <p className="text-sm text-subdued">Limited + payment methods on file (Figma 5354:237527)</p>
+          <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
+            <PaymentsPopoverPanel status="limited" hasPaymentMethodOnFile />
+          </div>
           <p className="text-sm text-subdued">Payouts — same shell, single “Payouts” capability</p>
           <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
             <PaymentsPopoverPanel variant="payouts" status="active" onEditCapabilities={() => {}} />
@@ -131,11 +136,29 @@ function SignalGroupPopoverDemo() {
           <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
             <PaymentsPopoverPanel variant="payouts" status="limited" onEditCapabilities={() => {}} />
           </div>
+          <p className="text-sm text-subdued">Payouts + schedule / destinations well (Figma 129:59300)</p>
+          <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
+            <PaymentsPopoverPanel
+              variant="payouts"
+              status="active"
+              hasPayoutSchedule
+              onEditCapabilities={() => {}}
+            />
+          </div>
           <p className="text-sm text-subdued">Financial accounts — Figma 113:49956 (chip row)</p>
           <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
             <PaymentsPopoverPanel
               variant="financialAccounts"
               status="active"
+              onEditCapabilities={() => {}}
+            />
+          </div>
+          <p className="text-sm text-subdued">Financial accounts + balances well (Figma 142:61198)</p>
+          <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
+            <PaymentsPopoverPanel
+              variant="financialAccounts"
+              status="active"
+              hasFinancialAccounts
               onEditCapabilities={() => {}}
             />
           </div>
@@ -171,6 +194,15 @@ function SignalGroupPopoverDemo() {
               onEditCapabilities={() => {}}
             />
           </div>
+          <p className="text-sm text-subdued">Financing — no products selected (empty capability list, well hidden)</p>
+          <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
+            <PaymentsPopoverPanel
+              variant="financing"
+              financingProducts={{ loan: false, cashAdvance: false }}
+              status="active"
+              onEditCapabilities={() => {}}
+            />
+          </div>
           <p className="text-sm text-subdued">Card issuing — single capability chip</p>
           <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
             <PaymentsPopoverPanel
@@ -184,6 +216,24 @@ function SignalGroupPopoverDemo() {
               variant="cardIssuing"
               status="limited"
               onEditCapabilities={() => {}}
+            />
+          </div>
+          <p className="text-sm text-subdued">Billing — Figma 141:61045 (chips + subscriptions well)</p>
+          <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
+            <PaymentsPopoverPanel
+              variant="billing"
+              status="active"
+              billingFlavors={
+                new Set<BillingFlavor>(['invoicing', 'subscriptions', 'metered_billing'])
+              }
+            />
+          </div>
+          <p className="text-sm text-subdued">Billing — invoicing + metered only (no subscriptions well)</p>
+          <div className="inline-block rounded-[12px] border border-neutral-50 bg-offset p-4">
+            <PaymentsPopoverPanel
+              variant="billing"
+              status="active"
+              billingFlavors={new Set<BillingFlavor>(['invoicing', 'metered_billing'])}
             />
           </div>
         </div>

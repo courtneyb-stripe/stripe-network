@@ -9,6 +9,11 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useLayoutEffect, useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 
+import {
+  SIGNAL_GROUP_POPOVER_INNER_CLASS,
+  SIGNAL_GROUP_POPOVER_SHELL_CLASS,
+} from './PaymentsPopoverPanel'
+
 /** Vertical gap between pill row and popover; keep in sync with header measurement. */
 export const SIGNAL_GROUP_POPOVER_ANCHOR_GAP_PX = 4
 const SHARED_SHELL_TRANSITION = 'transform 100ms linear, height 100ms linear'
@@ -186,12 +191,12 @@ export default function SignalGroupPopover({
         ref={popoverRef}
         role="dialog"
         aria-label={title}
-        className="w-max max-w-[min(100vw-24px,360px)]"
+        className="w-[360px] max-w-[calc(100vw-24px)]"
         style={sharedShellStyle}
         onMouseEnter={onPointerEnter}
         onMouseLeave={onPointerLeave}
       >
-        <div ref={sharedContentInnerRef} className="w-max max-w-[min(100vw-24px,360px)]">
+        <div ref={sharedContentInnerRef} className="w-[360px] max-w-[calc(100vw-24px)]">
           {renderBody(activeContentId)}
         </div>
       </div>,
@@ -206,11 +211,7 @@ export default function SignalGroupPopover({
       ref={popoverRef}
       role="dialog"
       aria-label={title}
-      className={
-        hasCustomBodyLegacy
-          ? 'fixed z-[10000]'
-          : 'fixed z-[10000] min-w-[280px] rounded-[8px] bg-white p-4 shadow-[0_4px_24px_rgba(0,0,0,0.10)]'
-      }
+      className={hasCustomBodyLegacy ? 'fixed z-[10000]' : `fixed z-[10000] ${SIGNAL_GROUP_POPOVER_SHELL_CLASS}`}
       style={legacyShellStyle}
       onMouseEnter={onPointerEnter}
       onMouseLeave={onPointerLeave}
@@ -218,12 +219,10 @@ export default function SignalGroupPopover({
       {hasCustomBodyLegacy ? (
         children
       ) : (
-        <>
-          <h3 className="m-0 font-label-medium-emphasized text-[14px] leading-5 text-default">{title}</h3>
-          <p className="mb-0 mt-2 font-label-medium text-[14px] leading-5 text-subdued">
-            Popover content coming soon
-          </p>
-        </>
+        <div className={SIGNAL_GROUP_POPOVER_INNER_CLASS}>
+          <h3 className="m-0 font-label-medium text-[14px] leading-5 text-default">{title}</h3>
+          <p className="m-0 mt-1 font-label-small leading-4 text-[#50617a]">Popover content coming soon</p>
+        </div>
       )}
     </div>,
     document.body

@@ -214,6 +214,9 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
         prototype.riskLevel,
         JSON.stringify(prototype.relationship),
         JSON.stringify(prototype.capabilityStatuses),
+        String(prototype.hasPaymentMethodOnFile),
+        String(prototype.hasPayoutSchedule),
+        String(prototype.hasFinancialAccounts),
       ].join('|')
     : ''
 
@@ -231,9 +234,9 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
     setDraftCapabilityStatuses(cloneCapabilityStatuses(prototype.capabilityStatuses))
     setPendingRiskLevel(prototype.riskLevel)
     setDraftRelationship({ ...prototype.relationship })
-    setDraftPaymentMethodOnFile(!!SIGNAL_GROUP_DEFAULTS.merchant?.hasPaymentMethodOnFile)
-    setDraftPayoutSchedule(!!SIGNAL_GROUP_DEFAULTS.recipient?.hasPayoutSchedule)
-    setDraftFinancialAccounts(!!SIGNAL_GROUP_DEFAULTS.storer?.hasFinancialAccounts)
+    setDraftPaymentMethodOnFile(prototype.hasPaymentMethodOnFile)
+    setDraftPayoutSchedule(prototype.hasPayoutSchedule)
+    setDraftFinancialAccounts(prototype.hasFinancialAccounts)
     const financingOn = !!SIGNAL_GROUP_DEFAULTS.borrower?.hasBusinessFinancing
     setDraftBusinessFinancing(financingOn)
     setDraftFinancingLoan(prototype.financingProducts.loan)
@@ -247,14 +250,6 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
     if (pendingRoles.has('card_holder')) setDraftParticipatesCardProgram(true)
     else setDraftParticipatesCardProgram(false)
   }, [open, pendingRolesKey])
-
-  /** Nested financing checkboxes: default first option (Loan) when toggle is on and none selected. */
-  useEffect(() => {
-    if (!open || !draftBusinessFinancing) return
-    if (!draftFinancingLoan && !draftFinancingCashAdvance) {
-      setDraftFinancingLoan(true)
-    }
-  }, [open, draftBusinessFinancing, draftFinancingLoan, draftFinancingCashAdvance])
 
   const resolvedGroups = useMemo(() => {
     const g = resolveCapabilityGroups(pendingRoles, pendingBilling)
@@ -347,6 +342,9 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
       loan: draftFinancingLoan,
       cashAdvance: draftFinancingCashAdvance,
     })
+    prototype.setHasPaymentMethodOnFile(draftPaymentMethodOnFile)
+    prototype.setHasPayoutSchedule(draftPayoutSchedule)
+    prototype.setHasFinancialAccounts(draftFinancialAccounts)
     onClose()
   }
 
