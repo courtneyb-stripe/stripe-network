@@ -13,6 +13,8 @@
   --color-neutral-300: #99a5b8;
   --color-neutral-700: #474e5a;
   --color-default: #353a44;
+  /* baby/PageHeader primary labels + heading (Figma Stripe Network Cursor SRC 145:61868) */
+  --color-page-header-ink: #1a2c44;
   --color-subdued: #596171;
   --color-action-primary: #533afd;
   --color-action-primary-hover: #4230d4;

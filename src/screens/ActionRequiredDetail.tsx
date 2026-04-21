@@ -57,6 +57,7 @@ export default function ActionRequiredDetail() {
               breadcrumbs={breadcrumbs}
               heading={actionTitle}
               badge={headerBadge}
+              identityBleedClassName="-mx-10 px-10"
             />
           </div>
         </div>

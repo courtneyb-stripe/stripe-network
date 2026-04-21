@@ -11,6 +11,7 @@ import { usePrototypeOptional } from '../context/PrototypeContext'
 import {
   CAPABILITY_GROUP_DISPLAY_LABELS,
   CAPABILITY_GROUP_DISPLAY_ORDER,
+  CAPABILITY_GROUP_SINGLE_SIGNAL,
   COMPLIANCE_ROLES,
   ROLE_AUTO_SELECT,
   SIGNAL_GROUP_DEFAULTS,
@@ -60,6 +61,25 @@ const CAPABILITY_STATUS_OPTIONS: { id: CapabilityStatus; label: string }[] = [
   { id: 'limited', label: 'Limited' },
   { id: 'paused', label: 'Paused' },
 ]
+
+function capabilityStatusOptionsForGroup(
+  groupId: CapabilityGroupId
+): { id: CapabilityStatus; label: string }[] {
+  if (CAPABILITY_GROUP_SINGLE_SIGNAL.has(groupId)) {
+    return CAPABILITY_STATUS_OPTIONS.filter((o) => o.id !== 'limited')
+  }
+  return CAPABILITY_STATUS_OPTIONS
+}
+
+function normalizeCapabilityStatusesForDraft(
+  src: Record<CapabilityGroupId, CapabilityStatus>
+): Record<CapabilityGroupId, CapabilityStatus> {
+  const next = { ...src }
+  for (const g of CAPABILITY_GROUP_SINGLE_SIGNAL) {
+    if (next[g] === 'limited') next[g] = 'active'
+  }
+  return next
+}
 
 const CAPABILITY_GROUP_ORDER = CAPABILITY_GROUP_DISPLAY_ORDER
 
@@ -231,7 +251,9 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
     setPendingRoles(rolesForPrototypeUi(prototype.activeRoles))
     setPendingBilling(prototype.hasBilling)
     setPendingBillingFlavors(new Set(prototype.billingFlavors))
-    setDraftCapabilityStatuses(cloneCapabilityStatuses(prototype.capabilityStatuses))
+    setDraftCapabilityStatuses(
+      normalizeCapabilityStatusesForDraft(cloneCapabilityStatuses(prototype.capabilityStatuses))
+    )
     setPendingRiskLevel(prototype.riskLevel)
     setDraftRelationship({ ...prototype.relationship })
     setDraftPaymentMethodOnFile(prototype.hasPaymentMethodOnFile)
@@ -334,7 +356,9 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
     for (const g of capabilityGroupsWithStatus(
       resolveCapabilityGroups(rolesToApply, pendingBilling)
     )) {
-      prototype.setCapabilityStatus(g, draftCapabilityStatuses[g] ?? 'active')
+      let s = draftCapabilityStatuses[g] ?? 'active'
+      if (CAPABILITY_GROUP_SINGLE_SIGNAL.has(g) && s === 'limited') s = 'active'
+      prototype.setCapabilityStatus(g, s)
     }
     prototype.setRiskLevel(pendingRiskLevel)
     prototype.setRelationship({ ...draftRelationship })
@@ -359,17 +383,22 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
     return <PillBadge label="Enabled" variant="success" />
   })()
 
-  const renderCapabilityStatus = (groupId: CapabilityGroupId) => (
+  const renderCapabilityStatus = (groupId: CapabilityGroupId) => {
+    const options = capabilityStatusOptionsForGroup(groupId)
+    const raw = draftCapabilityStatuses[groupId] ?? 'active'
+    const value =
+      CAPABILITY_GROUP_SINGLE_SIGNAL.has(groupId) && raw === 'limited' ? 'active' : raw
+    return (
     <div className="flex flex-col gap-1">
       <span className="text-[12px] leading-4 text-subdued">Capability group status</span>
       <span className="relative block w-full">
         <select
           id={`configure-cap-${groupId}`}
-          value={draftCapabilityStatuses[groupId] ?? 'active'}
+          value={value}
           onChange={(e) => setDraftStatus(groupId, e.target.value as CapabilityStatus)}
           className={SELECT_FIELD}
         >
-          {CAPABILITY_STATUS_OPTIONS.map((o) => (
+          {options.map((o) => (
             <option key={o.id} value={o.id}>
               {o.label}
             </option>
@@ -383,7 +412,8 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
         />
       </span>
     </div>
-  )
+    )
+  }
 
   if (!open) return null
 

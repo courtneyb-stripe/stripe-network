@@ -2,6 +2,23 @@
 
 Tokens are defined in `src/index.css` under `@theme` and used via Tailwind utilities (e.g. `bg-surface`, `text-subdued`) or `var(--color-*)` in custom CSS.
 
+## Figma — Stripe Network Cursor SRC
+
+**File (design + dev):**  
+[Stripe Network Cursor SRC](https://www.figma.com/design/le2cUdg8571ODSCAPVliJO/Stripe-Network--Cursor-SRC-?node-id=0-1&m=dev)  
+File key: `le2cUdg8571ODSCAPVliJO`
+
+**Account detail header (`baby/PageHeader`)**
+
+| Layer | `data-node-id` | Dev link |
+|-------|----------------|----------|
+| Page header frame | `145:61868` | [Open in Figma](https://www.figma.com/design/le2cUdg8571ODSCAPVliJO/Stripe-Network--Cursor-SRC-?node-id=145-61868&m=dev) |
+| Identity card + background | `145:61871` | [Open in Figma](https://www.figma.com/design/le2cUdg8571ODSCAPVliJO/Stripe-Network--Cursor-SRC-?node-id=145-61871&m=dev) |
+| Breadcrumbs | `145:61873` | [Open in Figma](https://www.figma.com/design/le2cUdg8571ODSCAPVliJO/Stripe-Network--Cursor-SRC-?node-id=145-61873&m=dev) |
+| Title + brand row | `145:61876` | [Open in Figma](https://www.figma.com/design/le2cUdg8571ODSCAPVliJO/Stripe-Network--Cursor-SRC-?node-id=145-61876&m=dev) |
+
+Node ids in URLs use hyphens (`145-61868`), not colons.
+
 ## Colors
 
 | Token | Value | Usage |
@@ -13,6 +30,7 @@ Tokens are defined in `src/index.css` under `@theme` and used via Tailwind utili
 | `--color-neutral-100` | `#d8dee4` | Borders |
 | `--color-neutral-700` | `#474e5a` | Text/icons |
 | `--color-default` | `#353a44` | Primary text |
+| `--color-page-header-ink` | `#1a2c44` | baby/PageHeader labels + heading (Figma 145:61868) |
 | `--color-subdued` | `#596171` | Secondary text |
 | `--color-action-primary` | `#533afd` | Primary actions, focus ring |
 | `--color-icon-default` | `#474e5a` | Default icon |

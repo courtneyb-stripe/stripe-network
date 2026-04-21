@@ -1,20 +1,9 @@
 /**
  * Global header — Figma Stripe Network Cursor SRC, node 2:358 (baby/global-header)
- * Left: Search bar (desktop). Right: App Dock, Help, Notifications, Settings, Create.
+ * Left: Search bar (desktop). Right: Help, Notifications, Settings, Create.
  */
 
 import { Icon } from '../icons/SailIcons'
-
-/** App Dock icons: Figma asset URLs expire or require auth, so use inline placeholders so the dock always renders. */
-function AppDockIcon({ className = 'h-4 w-4', bg }: { className?: string; bg?: string }) {
-  return (
-    <span
-      className={`shrink-0 rounded-[length:var(--radius-xsmall)] ${className}`}
-      style={{ backgroundColor: bg ?? 'var(--color-neutral-100)' }}
-      aria-hidden
-    />
-  )
-}
 
 function KeyboardShortcut({ keyChar = '/' }: { keyChar?: string }) {
   return (
@@ -25,53 +14,6 @@ function KeyboardShortcut({ keyChar = '/' }: { keyChar?: string }) {
       <kbd className="font-mono text-xs font-bold leading-4 text-icon-subdued" style={{ fontFamily: 'Menlo, monospace' }}>
         {keyChar}
       </kbd>
-    </div>
-  )
-}
-
-function AppDock() {
-  return (
-    <div
-      className="relative flex items-center gap-4 px-3 py-3 rounded-[length:var(--radius-rounded)] shrink-0"
-      data-name="App Dock"
-      data-node-id="2:105"
-    >
-      <div className="flex items-center gap-[16px] shrink-0" data-name="apps">
-        <button
-          type="button"
-          className="relative flex h-4 w-4 shrink-0 items-center justify-center rounded-[length:var(--radius-xsmall)] transition-colors hover:bg-offset"
-          aria-label="App 1"
-        >
-          <AppDockIcon />
-        </button>
-        <button
-          type="button"
-          className="relative flex h-4 w-4 shrink-0 items-center justify-center rounded-[length:var(--radius-xsmall)] transition-colors hover:bg-offset"
-          aria-label="App 2"
-        >
-          <AppDockIcon className="h-4 w-4" bg="#063667" />
-        </button>
-        <button
-          type="button"
-          className="relative flex h-4 w-4 shrink-0 items-center justify-center rounded-[length:var(--radius-xsmall)] transition-colors hover:bg-offset"
-          aria-label="App 3"
-        >
-          <AppDockIcon />
-        </button>
-      </div>
-      <button
-        type="button"
-        className="relative flex h-4 w-4 shrink-0 items-center justify-center rounded-[length:var(--radius-xsmall)] transition-colors hover:bg-offset"
-        aria-label="Add app"
-        data-name="addApp"
-      >
-        <Icon name="add" size={16} fill="var(--color-icon-default)" />
-      </button>
-      <div
-        className="pointer-events-none absolute inset-0 left-0 right-0 top-1/2 h-10 -translate-y-1/2 rounded-[length:var(--radius-rounded)] border border-neutral-50"
-        data-name="Border"
-        aria-hidden
-      />
     </div>
   )
 }
@@ -114,7 +56,7 @@ export function GlobalSearchBar() {
   )
 }
 
-/** Header actions (App Dock + Help, Notifications, Settings, Create) — right-aligned to viewport edge. */
+/** Header actions (Help, Notifications, Settings, Create) — right-aligned to viewport edge. */
 export function GlobalHeaderActions() {
   return (
     <div
@@ -122,8 +64,6 @@ export function GlobalHeaderActions() {
       data-name="[desktop +]"
       data-node-id="2:370"
     >
-      <AppDock />
-      <div className="w-[24px] shrink-0" aria-hidden />
       <div className="flex items-center gap-[24px] shrink-0">
         <HeaderIconButton aria-label="Help" data-name="Help">
           <Icon name="help" size={16} fill="var(--color-icon-default)" />

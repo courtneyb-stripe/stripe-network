@@ -73,6 +73,7 @@ export default function FinancialAccountDetail() {
               breadcrumbs={breadcrumbs}
               heading={faName}
               badge={headerBadge}
+              identityBleedClassName="-mx-10 px-10"
               trailing={
                 <AccountDetailMainActions
                   visibility={visibility}

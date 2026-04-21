@@ -58,6 +58,7 @@ import {
   type CapabilityStatus,
 } from '../data/configMatrix'
 import { signalGroupsForConfigureModal } from '../data/uadVisibility'
+import { parseGutterBleed } from '../utils/gutterBleed'
 
 function signalPopoverHeading(popoverId: string): string {
   if (popoverId === 'payments') return 'Payments'
@@ -151,6 +152,12 @@ type AccountDetailActionBarProps = {
   onOpenSettings?: () => void
   /** Legacy prop; signal group chips no longer navigate to Settings (popover instead). */
   onOpenSettingsSection?: (sectionId: string) => void
+  /**
+   * When set, the 1px rule below the signal chip row spans the same horizontal bleed as the page header
+   * (e.g. `-mx-6 px-6` with AccountDetail root `px-6`). Figma: hairline under `header/signal-group-row` (112:49522),
+   * Home actions frame 2:6375 — same `neutral-50` as TabBar divider.
+   */
+  signalRowBorderBleedClassName?: string
 }
 
 /** Payouts/Payments/Billing: always ghost, same placement. Billing is always shown as enabled (no compliance status). Payouts/Payments: enabled → popover; restricted → Actions required (filtered). */
@@ -284,12 +291,12 @@ export function AccountDetailHeaderStatusButtons({
   const payoutsCapability = prototype?.capabilityStatuses.payouts
   const paymentsCapability = prototype?.capabilityStatuses.payments
 
-  /** Open Actions required instead of popover only for paused / pausing soon; limited is still “active” for account flows. */
-  const signalOpensActionsModal = (c: CapabilityStatus | undefined) =>
+  /** Click opens Actions required for paused / pausing soon; hover still opens the signal popover. */
+  const signalClickOpensActionsModal = (c: CapabilityStatus | undefined) =>
     c != null ? c === 'paused' || c === 'pausing_soon' : isRestricted
 
-  const payoutsNeedsAttention = signalOpensActionsModal(payoutsCapability)
-  const paymentsNeedsAttention = signalOpensActionsModal(paymentsCapability)
+  const payoutsNeedsAttention = signalClickOpensActionsModal(payoutsCapability)
+  const paymentsNeedsAttention = signalClickOpensActionsModal(paymentsCapability)
 
   const billingUsesFlavors = prototype?.billingFlavors ?? new Set<BillingFlavor>()
   const showBillingSubscriptionsWell =
@@ -455,10 +462,8 @@ export function AccountDetailHeaderStatusButtons({
           }
           tooltipId="payments-tooltip"
           aria-expanded={openPopoverId === 'payments'}
-          onMouseEnter={
-            paymentsNeedsAttention ? undefined : () => openPopoverOnHover('payments')
-          }
-          onMouseLeave={paymentsNeedsAttention ? undefined : schedulePopoverClose}
+          onMouseEnter={() => openPopoverOnHover('payments')}
+          onMouseLeave={schedulePopoverClose}
           onClick={
             paymentsNeedsAttention
               ? () => {
@@ -492,10 +497,8 @@ export function AccountDetailHeaderStatusButtons({
           }
           tooltipId="payouts-tooltip"
           aria-expanded={openPopoverId === 'payouts'}
-          onMouseEnter={
-            payoutsNeedsAttention ? undefined : () => openPopoverOnHover('payouts')
-          }
-          onMouseLeave={payoutsNeedsAttention ? undefined : schedulePopoverClose}
+          onMouseEnter={() => openPopoverOnHover('payouts')}
+          onMouseLeave={schedulePopoverClose}
           onClick={
             payoutsNeedsAttention
               ? () => {
@@ -537,7 +540,7 @@ export function AccountDetailHeaderStatusButtons({
       {extraActiveCapabilityChips.map((groupId) => {
         const popoverKey = `extra:${groupId}`
         const extraCapability = prototype?.capabilityStatuses[groupId]
-        const extraNeedsAttention = signalOpensActionsModal(extraCapability)
+        const extraNeedsAttention = signalClickOpensActionsModal(extraCapability)
         const tooltip =
           HEADER_CAPABILITY_ACTIVE_TOOLTIP[groupId] ??
           `${CAPABILITY_GROUP_DISPLAY_LABELS[groupId]} are active for this account.`
@@ -551,10 +554,8 @@ export function AccountDetailHeaderStatusButtons({
             tooltipLabel={tooltip}
             tooltipId={`header-cap-${groupId}-tooltip`}
             aria-expanded={openPopoverId === popoverKey}
-            onMouseEnter={
-              extraNeedsAttention ? undefined : () => openPopoverOnHover(popoverKey)
-            }
-            onMouseLeave={extraNeedsAttention ? undefined : schedulePopoverClose}
+            onMouseEnter={() => openPopoverOnHover(popoverKey)}
+            onMouseLeave={schedulePopoverClose}
             onClick={
               extraNeedsAttention
                 ? () => {
@@ -638,9 +639,9 @@ export function AccountDetailMainActions({
 
   return (
     <div
-      className="flex flex-wrap items-center gap-[8px]"
+      className="flex flex-wrap items-center gap-2"
       data-name="Home actions"
-      data-node-id="2:6375"
+      data-node-id="145:61890"
     >
       {v.showMoveMoney && (
         <div className="relative" ref={moveMoneyRef}>
@@ -648,6 +649,7 @@ export function AccountDetailMainActions({
             label="Move money"
             tooltipId="actionbar-move-money-tooltip"
             variant="standard"
+            className="h-8 gap-1 border-0 !bg-[#f4f7fa] !px-2 !py-0 !text-[#273951] shadow-none hover:!bg-neutral-50"
             onClick={() => setMoveMoneyOpen((o) => !o)}
             aria-haspopup="menu"
             aria-expanded={moveMoneyOpen}
@@ -684,13 +686,18 @@ export function AccountDetailMainActions({
           label="Settings"
           tooltipId="actionbar-settings-tooltip"
           variant="iconOnly"
+          className="!rounded-2xl !bg-[#f4f7fa] hover:!bg-neutral-50"
           onClick={openSettings}
         >
           <Icon name="settings" size={12} fill={iconDefault} />
         </ActionButton>
       )}
       {v.showMore && (
-        <IconButton label="More actions" tooltipId="actionbar-more-tooltip" roundedFull>
+        <IconButton
+          label="More actions"
+          tooltipId="actionbar-more-tooltip"
+          className="!rounded-2xl !bg-[#f4f7fa] hover:!bg-neutral-50"
+        >
           <Icon name="more" size={12} fill={iconDefault} />
         </IconButton>
       )}
@@ -698,7 +705,7 @@ export function AccountDetailMainActions({
         <IconButton
           label="View account details"
           tooltipId="actionbar-account-drawer-tooltip"
-          roundedFull
+          className="!rounded-2xl !bg-[#f4f7fa] hover:!bg-neutral-50"
           onClick={() => onOpenAccountDrawer?.({ profileTab: 'details' })}
         >
           <Icon name="identityVerification" size={12} fill={iconDefault} />
@@ -723,6 +730,7 @@ export default function AccountDetailActionBar({
   onCloseActionsModal: controlledOnClose,
   onOpenSettings: _onOpenSettings,
   onOpenSettingsSection,
+  signalRowBorderBleedClassName,
 }: AccountDetailActionBarProps) {
   const prototype = usePrototypeOptional()
   const v = useVisibility(visibility)
@@ -760,23 +768,45 @@ export default function AccountDetailActionBar({
     showBillingButton ||
     extraActiveCapabilityChips.length > 0
   const signalPillRowRef = useRef<HTMLDivElement>(null)
+  const signalRowBleed = parseGutterBleed(signalRowBorderBleedClassName)
+
+  const signalRowWithDivider = (
+    <SignalGroup ref={signalPillRowRef}>
+      <AccountDetailHeaderStatusButtons
+        showPayouts={v.showPayouts}
+        showPayments={v.showPayments}
+        showBilling={showBillingButton}
+        extraActiveCapabilityChips={extraActiveCapabilityChips}
+        status={status}
+        onOpenSettingsSection={onOpenSettingsSection}
+        onOpenActionsModal={openActionsModal}
+        onOpenAccountDrawer={onOpenAccountDrawer}
+        pillRowRef={signalPillRowRef}
+      />
+    </SignalGroup>
+  )
+
   return (
     <>
-      {showStatus && (
-        <SignalGroup ref={signalPillRowRef}>
-          <AccountDetailHeaderStatusButtons
-            showPayouts={v.showPayouts}
-            showPayments={v.showPayments}
-            showBilling={showBillingButton}
-            extraActiveCapabilityChips={extraActiveCapabilityChips}
-            status={status}
-            onOpenSettingsSection={onOpenSettingsSection}
-            onOpenActionsModal={openActionsModal}
-            onOpenAccountDrawer={onOpenAccountDrawer}
-            pillRowRef={signalPillRowRef}
-          />
-        </SignalGroup>
-      )}
+      {/*
+        Figma: 1px neutral-50 hairline below the capability chip row (`header/signal-group-row` 112:49522),
+        Home actions frame 2:6375 — same token as TabBar divider (`border-neutral-50` / `bg-neutral-50`).
+      */}
+      {showStatus &&
+        (signalRowBleed ? (
+          <div className={signalRowBleed.marginClass}>
+            <div
+              className={`border-b border-neutral-50 py-4 ${signalRowBleed.paddingClass}`}
+              data-name="header/signal-group-bottom-rule"
+            >
+              {signalRowWithDivider}
+            </div>
+          </div>
+        ) : (
+          <div className="border-b border-neutral-50 py-4" data-name="header/signal-group-bottom-rule">
+            {signalRowWithDivider}
+          </div>
+        ))}
       <ActionsRequiredModal
         open={actionsModalOpen}
         onClose={closeActionsModal}

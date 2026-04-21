@@ -166,29 +166,30 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
     ) : undefined
 
   return (
-    <div className="flex h-full w-full flex-col" data-name="AccountDetail">
-      {/* Header + action bar; top-aligned so header position is stable across detail and nested pages. */}
-      <div className="flex shrink-0 items-start gap-6 px-10 pt-6 pb-0">
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <div>
-            <AccountDetailHeader
-              accountName={accountName}
-              breadcrumbs={breadcrumbs}
-              badge={headerBadge}
-              trailing={
-                <AccountDetailMainActions
-                  visibility={actionBarVisibility}
-                  onOpenAccountDrawer={openAccountDrawer}
-                  accountId={id}
-                  onOpenSettings={id ? () => navigate(`/network/${id}/settings`) : undefined}
-                />
-              }
+    <div className="flex h-full w-full min-w-0 flex-col px-6" data-name="AccountDetail">
+      {/* Header + action bar — flush under shell global bar; horizontal gutter px-6. Identity card keeps internal top padding. */}
+      <div className="flex w-full min-w-0 shrink-0 flex-col">
+        <AccountDetailHeader
+          accountName={accountName}
+          breadcrumbs={breadcrumbs}
+          badge={headerBadge}
+          accountEmail={mockAccount?.email}
+          showAccountAvatar={hasMerchantConfig}
+          identityBleedClassName="-mx-6 px-6"
+          trailing={
+            <AccountDetailMainActions
+              visibility={actionBarVisibility}
+              onOpenAccountDrawer={openAccountDrawer}
+              accountId={id}
+              onOpenSettings={id ? () => navigate(`/network/${id}/settings`) : undefined}
             />
-          </div>
-          <div className="-ml-8 pl-10">
-            <AccountDetailActionBar
+          }
+        />
+        <div className="w-full">
+          <AccountDetailActionBar
               status={status}
               visibility={actionBarVisibility}
+              signalRowBorderBleedClassName="-mx-6 px-6"
               onOpenAccountDrawer={openAccountDrawer}
               accountId={id}
               accountName={accountName}
@@ -206,11 +207,10 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
               onOpenSettings={() => id && navigate(`/network/${id}/settings`)}
               onOpenSettingsSection={(sectionId) => id && navigate(`/network/${id}/settings`, { state: { sectionId } })}
             />
-          </div>
         </div>
       </div>
       {/* Tab row: full-width tab bar; toggle floats above on the right so tab bottom border extends beneath it. */}
-      <div className="relative w-full shrink-0 pl-10 pr-10 pt-2" data-name="Tabs">
+      <div className="relative w-full min-w-0 shrink-0 pt-2" data-name="Tabs">
         <TabBar
           tabs={sectionTabs}
           activeId={effectiveSectionId}
@@ -219,13 +219,13 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
           gap={12}
         />
         {activityFilter === 'universalToggle' && (
-          <div className="absolute right-10 top-0 z-10 flex h-full items-center">
+          <div className="absolute right-0 top-0 z-10 flex h-full items-center">
             <ThirdPartyActivityToggle />
           </div>
         )}
       </div>
-      {/* Content: 24px below tab bar; all section first headings align to this */}
-      <div className="min-h-0 flex-1 overflow-auto pb-6 pt-[24px] pl-[40px] pr-[40px]">
+      {/* Content: 24px below tab bar; gutter matches header (px-6 on page root). */}
+      <div className="min-h-0 flex-1 overflow-auto pb-6 pt-6">
         {effectiveSectionId === 'overview' && (
           <div className="flex w-full items-stretch gap-10">
             <div className="flex min-w-0 flex-1 flex-col gap-6">

@@ -3,6 +3,9 @@
  * Payments + PM-on-file, payouts + schedule well, treasury + financial accounts well (142:61198; FA row mark 142:61212),
  * financing + products well (143:61336), card issuing + cards issued well, billing + subscriptions well (141:61045).
  * Section spacing (gap-3 / gap-1), status headings, comma-separated or muted capability lines.
+ * Paused / pausing_soon: Payments keeps paused+active / pausing_soon+active mixes (method pills). Other
+ * multi-cap groups use two sections. Payouts / Issuing (one cap): single status row + capability line only.
+ * “Limited” split UI applies only when the group can represent multiple sub-capabilities (not Payouts or Issuing alone).
  *
  * Well card rows (PM on file, payouts, treasury) use **flex** — not CSS subgrid — so spacing stays
  * stable when adjusting gaps/padding; subgrid had inconsistent gap/column behavior across engines.
@@ -17,10 +20,13 @@ import {
   DEFAULT_FINANCING_POPOVER,
   FINANCIAL_ACCOUNTS_POPOVER_CHIPS,
   FINANCIAL_ACCOUNTS_POPOVER_OVERFLOW_EXTRA,
+  FINANCING_LOAN_MASKED_ACCOUNT_LINE,
   financingPopoverChipLabels,
+  signalPopoverSingleCapabilityRow,
   type BillingFlavor,
   type CapabilityStatus,
   type FinancingProductSelection,
+  type SignalPopoverPanelVariant,
 } from '../data/configMatrix'
 import CapabilityStatusIcon from '../icons/CapabilityStatusIcon'
 import { FinancingCashAdvanceMark } from '../icons/FinancingCashAdvanceMark'
@@ -75,8 +81,6 @@ const ZIP_PAYMENTS_PAUSED_LABEL = 'Zip payments'
 const INSTANT_PAYOUTS_PAUSED_LABEL = 'Instant payouts'
 
 const FINANCIAL_ACCOUNTS_PAUSED_GRANULAR_LABEL = 'Cross-border transfers'
-
-const FINANCING_PAUSED_GRANULAR_LABEL = 'Term loans'
 
 const CARD_ISSUING_PAUSED_GRANULAR_LABEL = 'Physical cards'
 
@@ -152,13 +156,7 @@ function LimitedPaymentsCapabilityPill({ children }: { children: string }) {
 
 type PaymentsPopoverPanelProps = {
   status: CapabilityStatus
-  variant?:
-    | 'payments'
-    | 'payouts'
-    | 'financialAccounts'
-    | 'financing'
-    | 'cardIssuing'
-    | 'billing'
+  variant?: SignalPopoverPanelVariant
   financingProducts?: FinancingProductSelection
   /** Financing only: platform name in “Financing with …” well (e.g. Shopify). */
   financingPlatformLabel?: string
@@ -367,7 +365,7 @@ function FinancingWithPlatformWell({
               <FinancingLoanMark />
             </span>
             <p className="min-w-0 flex-1 truncate font-label-medium text-[12px] leading-5 tracking-[-0.15px] text-default">
-              Term loans
+              {FINANCING_LOAN_MASKED_ACCOUNT_LINE}
             </p>
             <p className="shrink-0 whitespace-nowrap text-right font-label-small leading-4 text-default">
               $125,000.00 available
@@ -664,7 +662,7 @@ function pausedGranularLabel(
 ): string {
   if (isPayouts) return INSTANT_PAYOUTS_PAUSED_LABEL
   if (isFinancialAccounts) return FINANCIAL_ACCOUNTS_PAUSED_GRANULAR_LABEL
-  if (isFinancing) return FINANCING_PAUSED_GRANULAR_LABEL
+  if (isFinancing) return FINANCING_LOAN_MASKED_ACCOUNT_LINE
   if (isCardIssuing) return CARD_ISSUING_PAUSED_GRANULAR_LABEL
   return ZIP_PAYMENTS_PAUSED_LABEL
 }
@@ -688,7 +686,6 @@ export default function PaymentsPopoverPanel({
   cardIssuingPlatformLabel = 'Shopify',
 }: PaymentsPopoverPanelProps) {
   const statusLabel = CAPABILITY_STATUS_DISPLAY_LABELS[status]
-  const isLimitedGroup = status === 'limited'
   const isPayouts = variant === 'payouts'
   const isFinancialAccounts = variant === 'financialAccounts'
   const isFinancing = variant === 'financing'
@@ -696,6 +693,9 @@ export default function PaymentsPopoverPanel({
   const isBilling = variant === 'billing'
   const isPayments =
     !isPayouts && !isFinancialAccounts && !isFinancing && !isCardIssuing && !isBilling
+  /** Mirrors `CAPABILITY_GROUP_SINGLE_SIGNAL` in configMatrix (payouts + issuing). */
+  const singleCapabilityVariant = signalPopoverSingleCapabilityRow(variant)
+  const effectiveLimited = status === 'limited' && !singleCapabilityVariant
   const financingProductsResolved = financingProductsProp ?? DEFAULT_FINANCING_POPOVER
   const showFinancingProductsWell =
     isFinancing && (financingProductsResolved.loan || financingProductsResolved.cashAdvance)
@@ -831,6 +831,113 @@ export default function PaymentsPopoverPanel({
     </>
   )
 
+  const pausingSoonTwoSection = (
+    dataName: string | undefined,
+    granularLabel: string
+  ) => (
+    <>
+      <div className="flex flex-col gap-1" data-name={dataName}>
+        <SectionStatusHeading
+          sectionStatus="pausing_soon"
+          label={CAPABILITY_STATUS_DISPLAY_LABELS.pausing_soon}
+        />
+        {singleMutedLine(granularLabel)}
+      </div>
+      <div className="flex flex-col gap-1">
+        <SectionStatusHeading
+          sectionStatus="active"
+          label={CAPABILITY_STATUS_DISPLAY_LABELS.active}
+        />
+        <PaymentsCommaMethods
+          labels={activeMethodLabels}
+          onViewAllCapabilities={secondaryVariantViewAll}
+          showOverflow={showCapabilityOverflow || showFinancialAccountsOverflow}
+          overflowExtra={
+            isFinancialAccounts ? FINANCIAL_ACCOUNTS_POPOVER_OVERFLOW_EXTRA : undefined
+          }
+          viewAllTooltipId={viewAllTooltipId}
+        />
+      </div>
+    </>
+  )
+
+  const paymentsPausedMix = (
+    <>
+      <div className="flex flex-col gap-1" data-name="payments-paused-granular">
+        <SectionStatusHeading
+          sectionStatus="paused"
+          label={CAPABILITY_STATUS_DISPLAY_LABELS.paused}
+        />
+        <LimitedPaymentsCapabilityPill>{ZIP_PAYMENTS_PAUSED_LABEL}</LimitedPaymentsCapabilityPill>
+      </div>
+      <div className="flex flex-col gap-1" data-name="payments-paused-active">
+        <SectionStatusHeading
+          sectionStatus="active"
+          label={CAPABILITY_STATUS_DISPLAY_LABELS.active}
+        />
+        <PaymentsCommaMethods
+          labels={PAYMENT_METHOD_CHIPS}
+          onViewAllCapabilities={secondaryVariantViewAll}
+          showOverflow={showCapabilityOverflow}
+          viewAllTooltipId={viewAllTooltipId}
+        />
+      </div>
+    </>
+  )
+
+  const paymentsPausingSoonMix = (
+    <>
+      <div className="flex flex-col gap-1" data-name="payments-pausing-soon-granular">
+        <SectionStatusHeading
+          sectionStatus="pausing_soon"
+          label={CAPABILITY_STATUS_DISPLAY_LABELS.pausing_soon}
+        />
+        <LimitedPaymentsCapabilityPill>{PAUSING_SOON_PAYMENTS_METHOD_LABEL}</LimitedPaymentsCapabilityPill>
+      </div>
+      <div className="flex flex-col gap-1" data-name="payments-pausing-soon-active">
+        <SectionStatusHeading
+          sectionStatus="active"
+          label={CAPABILITY_STATUS_DISPLAY_LABELS.active}
+        />
+        <PaymentsCommaMethods
+          labels={PAYMENT_METHOD_CHIPS}
+          onViewAllCapabilities={secondaryVariantViewAll}
+          showOverflow={showCapabilityOverflow}
+          viewAllTooltipId={viewAllTooltipId}
+        />
+      </div>
+    </>
+  )
+
+  /** gap-3 only when multiple vertical blocks; single-cap paused/pausing_soon stays one column. */
+  const mixedStatusVerticalGap =
+    effectiveLimited ||
+    (status === 'paused' && (isPayments || !singleCapabilityVariant)) ||
+    (status === 'pausing_soon' && (isPayments || !singleCapabilityVariant))
+
+  const homogenousStatusCapabilityBlock = (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1.5">
+        <span className="inline-flex shrink-0" aria-hidden>
+          <CapabilityStatusIcon status={status} size={12} />
+        </span>
+        <p className="m-0 min-w-0 flex-1 truncate font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default">
+          {statusLabel}
+        </p>
+      </div>
+
+      <PaymentsCommaMethods
+        labels={activeMethodLabels}
+        onViewAllCapabilities={secondaryVariantViewAll}
+        showOverflow={showCapabilityOverflow || showFinancialAccountsOverflow}
+        overflowExtra={
+          isFinancialAccounts ? FINANCIAL_ACCOUNTS_POPOVER_OVERFLOW_EXTRA : undefined
+        }
+        viewAllTooltipId={viewAllTooltipId}
+      />
+    </div>
+  )
+
   return (
     <div
       className={SIGNAL_GROUP_POPOVER_SHELL_CLASS}
@@ -858,8 +965,8 @@ export default function PaymentsPopoverPanel({
       <div
         className={`px-3 pt-4 pr-12 ${(isPayments && hasPaymentMethodOnFile) || (isPayouts && hasPayoutSchedule) || (isFinancialAccounts && hasFinancialAccounts) || showFinancingProductsWell || isCardIssuing ? 'pb-0' : 'pb-3'}`}
       >
-        <div className={`flex flex-col ${isLimitedGroup ? 'gap-3' : ''}`}>
-          {isLimitedGroup ? (
+        <div className={`flex flex-col ${mixedStatusVerticalGap ? 'gap-3' : ''}`}>
+          {effectiveLimited ? (
             isPayments ? (
               <>
                 <div className="flex flex-col gap-1" data-name="payments-limited-paused">
@@ -905,27 +1012,38 @@ export default function PaymentsPopoverPanel({
                 pausedGranularLabel(isPayouts, isFinancialAccounts, isFinancing, isCardIssuing)
               )
             )
+          ) : status === 'paused' ? (
+            isPayments ? (
+              paymentsPausedMix
+            ) : singleCapabilityVariant ? (
+              homogenousStatusCapabilityBlock
+            ) : (
+              limitedTwoSection(
+                isFinancialAccounts
+                  ? 'financial-accounts-paused-granular'
+                  : isFinancing
+                    ? 'financing-paused-granular'
+                    : undefined,
+                pausedGranularLabel(isPayouts, isFinancialAccounts, isFinancing, isCardIssuing)
+              )
+            )
+          ) : status === 'pausing_soon' ? (
+            isPayments ? (
+              paymentsPausingSoonMix
+            ) : singleCapabilityVariant ? (
+              homogenousStatusCapabilityBlock
+            ) : (
+              pausingSoonTwoSection(
+                isFinancialAccounts
+                  ? 'financial-accounts-pausing-soon-granular'
+                  : isFinancing
+                    ? 'financing-pausing-soon-granular'
+                    : undefined,
+                pausedGranularLabel(isPayouts, isFinancialAccounts, isFinancing, isCardIssuing)
+              )
+            )
           ) : (
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex shrink-0" aria-hidden>
-                  <CapabilityStatusIcon status={status} size={12} />
-                </span>
-                <p className="m-0 min-w-0 flex-1 truncate font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default">
-                  {statusLabel}
-                </p>
-              </div>
-
-              <PaymentsCommaMethods
-                labels={activeMethodLabels}
-                onViewAllCapabilities={secondaryVariantViewAll}
-                showOverflow={showCapabilityOverflow || showFinancialAccountsOverflow}
-                overflowExtra={
-                  isFinancialAccounts ? FINANCIAL_ACCOUNTS_POPOVER_OVERFLOW_EXTRA : undefined
-                }
-                viewAllTooltipId={viewAllTooltipId}
-              />
-            </div>
+            homogenousStatusCapabilityBlock
           )}
         </div>
       </div>

@@ -57,6 +57,45 @@ export type CapabilityGroupId =
   | 'payments' | 'payouts' | 'transfers'
   | 'billing' | 'treasury' | 'capital' | 'issuing'
 
+/**
+ * Header / Configure groups backed by a single compliance capability (no “limited” sub-cap mix).
+ * Configure omits **Limited** for these; signal popover uses one status column for paused / pausing_soon.
+ */
+export const CAPABILITY_GROUP_SINGLE_SIGNAL = new Set<CapabilityGroupId>(['payouts', 'issuing'])
+
+/** `PaymentsPopoverPanel` `variant` → underlying `CapabilityGroupId` (FA popover → treasury). */
+export type SignalPopoverPanelVariant =
+  | 'payments'
+  | 'payouts'
+  | 'financialAccounts'
+  | 'financing'
+  | 'cardIssuing'
+  | 'billing'
+
+export function capabilityGroupForSignalPopover(
+  variant: SignalPopoverPanelVariant
+): CapabilityGroupId {
+  switch (variant) {
+    case 'payments':
+      return 'payments'
+    case 'payouts':
+      return 'payouts'
+    case 'financialAccounts':
+      return 'treasury'
+    case 'financing':
+      return 'capital'
+    case 'cardIssuing':
+      return 'issuing'
+    case 'billing':
+      return 'billing'
+  }
+}
+
+/** True when the signal popover is for Payouts or Card issuing only (single-cap chip). */
+export function signalPopoverSingleCapabilityRow(variant: SignalPopoverPanelVariant): boolean {
+  return CAPABILITY_GROUP_SINGLE_SIGNAL.has(capabilityGroupForSignalPopover(variant))
+}
+
 export type CapabilityStatus =
   | 'active' | 'pausing_soon' | 'limited' | 'paused'
 
@@ -200,8 +239,8 @@ export type FinancingProductSelection = {
 export const DEFAULT_FINANCING_POPOVER: FinancingProductSelection = { loan: true, cashAdvance: false }
 
 /**
- * Capability line for Financing popover — matches “Loan” / “Cash advance” in Configure account.
- * Omits entries when the corresponding checkbox is off (no implicit default).
+ * Capability line for Financing popover — matches Configure checkboxes. Omits entries when off.
+ * Uses plural capability nouns (same pattern as Payments, Financial accounts, etc.).
  */
 export function financingPopoverChipLabels(
   selection: FinancingProductSelection
@@ -212,6 +251,12 @@ export function financingPopoverChipLabels(
   if (cashAdvance) out.push('Cash advances')
   return out
 }
+
+/**
+ * Financing **well** row + paused / granular popover line: one **loan account** display (not the plural capability list).
+ * Mask uses •••• like payment method rows (Visa •••• 1933). Do not conflate with `financingPopoverChipLabels` “Loans”.
+ */
+export const FINANCING_LOAN_MASKED_ACCOUNT_LINE = 'Loan •••• 7809'
 
 /** Human-readable labels for capability / signal group chips (configure modal + account header). */
 export const CAPABILITY_GROUP_DISPLAY_LABELS: Record<CapabilityGroupId, string> = {
