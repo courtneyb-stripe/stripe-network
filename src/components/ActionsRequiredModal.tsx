@@ -1,12 +1,13 @@
 /**
- * Needs Attention — Full-screen view (like Settings): left sidebar = actions list,
- * main content = selected issue detail (first issue by default). Segment: Actions required | Blocking issues (default: Actions required).
- * Filter by impacted capabilities: All, Impacts payments, Impacts payouts. Low-fi: skeletons throughout.
+ * Needs Attention — Full-screen view (like Settings): left sidebar = list + optional segment + impacts filter.
+ * When capability/tax remediation exists: Actions required | Blocking issues + impacts dropdown on Actions.
+ * Blocking-only (e.g. expired default PM, all capabilities active): no segment or filter — single blocking list.
  */
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import {
+  BLOCKING_EXPIRED_DEFAULT_PAYMENT_METHOD,
   filterActionsRequired,
   getImpactsDisplayParts,
   getImpactsTooltipLabel,
@@ -21,6 +22,7 @@ import BabySegmentedControl from './BabySegmentedControl'
 import ChevronDownIcon from '../icons/ChevronDownIcon'
 import { usePrototypeOptional } from '../context/PrototypeContext'
 import type { ActionRequiredItem } from '../data/actionsRequired'
+import { hasAnyNonActiveComplianceStatus, resolveCapabilityGroups } from '../data/uadVisibility'
 
 function CloseIcon({ size = 12 }: { size?: number }) {
   return (
@@ -167,16 +169,29 @@ export default function ActionsRequiredModal({
 }: ActionsRequiredModalProps) {
   const prototype = usePrototypeOptional()
   const isLowFidelity = prototype?.fidelity === 'low'
+  const hasComplianceRemediation = useMemo(() => {
+    if (prototype == null) return false
+    return hasAnyNonActiveComplianceStatus(
+      prototype.capabilityStatuses,
+      resolveCapabilityGroups(prototype.activeRoles, prototype.hasBilling),
+      prototype.taxCapabilityStatus
+    )
+  }, [prototype])
+  const expiredDefaultPm = prototype?.relationship?.expiredPaymentMethod === true
+  const blockingOnlyMode = !hasComplianceRemediation && expiredDefaultPm
 
   const [segment, setSegment] = useState<SegmentId>('actions')
   const [impactsFilter, setImpactsFilter] = useState<ActionsRequiredFilter>(initialFilter)
   const [impactsDropdownOpen, setImpactsDropdownOpen] = useState(false)
   const impactsDropdownRef = useRef<HTMLDivElement>(null)
   /** Blocking issues: no filter (always "all"). Actions required: use impacts dropdown (All / Impacts payments / Impacts payouts). */
-  const listFilter = segment === 'blocking' ? 'all' : impactsFilter
+  const listFilter = blockingOnlyMode || segment === 'blocking' ? 'all' : impactsFilter
   const filteredList = filterActionsRequired(listFilter)
-  /** Blocking: 2 items only; Actions required: full list. */
-  const displayList = segment === 'blocking' ? filteredList.slice(0, 2) : filteredList
+  /** With compliance: blocking tab shows first list row only. Blocking-only: single configured row (expired default PM). */
+  const blockingDisplayList = blockingOnlyMode
+    ? [BLOCKING_EXPIRED_DEFAULT_PAYMENT_METHOD]
+    : filteredList.slice(0, 1)
+  const displayList = blockingOnlyMode || segment === 'blocking' ? blockingDisplayList : filteredList
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null)
 
   const selectedAction = selectedActionId
@@ -186,9 +201,13 @@ export default function ActionsRequiredModal({
   useEffect(() => {
     if (!open) return
     setImpactsFilter(initialFilter)
-    setSegment(initialSegment ?? 'actions')
+    if (blockingOnlyMode) {
+      setSegment('blocking')
+    } else {
+      setSegment(initialSegment ?? 'actions')
+    }
     setSelectedActionId(initialSelectedActionId ?? null)
-  }, [open, initialFilter, initialSegment, initialSelectedActionId])
+  }, [open, initialFilter, initialSegment, initialSelectedActionId, blockingOnlyMode])
 
   useEffect(() => {
     if (!open) return
@@ -258,59 +277,67 @@ export default function ActionsRequiredModal({
           className="flex w-[320px] shrink-0 flex-col gap-2 border-r border-neutral-50 bg-surface overflow-hidden"
           aria-label="Needs attention list"
         >
-          <div className="flex shrink-0 flex-col gap-3 p-4">
-            <BabySegmentedControl
-              options={SEGMENT_OPTIONS}
-              selectedId={segment}
-              onChange={(id) => {
-                setSegment(id)
-                if (id === 'blocking') setImpactsDropdownOpen(false)
-              }}
-              aria-label="Category"
-            />
-            {segment === 'actions' && (
-              <div className="relative shrink-0" ref={impactsDropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => setImpactsDropdownOpen((o) => !o)}
-                  className="flex h-8 min-h-8 shrink-0 items-center gap-2 overflow-clip rounded-[8px] border border-solid border-neutral-100 bg-surface px-2 py-1.5 text-left transition-colors hover:border-neutral-100 hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-action-primary"
-                  aria-haspopup="listbox"
-                  aria-expanded={impactsDropdownOpen}
-                  aria-label="Filter by impact"
-                >
-                  <span className="shrink-0 truncate text-[14px] leading-5 tracking-[-0.15px] font-[500] text-subdued">
-                    {impactsFilterLabel}
-                  </span>
-                  <ChevronDownIcon size={8} fill="var(--color-icon-subdued)" className="shrink-0" />
-                </button>
-                {impactsDropdownOpen && (
-                  <div
-                    className="absolute left-0 top-full z-50 mt-1 min-w-[160px] rounded-[6px] border border-neutral-100 bg-surface py-1 shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
-                    role="listbox"
+          {blockingOnlyMode ? (
+            <div className="flex shrink-0 flex-col gap-2 px-4 pb-2 pt-4">
+              <p className="m-0 font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-subdued">
+                Blocking issues
+              </p>
+            </div>
+          ) : (
+            <div className="flex shrink-0 flex-col gap-3 p-4">
+              <BabySegmentedControl
+                options={SEGMENT_OPTIONS}
+                selectedId={segment}
+                onChange={(id) => {
+                  setSegment(id)
+                  if (id === 'blocking') setImpactsDropdownOpen(false)
+                }}
+                aria-label="Category"
+              />
+              {segment === 'actions' && (
+                <div className="relative shrink-0" ref={impactsDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setImpactsDropdownOpen((o) => !o)}
+                    className="flex h-8 min-h-8 shrink-0 items-center gap-2 overflow-clip rounded-[8px] border border-solid border-neutral-100 bg-surface px-2 py-1.5 text-left transition-colors hover:border-neutral-100 hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-action-primary"
+                    aria-haspopup="listbox"
+                    aria-expanded={impactsDropdownOpen}
                     aria-label="Filter by impact"
                   >
-                    {IMPACTS_CHIPS.map((chip) => (
-                      <button
-                        key={chip.id}
-                        type="button"
-                        role="option"
-                        aria-selected={impactsFilter === chip.id}
-                        onClick={() => {
-                          setImpactsFilter(chip.id)
-                          setImpactsDropdownOpen(false)
-                        }}
-                        className={`w-full px-3 py-2 text-left font-label-medium transition-colors hover:bg-offset focus:bg-offset focus:outline-none ${
-                          impactsFilter === chip.id ? 'bg-offset text-default' : 'text-subdued'
-                        }`}
-                      >
-                        {chip.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+                    <span className="shrink-0 truncate text-[14px] leading-5 tracking-[-0.15px] font-[500] text-subdued">
+                      {impactsFilterLabel}
+                    </span>
+                    <ChevronDownIcon size={8} fill="var(--color-icon-subdued)" className="shrink-0" />
+                  </button>
+                  {impactsDropdownOpen && (
+                    <div
+                      className="absolute left-0 top-full z-50 mt-1 min-w-[160px] rounded-[6px] border border-neutral-100 bg-surface py-1 shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
+                      role="listbox"
+                      aria-label="Filter by impact"
+                    >
+                      {IMPACTS_CHIPS.map((chip) => (
+                        <button
+                          key={chip.id}
+                          type="button"
+                          role="option"
+                          aria-selected={impactsFilter === chip.id}
+                          onClick={() => {
+                            setImpactsFilter(chip.id)
+                            setImpactsDropdownOpen(false)
+                          }}
+                          className={`w-full px-3 py-2 text-left font-label-medium transition-colors hover:bg-offset focus:bg-offset focus:outline-none ${
+                            impactsFilter === chip.id ? 'bg-offset text-default' : 'text-subdued'
+                          }`}
+                        >
+                          {chip.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           <div className="min-h-0 flex-1 overflow-auto px-4 pb-4">
             {isLowFidelity ? (
               <NeedsAttentionListSkeleton selectedIndex={0} />

@@ -1,13 +1,14 @@
 /**
  * Needs Attention sidebar section — Figma 18-7608.
- * Shown when account is Restricted: title "Needs Attention", nested segmented control, link/expand buttons,
- * first 5 actions from shared list (using List/ListItem), "5 of 9 actions required" link (opens modal with All).
+ * Compliance (non-active capability / tax): segmented control (Actions required | Blocking issues) + list.
+ * Blocking-only (e.g. expired default PM while all capabilities active): no segment control — single blocking row.
  * Styling aligned with Profile card and other sidebar sections.
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   ACTIONS_REQUIRED_LIST,
+  BLOCKING_EXPIRED_DEFAULT_PAYMENT_METHOD,
   filterActionsRequired,
   getImpactsDisplayParts,
   getImpactsTooltipLabel,
@@ -21,6 +22,7 @@ import { ActionRequiredDescriptionRow } from './ActionRequiredDescriptionRow'
 import { IconButton } from './IconButton'
 import { List, ListItem } from './List'
 import { RightArrowIcon } from './metrics/MetricCard'
+import { hasAnyNonActiveComplianceStatus, resolveCapabilityGroups } from '../data/uadVisibility'
 
 const TOTAL_ACTIONS = ACTIONS_REQUIRED_LIST.length
 const SIDEBAR_ACTION_COUNT = 5
@@ -99,11 +101,23 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
   const prototype = usePrototypeOptional()
   const isLowFidelity = prototype?.fidelity === 'low'
   const [segment, setSegment] = useState<SegmentId>('actions')
+  const expiredDefaultPm = prototype?.relationship?.expiredPaymentMethod === true
+  const hasComplianceRemediation = useMemo(() => {
+    if (prototype == null) return false
+    return hasAnyNonActiveComplianceStatus(
+      prototype.capabilityStatuses,
+      resolveCapabilityGroups(prototype.activeRoles, prototype.hasBilling),
+      prototype.taxCapabilityStatus
+    )
+  }, [prototype])
+  /** Expired PM (or similar) with no capability/tax remediation — only blocking row, no “Actions required” segment. */
+  const blockingOnlyMode = !hasComplianceRemediation && expiredDefaultPm
   const filteredForSidebar = filterActionsRequired('all')
-  /** Blocking: 2 items only; Actions required: full preview list. */
-  const sidebarActions =
-    segment === 'blocking'
-      ? filteredForSidebar.slice(0, 2)
+  /** Blocking-only: expired PM row. With compliance: blocking tab = first list row only; actions tab = preview. */
+  const sidebarActions = blockingOnlyMode
+    ? [BLOCKING_EXPIRED_DEFAULT_PAYMENT_METHOD]
+    : segment === 'blocking'
+      ? filteredForSidebar.slice(0, 1)
       : filteredForSidebar.slice(0, SIDEBAR_ACTION_COUNT)
 
   const handleCopyLink = () => {
@@ -147,28 +161,46 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
           </IconButton>
         </div>
       </div>
-      {/* Nested segmented control — Figma 2059:88785; 8px gap between segment and list */}
       <div className="flex shrink-0 flex-col gap-2 pb-2">
-        <div className="shrink-0 pt-1">
-          <BabySegmentedControl
-            options={SEGMENT_OPTIONS}
-            selectedId={segment}
-            onChange={setSegment}
-            aria-label="Filter needs attention"
-          />
-        </div>
+        {blockingOnlyMode ? (
+          <div className="shrink-0 pt-1">
+            <p className="m-0 font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-subdued">
+              Blocking issues
+            </p>
+          </div>
+        ) : (
+          <div className="shrink-0 pt-1">
+            <BabySegmentedControl
+              options={SEGMENT_OPTIONS}
+              selectedId={segment}
+              onChange={setSegment}
+              aria-label="Filter needs attention"
+            />
+          </div>
+        )}
         {isLowFidelity ? (
           <div className="flex flex-col shrink-0 px-2" aria-label="Needs Attention">
-            {Array.from({ length: SIDEBAR_ACTION_COUNT }, (_, i) => {
-              const action = ACTIONS_REQUIRED_LIST[i]
-              return (
-                <ActionsRequiredSkeletonRow
-                  key={i}
-                  actionId={action?.id}
-                  onClick={action != null ? (actionId) => onOpenActionsModal(actionId, segment) : undefined}
-                />
-              )
-            })}
+            {Array.from(
+              { length: blockingOnlyMode || segment === 'blocking' ? 1 : SIDEBAR_ACTION_COUNT },
+              (_, i) => {
+                const action = ACTIONS_REQUIRED_LIST[i]
+                return (
+                  <ActionsRequiredSkeletonRow
+                    key={i}
+                    actionId={
+                      blockingOnlyMode ? BLOCKING_EXPIRED_DEFAULT_PAYMENT_METHOD.id : action?.id
+                    }
+                    onClick={
+                      blockingOnlyMode
+                        ? (actionId) => onOpenActionsModal(actionId)
+                        : action != null
+                          ? (actionId) => onOpenActionsModal(actionId, segment)
+                          : undefined
+                    }
+                  />
+                )
+              }
+            )}
           </div>
         ) : (
           <>
@@ -176,7 +208,7 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
               aria-label="Needs Attention"
               className="shrink-0"
               variant="noDividers"
-              onAction={(id) => onOpenActionsModal(id, segment)}
+              onAction={(id) => onOpenActionsModal(id, blockingOnlyMode ? undefined : segment)}
             >
             {sidebarActions.map((action) => {
               const daysPastDue = getDaysPastDue(action.dueDate)
@@ -213,17 +245,26 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
               )
             })}
             </List>
-            {/* "5 of 9 actions required" — link part in action primary */}
-            <button
-            type="button"
-            onClick={() => onOpenActionsModal()}
-            className="flex flex-col font-label-small text-subdued text-[12px] leading-4 text-left hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[4px] -mb-1"
-          >
-            <span>
-              <span className="leading-4">{sidebarActions.length} of </span>
-                <span className="text-action-primary leading-4">{TOTAL_ACTIONS} need attention</span>
-            </span>
-          </button>
+            {blockingOnlyMode ? (
+              <button
+                type="button"
+                onClick={() => onOpenActionsModal()}
+                className="flex flex-col font-label-small text-[12px] leading-4 text-left text-subdued hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[4px] -mb-1"
+              >
+                <span className="text-action-primary leading-4">View blocking issue</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onOpenActionsModal()}
+                className="flex flex-col font-label-small text-subdued text-[12px] leading-4 text-left hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[4px] -mb-1"
+              >
+                <span>
+                  <span className="leading-4">{sidebarActions.length} of </span>
+                  <span className="text-action-primary leading-4">{TOTAL_ACTIONS} need attention</span>
+                </span>
+              </button>
+            )}
           </>
         )}
       </div>

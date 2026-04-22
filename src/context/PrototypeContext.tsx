@@ -112,6 +112,9 @@ type PrototypeState = {
   setRelationship: Dispatch<SetStateAction<RelationshipFlags>>
   capabilityStatuses: Record<CapabilityGroupId, CapabilityStatus>
   setCapabilityStatus: (groupId: CapabilityGroupId, status: CapabilityStatus) => void
+  /** Tax capability group (separate from `CapabilityGroupId` chips). Drives compliance / Actions required when not active. */
+  taxCapabilityStatus: CapabilityStatus
+  setTaxCapabilityStatus: (status: CapabilityStatus) => void
   /** Configure account → Financing: Loan / Cash advance (drives Financing popover chips). */
   financingProducts: FinancingProductSelection
   setFinancingProducts: Dispatch<SetStateAction<FinancingProductSelection>>
@@ -159,6 +162,7 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
       capabilityGroupsWithStatus(resolveCapabilityGroups(new Set(DEFAULT_ROLES), false))
     )
   )
+  const [taxCapabilityStatus, setTaxCapabilityStatus] = useState<CapabilityStatus>('active')
 
   const activeRoles = useMemo(() => new Set(activeRoleList), [activeRoleList])
 
@@ -221,6 +225,8 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
       setRelationship,
       capabilityStatuses,
       setCapabilityStatus,
+      taxCapabilityStatus,
+      setTaxCapabilityStatus,
       financingProducts,
       setFinancingProducts,
       hasPaymentMethodOnFile,
@@ -243,6 +249,8 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
       relationship,
       capabilityStatuses,
       setCapabilityStatus,
+      taxCapabilityStatus,
+      setTaxCapabilityStatus,
       setHasBilling,
       financingProducts,
       hasPaymentMethodOnFile,

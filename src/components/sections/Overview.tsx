@@ -22,6 +22,8 @@ import TransactionsTable, { generateTransactionRows } from '../TransactionsTable
 import { ViewChip } from '../NetworkFilterGroup'
 import { usePrototypeOptional } from '../../context/PrototypeContext'
 import type { AccountConfig } from '../../data/accountConfigs'
+import { hasAnyNonActiveComplianceStatus, resolveCapabilityGroups } from '../../data/uadVisibility'
+import ActionsRequiredSidebarSection from '../ActionsRequiredSidebarSection'
 
 const ALL_TRANSACTION_TABS = [
   { id: 'payments' as const, label: 'Payments' },
@@ -65,6 +67,8 @@ export type OverviewSectionProps = {
   onPaymentRowClick: () => void
   /** When set, Financial accounts balance card shows a ghost icon that switches to Money management tab. */
   onOpenMoneyMovement?: () => void
+  /** Opens fullscreen Actions required when any capability or tax is non-active. */
+  onOpenActionsModal?: (actionId?: string, segment?: 'blocking' | 'actions') => void
 }
 
 export default function Overview({
@@ -73,6 +77,7 @@ export default function Overview({
   accountName,
   onPaymentRowClick,
   onOpenMoneyMovement,
+  onOpenActionsModal,
 }: OverviewSectionProps) {
   const navigate = useNavigate()
   const prototype = usePrototypeOptional()
@@ -109,8 +114,26 @@ export default function Overview({
   const showRecentTransactions = config.overviewBlocks.includes('recentTransactions')
   const showRecentActivity = config.overviewBlocks.includes('recentActivity')
 
+  const showActionsRequiredBlock =
+    prototype != null &&
+    onOpenActionsModal != null &&
+    (hasAnyNonActiveComplianceStatus(
+      prototype.capabilityStatuses,
+      resolveCapabilityGroups(prototype.activeRoles, prototype.hasBilling),
+      prototype.taxCapabilityStatus
+    ) ||
+      prototype.relationship.expiredPaymentMethod === true)
+
   return (
     <div className="flex min-w-0 max-w-[1120px] flex-1 flex-col">
+      {showActionsRequiredBlock ? (
+        <div className="mb-6 min-w-0 w-full shrink-0">
+          <ActionsRequiredSidebarSection
+            accountId={accountId}
+            onOpenActionsModal={onOpenActionsModal}
+          />
+        </div>
+      ) : null}
       {showBalances && <BalancesAndMetricsSection accountId={accountId} onOpenMoneyMovement={onOpenMoneyMovement} />}
 
       {showBalances && iaVersion === 'v1-global-ia' && (

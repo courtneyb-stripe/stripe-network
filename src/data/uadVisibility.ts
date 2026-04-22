@@ -59,6 +59,22 @@ export function deriveAccountStatus(
   return 'enabled'
 }
 
+/**
+ * True when any resolved compliance capability (excl. billing) or Tax is not **active** —
+ * used to surface Actions required (limited / pausing_soon / paused, and tax non-active).
+ */
+export function hasAnyNonActiveComplianceStatus(
+  capabilityStatuses: Record<CapabilityGroupId, CapabilityStatus>,
+  activeGroups: CapabilityGroupId[],
+  taxCapabilityStatus: CapabilityStatus
+): boolean {
+  for (const g of capabilityGroupsWithStatus(activeGroups)) {
+    const s = capabilityStatuses[g]
+    if (s != null && s !== 'active') return true
+  }
+  return taxCapabilityStatus !== 'active'
+}
+
 export function isRelationshipOnly(activeRoles: Set<AccountRoleId>): boolean {
   return [...activeRoles].every(r => COMPLIANCE_ROLES.indexOf(r) === -1)
 }

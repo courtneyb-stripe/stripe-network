@@ -21,7 +21,7 @@ const SignalGroup = forwardRef<HTMLDivElement, SignalGroupProps>(function Signal
     >
       <div
         ref={ref}
-        className="flex flex-wrap items-center gap-1"
+        className="flex flex-wrap items-center gap-[8px]"
         data-name="header/signal-group-row"
         data-node-id="112:49522"
       >

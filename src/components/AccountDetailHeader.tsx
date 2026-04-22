@@ -162,7 +162,7 @@ export default function AccountDetailHeader({
             </div>
             {accountEmail ? (
               <div
-                className="flex items-center gap-[length:var(--spacing-small)]"
+                className="flex items-start justify-start gap-[6px]"
                 data-name="Profile email"
                 data-node-id="145:61886"
               >

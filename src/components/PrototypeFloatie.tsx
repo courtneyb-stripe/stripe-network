@@ -208,7 +208,7 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
   const [draftCapabilityStatuses, setDraftCapabilityStatuses] = useState<
     Record<CapabilityGroupId, CapabilityStatus>
   >(() => ({} as Record<CapabilityGroupId, CapabilityStatus>))
-  const [riskSettingsOpen, setRiskSettingsOpen] = useState(false)
+  const [advancedPanelOpen, setAdvancedPanelOpen] = useState(false)
   const [pendingRiskLevel, setPendingRiskLevel] = useState<RiskLevel>('low')
   const [draftRelationship, setDraftRelationship] = useState<RelationshipFlags>(
     () => ({ ...DEFAULT_RELATIONSHIP_DRAFT })
@@ -220,6 +220,7 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
   const [draftFinancingLoan, setDraftFinancingLoan] = useState(true)
   const [draftFinancingCashAdvance, setDraftFinancingCashAdvance] = useState(false)
   const [draftParticipatesCardProgram, setDraftParticipatesCardProgram] = useState(false)
+  const [draftTaxCapabilityStatus, setDraftTaxCapabilityStatus] = useState<CapabilityStatus>('active')
 
   /**
    * Stable snapshot of prototype fields we hydrate from — NOT the context object identity.
@@ -234,6 +235,7 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
         prototype.riskLevel,
         JSON.stringify(prototype.relationship),
         JSON.stringify(prototype.capabilityStatuses),
+        prototype.taxCapabilityStatus,
         String(prototype.hasPaymentMethodOnFile),
         String(prototype.hasPayoutSchedule),
         String(prototype.hasFinancialAccounts),
@@ -244,7 +246,7 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
 
   useEffect(() => {
     if (!open) {
-      setRiskSettingsOpen(false)
+      setAdvancedPanelOpen(false)
       return
     }
     if (!prototype) return
@@ -264,6 +266,7 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
     setDraftFinancingLoan(prototype.financingProducts.loan)
     setDraftFinancingCashAdvance(prototype.financingProducts.cashAdvance)
     setDraftParticipatesCardProgram(prototype.activeRoles.has('card_holder'))
+    setDraftTaxCapabilityStatus(prototype.taxCapabilityStatus)
     // prototype intentionally omitted from deps — see prototypeSyncKey note above
   }, [open, prototypeSyncKey])
 
@@ -361,7 +364,10 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
       prototype.setCapabilityStatus(g, s)
     }
     prototype.setRiskLevel(pendingRiskLevel)
-    prototype.setRelationship({ ...draftRelationship })
+    prototype.setRelationship({
+      ...draftRelationship,
+      expiredPaymentMethod: draftPaymentMethodOnFile ? draftRelationship.expiredPaymentMethod : false,
+    })
     prototype.setFinancingProducts({
       loan: draftFinancingLoan,
       cashAdvance: draftFinancingCashAdvance,
@@ -369,6 +375,7 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
     prototype.setHasPaymentMethodOnFile(draftPaymentMethodOnFile)
     prototype.setHasPayoutSchedule(draftPayoutSchedule)
     prototype.setHasFinancialAccounts(draftFinancialAccounts)
+    prototype.setTaxCapabilityStatus(draftTaxCapabilityStatus)
     onClose()
   }
 
@@ -414,6 +421,32 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
     </div>
     )
   }
+
+  const renderTaxCapabilityStatus = () => (
+    <div className="flex w-full max-w-[240px] flex-col gap-1">
+      <span className="text-[12px] leading-4 text-subdued">Tax capability group status</span>
+      <span className="relative block w-full">
+        <select
+          id="configure-tax-capability"
+          value={draftTaxCapabilityStatus}
+          onChange={(e) => setDraftTaxCapabilityStatus(e.target.value as CapabilityStatus)}
+          className={SELECT_FIELD}
+        >
+          {CAPABILITY_STATUS_OPTIONS.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDownIcon
+          size={8}
+          fill="var(--color-icon-subdued)"
+          className="pointer-events-none absolute right-[12px] top-1/2 -translate-y-1/2"
+          aria-hidden
+        />
+      </span>
+    </div>
+  )
 
   if (!open) return null
 
@@ -498,7 +531,12 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
                                 <CharcoalSwitch
                                   id="configure-payments-pm"
                                   checked={draftPaymentMethodOnFile}
-                                  onChange={setDraftPaymentMethodOnFile}
+                                  onChange={(on) => {
+                                    setDraftPaymentMethodOnFile(on)
+                                    if (!on) {
+                                      setDraftRelationship((r) => ({ ...r, expiredPaymentMethod: false }))
+                                    }
+                                  }}
                                   className="mt-px"
                                 />
                                 <label
@@ -508,6 +546,26 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
                                   Has payment method on file
                                 </label>
                               </span>
+                              {draftPaymentMethodOnFile ? (
+                                <label
+                                  htmlFor="configure-payments-pm-expired"
+                                  className="ml-10 flex w-max max-w-full cursor-pointer items-center gap-2 whitespace-nowrap font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
+                                >
+                                  <input
+                                    id="configure-payments-pm-expired"
+                                    type="checkbox"
+                                    checked={draftRelationship.expiredPaymentMethod}
+                                    onChange={(e) =>
+                                      setDraftRelationship((r) => ({
+                                        ...r,
+                                        expiredPaymentMethod: e.target.checked,
+                                      }))
+                                    }
+                                    className="h-3.5 w-3.5 shrink-0 rounded-[4px] border border-neutral-100 text-action-primary focus:ring-action-primary"
+                                  />
+                                  Default payment method is expired
+                                </label>
+                              ) : null}
                             </>
                           )}
                           {groupId === 'payouts' && (
@@ -707,40 +765,43 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
                 </>
               )}
 
-              {riskSettingsOpen && (
+              {advancedPanelOpen && (
                 <div
-                  id="configure-risk-settings-panel"
+                  id="configure-advanced-settings-panel"
                   className="border-t border-neutral-100 px-4 pb-4 pt-4"
                   role="region"
-                  aria-label="Risk settings"
+                  aria-label="Advanced settings"
                 >
-                  <div className="flex max-w-[240px] flex-col gap-1">
-                    <label
-                      htmlFor="configure-risk-level"
-                      className="font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
-                    >
-                      Risk level
-                    </label>
-                    <span className="relative block w-full">
-                      <select
-                        id="configure-risk-level"
-                        value={pendingRiskLevel}
-                        onChange={(e) => setPendingRiskLevel(e.target.value as RiskLevel)}
-                        className={SELECT_FIELD}
+                  <div className="flex min-w-0 flex-col gap-6">
+                    {showComplianceSections ? renderTaxCapabilityStatus() : null}
+                    <div className="flex max-w-[240px] flex-col gap-1">
+                      <label
+                        htmlFor="configure-risk-level"
+                        className="font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
                       >
-                        {RISK_LEVEL_OPTIONS.map((o) => (
-                          <option key={o.id} value={o.id}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDownIcon
-                        size={8}
-                        fill="var(--color-icon-subdued)"
-                        className="pointer-events-none absolute right-[12px] top-1/2 -translate-y-1/2"
-                        aria-hidden
-                      />
-                    </span>
+                        Risk
+                      </label>
+                      <span className="relative block w-full">
+                        <select
+                          id="configure-risk-level"
+                          value={pendingRiskLevel}
+                          onChange={(e) => setPendingRiskLevel(e.target.value as RiskLevel)}
+                          className={SELECT_FIELD}
+                        >
+                          {RISK_LEVEL_OPTIONS.map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDownIcon
+                          size={8}
+                          fill="var(--color-icon-subdued)"
+                          className="pointer-events-none absolute right-[12px] top-1/2 -translate-y-1/2"
+                          aria-hidden
+                        />
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -752,13 +813,15 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
           {hasContext ? (
             <button
               type="button"
-              onClick={() => setRiskSettingsOpen((o) => !o)}
+              onClick={() => setAdvancedPanelOpen((o) => !o)}
               className="inline-flex items-center gap-1 rounded-[4px] font-label-medium text-[14px] leading-5 text-action-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary"
-              aria-expanded={riskSettingsOpen}
-              aria-controls={riskSettingsOpen ? 'configure-risk-settings-panel' : undefined}
+              aria-expanded={advancedPanelOpen}
+              aria-controls={
+                advancedPanelOpen ? 'configure-advanced-settings-panel' : undefined
+              }
             >
               <Icon name="settings" size={12} fill="var(--color-action-primary)" />
-              {riskSettingsOpen ? 'Hide risk settings' : 'Risk settings'}
+              {advancedPanelOpen ? 'Hide advanced' : 'Advanced'}
             </button>
           ) : (
             <span aria-hidden className="min-w-0 shrink" />

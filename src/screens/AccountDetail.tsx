@@ -197,10 +197,10 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
               actionsModalInitialFilter={actionsModalInitialFilter}
               actionsModalInitialSegment={actionsModalInitialSegment}
               actionsModalInitialSelectedActionId={actionsModalInitialSelectedActionId}
-              onOpenActionsModal={(filter) => {
+              onOpenActionsModal={(filter, initialSegment) => {
                 setActionsModalOpen(true)
                 setActionsModalInitialFilter(filter ?? 'all')
-                setActionsModalInitialSegment('actions')
+                setActionsModalInitialSegment(initialSegment ?? 'actions')
                 setActionsModalInitialSelectedActionId(undefined)
               }}
               onCloseActionsModal={() => setActionsModalOpen(false)}
@@ -239,6 +239,14 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                     accountName={accountName}
                     onPaymentRowClick={() => setPaymentDrawerOpen(true)}
                     onOpenMoneyMovement={() => setActiveSectionId('moneyMovement')}
+                    onOpenActionsModal={(actionId, segment) => {
+                      setActionsModalOpen(true)
+                      setActionsModalInitialFilter('all')
+                      setActionsModalInitialSegment(
+                        segment ?? (actionId != null ? 'actions' : undefined)
+                      )
+                      setActionsModalInitialSelectedActionId(actionId)
+                    }}
                   />
                 )
               })()}
@@ -302,11 +310,12 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
             effectiveSectionId === 'financialSnapshot'
               ? {
                   onRowClick: () => setPaymentDrawerOpen(true),
-                  status,
                   onOpenActionsModal: (actionId?: string, segment?: 'blocking' | 'actions') => {
                     setActionsModalOpen(true)
                     setActionsModalInitialFilter('all')
-                    setActionsModalInitialSegment(segment ?? (actionId != null ? 'actions' : undefined))
+                    setActionsModalInitialSegment(
+                      segment ?? (actionId != null ? 'actions' : undefined)
+                    )
                     setActionsModalInitialSelectedActionId(actionId)
                   },
                   accountId: id,

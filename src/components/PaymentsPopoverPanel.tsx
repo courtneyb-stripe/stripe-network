@@ -168,6 +168,8 @@ type PaymentsPopoverPanelProps = {
    * below the capabilities block (12px gap). Payments variant only; any capability status.
    */
   hasPaymentMethodOnFile?: boolean
+  /** Configure → “Default payment method is expired”: default PM row shows Default + Expired badges. */
+  defaultPaymentMethodExpired?: boolean
   /** Replaces “[Platform name]” in the payment methods heading (e.g. Shopify). */
   paymentMethodsPlatformLabel?: string
   /** Payouts only: when true (Configure → “Has payout schedule”), show Figma 129:59300 well below capabilities. */
@@ -222,9 +224,16 @@ type PaymentMethodOnFileRowProps = {
   line: string
   country: 'US' | 'GB'
   showDefaultBadge?: boolean
+  showExpiredBadge?: boolean
 }
 
-function PaymentMethodOnFileRow({ brand, line, country, showDefaultBadge }: PaymentMethodOnFileRowProps) {
+function PaymentMethodOnFileRow({
+  brand,
+  line,
+  country,
+  showDefaultBadge,
+  showExpiredBadge,
+}: PaymentMethodOnFileRowProps) {
   const flag = country === 'US' ? '🇺🇸' : '🇬🇧'
   return (
     <div className={WELL_CARD_FLEX_ROW_CLASS}>
@@ -232,9 +241,24 @@ function PaymentMethodOnFileRow({ brand, line, country, showDefaultBadge }: Paym
       <p className="min-w-0 flex-1 truncate font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default">
         {line}
       </p>
-      {showDefaultBadge ? (
-        <span className="shrink-0 rounded-md bg-[#e3f2fd] px-2 py-0.5 font-label-small leading-4 text-[#1565c0]">
-          Default
+      {showDefaultBadge || showExpiredBadge ? (
+        <span className="flex shrink-0 items-center gap-1">
+          {showDefaultBadge ? (
+            <span className="shrink-0 rounded-md bg-[#e3f2fd] px-2 py-0.5 font-label-small leading-4 text-[#1565c0]">
+              Default
+            </span>
+          ) : null}
+          {showExpiredBadge ? (
+            <span
+              className="shrink-0 rounded-md px-2 py-0.5 font-label-small leading-4"
+              style={{
+                backgroundColor: 'var(--color-feedback-critical-subdued)',
+                color: 'var(--color-feedback-critical-on)',
+              }}
+            >
+              Expired
+            </span>
+          ) : null}
         </span>
       ) : null}
       <div className="min-h-10 w-px shrink-0 self-stretch bg-neutral-50" aria-hidden />
@@ -268,7 +292,13 @@ function CardsIssuedByPlatformWell({ platformLabel }: { platformLabel: string })
 }
 
 /** Figma 128:58269 — payment methods well. */
-function PaymentMethodsOnFileSection({ platformName }: { platformName: string }) {
+function PaymentMethodsOnFileSection({
+  platformName,
+  defaultPaymentMethodExpired,
+}: {
+  platformName: string
+  defaultPaymentMethodExpired?: boolean
+}) {
   return (
     <div
       className="flex w-full flex-col gap-3 rounded-[12px] bg-offset pb-1 pt-3"
@@ -286,6 +316,7 @@ function PaymentMethodsOnFileSection({ platformName }: { platformName: string })
           line="Visa •••• 1933"
           country="US"
           showDefaultBadge
+          showExpiredBadge={defaultPaymentMethodExpired}
         />
         <PaymentMethodOnFileRow brand="mastercard" line="Mastercard •••• 4280" country="GB" />
       </div>
@@ -675,6 +706,7 @@ export default function PaymentsPopoverPanel({
   onViewAllCapabilities,
   onEditCapabilities,
   hasPaymentMethodOnFile = false,
+  defaultPaymentMethodExpired = false,
   paymentMethodsPlatformLabel = 'Shopify',
   hasPayoutSchedule = false,
   hasFinancialAccounts = false,
@@ -1050,7 +1082,10 @@ export default function PaymentsPopoverPanel({
 
       {isPayments && hasPaymentMethodOnFile ? (
         <div className="mt-3 w-full shrink-0 px-0">
-          <PaymentMethodsOnFileSection platformName={paymentMethodsPlatformLabel} />
+          <PaymentMethodsOnFileSection
+            platformName={paymentMethodsPlatformLabel}
+            defaultPaymentMethodExpired={defaultPaymentMethodExpired}
+          />
         </div>
       ) : null}
       {isPayouts && hasPayoutSchedule ? (

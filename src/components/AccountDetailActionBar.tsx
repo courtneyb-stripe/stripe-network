@@ -146,7 +146,7 @@ type AccountDetailActionBarProps = {
   actionsModalInitialSegment?: 'blocking' | 'actions'
   /** When opening from sidebar list item click, pass that action's id to show in modal. */
   actionsModalInitialSelectedActionId?: string
-  onOpenActionsModal?: (filter?: ActionsRequiredFilter) => void
+  onOpenActionsModal?: (filter?: ActionsRequiredFilter, initialSegment?: 'blocking' | 'actions') => void
   onCloseActionsModal?: () => void
   /** When provided, Settings icon opens parent-controlled Settings modal (e.g. for deep link from profile Edit). */
   onOpenSettings?: () => void
@@ -185,7 +185,7 @@ export function AccountDetailHeaderStatusButtons({
   status?: 'enabled' | 'restricted' | 'restricted_soon' | undefined
   onOpenSettingsSection?: (sectionId: string) => void
   /** When restricted, status buttons open Actions required modal with this filter. */
-  onOpenActionsModal?: (filter?: ActionsRequiredFilter) => void
+  onOpenActionsModal?: (filter?: ActionsRequiredFilter, initialSegment?: 'blocking' | 'actions') => void
   /** Opens Profile drawer (e.g. Capabilities tab from payments overflow). */
   onOpenAccountDrawer?: (opts?: { profileTab?: ProfileDrawerTabId }) => void
   /** Inner `header/signal-group-row` ref — shared popover Y + outside-click guard. */
@@ -291,12 +291,13 @@ export function AccountDetailHeaderStatusButtons({
   const payoutsCapability = prototype?.capabilityStatuses.payouts
   const paymentsCapability = prototype?.capabilityStatuses.payments
 
-  /** Click opens Actions required for paused / pausing soon; hover still opens the signal popover. */
+  /** Click opens Actions required whenever the cap is not fully active (limited / pausing soon / paused). */
   const signalClickOpensActionsModal = (c: CapabilityStatus | undefined) =>
-    c != null ? c === 'paused' || c === 'pausing_soon' : isRestricted
+    c != null ? c !== 'active' : isRestricted
 
   const payoutsNeedsAttention = signalClickOpensActionsModal(payoutsCapability)
   const paymentsNeedsAttention = signalClickOpensActionsModal(paymentsCapability)
+  const paymentsExpiredDot = prototype?.relationship?.expiredPaymentMethod === true
 
   const billingUsesFlavors = prototype?.billingFlavors ?? new Set<BillingFlavor>()
   const showBillingSubscriptionsWell =
@@ -306,6 +307,9 @@ export function AccountDetailHeaderStatusButtons({
   const billingOmitCapabilitySection =
     !(prototype?.hasBilling ?? false) && showBillingSubscriptionsWell
 
+  const billingCapability = prototype?.capabilityStatuses.billing
+  const billingNeedsComplianceClick = signalClickOpensActionsModal(billingCapability)
+
   const renderSignalPopoverBody = useCallback(
     (id: string) => {
       switch (id) {
@@ -314,6 +318,7 @@ export function AccountDetailHeaderStatusButtons({
             <PaymentsPopoverPanel
               status={prototype?.capabilityStatuses.payments ?? 'active'}
               hasPaymentMethodOnFile={prototype?.hasPaymentMethodOnFile ?? false}
+              defaultPaymentMethodExpired={prototype?.relationship?.expiredPaymentMethod ?? false}
               paymentMethodsPlatformLabel="Shopify"
               onViewAllCapabilities={
                 onOpenAccountDrawer
@@ -439,6 +444,7 @@ export function AccountDetailHeaderStatusButtons({
       prototype?.hasFinancialAccounts,
       prototype?.billingFlavors,
       prototype?.relationship?.hasActiveSubscriptions,
+      prototype?.relationship?.expiredPaymentMethod,
       prototype?.hasBilling,
       showBillingSubscriptionsWell,
       billingOmitCapabilitySection,
@@ -451,39 +457,52 @@ export function AccountDetailHeaderStatusButtons({
   return (
     <>
       {showPayments && (
-        <HeaderSignalGroupButton
-          ref={paymentsRef}
-          tooltipLabel={
-            paymentsCapability != null
-              ? PAYMENTS_TOOLTIP_BY_CAPABILITY[paymentsCapability]
-              : isRestricted
-                ? 'Payments paused — view actions required'
-                : 'Payments are active for this account.'
-          }
-          tooltipId="payments-tooltip"
-          aria-expanded={openPopoverId === 'payments'}
-          onMouseEnter={() => openPopoverOnHover('payments')}
-          onMouseLeave={schedulePopoverClose}
-          onClick={
-            paymentsNeedsAttention
-              ? () => {
-                  setOpenPopoverId(null)
-                  onOpenActionsModal?.('payments')
-                }
-              : undefined
-          }
-          leading={
-            paymentsCapability != null ? (
-              <CapabilityStatusIcon status={paymentsCapability} />
-            ) : isRestricted ? (
-              <PausedCircleIcon size={12} />
-            ) : (
-              <CapabilityStatusIcon status="active" />
-            )
-          }
-        >
-          Payments
-        </HeaderSignalGroupButton>
+        <span className="relative inline-flex shrink-0">
+          <HeaderSignalGroupButton
+            ref={paymentsRef}
+            tooltipLabel={
+              paymentsCapability != null
+                ? PAYMENTS_TOOLTIP_BY_CAPABILITY[paymentsCapability]
+                : isRestricted
+                  ? 'Payments paused — view actions required'
+                  : 'Payments are active for this account.'
+            }
+            tooltipId="payments-tooltip"
+            aria-expanded={openPopoverId === 'payments'}
+            onMouseEnter={() => openPopoverOnHover('payments')}
+            onMouseLeave={schedulePopoverClose}
+            onClick={
+              paymentsNeedsAttention
+                ? () => {
+                    setOpenPopoverId(null)
+                    onOpenActionsModal?.('payments', 'actions')
+                  }
+                : paymentsExpiredDot
+                  ? () => {
+                      setOpenPopoverId(null)
+                      onOpenActionsModal?.('payments')
+                    }
+                  : undefined
+            }
+            leading={
+              paymentsCapability != null ? (
+                <CapabilityStatusIcon status={paymentsCapability} />
+              ) : isRestricted ? (
+                <PausedCircleIcon size={12} />
+              ) : (
+                <CapabilityStatusIcon status="active" />
+              )
+            }
+          >
+            Payments
+          </HeaderSignalGroupButton>
+          {paymentsExpiredDot ? (
+            <span
+              className="pointer-events-none absolute -right-0.5 -top-0.5 size-2 rounded-full bg-[var(--color-icon-feedback-critical)] ring-2 ring-surface"
+              aria-hidden
+            />
+          ) : null}
+        </span>
       )}
       {showPayouts && (
         <HeaderSignalGroupButton
@@ -503,7 +522,7 @@ export function AccountDetailHeaderStatusButtons({
             payoutsNeedsAttention
               ? () => {
                   setOpenPopoverId(null)
-                  onOpenActionsModal?.('payouts')
+                  onOpenActionsModal?.('payouts', 'actions')
                 }
               : undefined
           }
@@ -528,6 +547,14 @@ export function AccountDetailHeaderStatusButtons({
           aria-expanded={openPopoverId === 'billing'}
           onMouseEnter={() => openPopoverOnHover('billing')}
           onMouseLeave={schedulePopoverClose}
+          onClick={
+            billingNeedsComplianceClick
+              ? () => {
+                  setOpenPopoverId(null)
+                  onOpenActionsModal?.('all', 'actions')
+                }
+              : undefined
+          }
           leading={
             <CapabilityStatusIcon
               status={prototype?.capabilityStatuses.billing ?? 'active'}
@@ -560,7 +587,7 @@ export function AccountDetailHeaderStatusButtons({
               extraNeedsAttention
                 ? () => {
                     setOpenPopoverId(null)
-                    onOpenActionsModal?.('all')
+                    onOpenActionsModal?.('all', 'actions')
                   }
                 : undefined
             }
@@ -753,7 +780,8 @@ export default function AccountDetailActionBar({
   const isControlled = controlledOnOpen != null && controlledOnClose != null
   const actionsModalOpen = isControlled ? (controlledActionsModalOpen ?? false) : internalActionsModalOpen
   const openActionsModal = isControlled
-    ? (filter?: ActionsRequiredFilter) => controlledOnOpen!(filter)
+    ? (filter?: ActionsRequiredFilter, initialSegment?: 'blocking' | 'actions') =>
+        controlledOnOpen!(filter, initialSegment)
     : (filter?: ActionsRequiredFilter) => {
         setInternalActionsModalFilter(filter ?? 'all')
         setInternalActionsModalOpen(true)

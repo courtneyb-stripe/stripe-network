@@ -14,13 +14,12 @@ import TransactionListCard from '../TransactionListCard'
 import type { TransactionListRow } from '../TransactionListCard'
 import { BrandIcon } from '../../icons/SailIcons'
 import { usePrototypeOptional } from '../../context/PrototypeContext'
+import { hasAnyNonActiveComplianceStatus, resolveCapabilityGroups } from '../../data/uadVisibility'
 import MetricCard from '../metrics/MetricCard'
 import { SimpleMetricCardSkeleton } from '../metrics/MetricCard'
 import MetricDropdown from '../metrics/MetricDropdown'
 import { TIME_RANGE_OPTIONS, type TimeRange } from '../metrics/constants'
 import ActionsRequiredSidebarSection from '../ActionsRequiredSidebarSection'
-import type { AccountStatusKind } from '../AccountDetailsSidebar'
-
 const bar = 'h-[10px] rounded-[3px] bg-neutral-100'
 const iconBoxGray = 'size-6 shrink-0 rounded-[6px] bg-neutral-100'
 const iconBoxBlurple = 'size-6 shrink-0 rounded-[6px] bg-[#635BFF]'
@@ -107,15 +106,13 @@ const RECENT_TRANSACTION_TABS = [
 export type FinancialSnapshotSectionProps = {
   /** When set, skeleton table rows are clickable and call this (e.g. open preview drawer). */
   onRowClick?: () => void
-  /** When 'restricted', Needs attention is shown above Balances in main. */
-  status?: AccountStatusKind
   /** Opens the fullscreen Actions required modal; pass (actionId, segment) when a list item is clicked so the modal opens with that item and segment selected. */
   onOpenActionsModal?: (actionId?: string, segment?: 'blocking' | 'actions') => void
   /** Account id for action detail links. */
   accountId?: string
 }
 
-export default function FinancialSnapshotSection({ onRowClick, status, onOpenActionsModal, accountId }: FinancialSnapshotSectionProps = {}) {
+export default function FinancialSnapshotSection({ onRowClick, onOpenActionsModal, accountId }: FinancialSnapshotSectionProps = {}) {
   const navigate = useNavigate()
   const prototype = usePrototypeOptional()
   const isLowFidelity = prototype?.fidelity === 'low'
@@ -132,7 +129,15 @@ export default function FinancialSnapshotSection({ onRowClick, status, onOpenAct
       },
     })
   }
-  const showNeedsAttention = status === 'restricted' && onOpenActionsModal
+  const showNeedsAttention =
+    prototype != null &&
+    onOpenActionsModal != null &&
+    (hasAnyNonActiveComplianceStatus(
+      prototype.capabilityStatuses,
+      resolveCapabilityGroups(prototype.activeRoles, prototype.hasBilling),
+      prototype.taxCapabilityStatus
+    ) ||
+      prototype.relationship.expiredPaymentMethod === true)
 
   const financialSnapshotMetricsBlock = (
     <div className="flex flex-col gap-0">

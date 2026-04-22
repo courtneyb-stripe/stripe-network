@@ -96,7 +96,21 @@ export const ACTIONS_REQUIRED_LIST: ActionRequiredItem[] = [
   },
 ]
 
+/**
+ * Configure → “Default payment method is expired”. Shown as the only row under Blocking issues
+ * (sidebar + modal) when `relationship.expiredPaymentMethod` is true — not counted in ACTIONS_REQUIRED_LIST.
+ */
+export const BLOCKING_EXPIRED_DEFAULT_PAYMENT_METHOD: ActionRequiredItem = {
+  id: 'blocking-expired-default-pm',
+  title: 'Replace expired default payment method',
+  dueDate: new Date(2026, 3, 1),
+  impactsFilter: 'payments',
+}
+
 export function getActionTitle(actionId: string): string {
+  if (actionId === BLOCKING_EXPIRED_DEFAULT_PAYMENT_METHOD.id) {
+    return BLOCKING_EXPIRED_DEFAULT_PAYMENT_METHOD.title
+  }
   const item = ACTIONS_REQUIRED_LIST.find((a) => a.id === actionId)
   return item?.title ?? `Action required ${actionId}`
 }
