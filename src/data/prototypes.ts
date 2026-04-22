@@ -61,13 +61,25 @@ const PROTOTYPES_ALL: PrototypeRow[] = [
   {
     id: 'network-detail-comp-model',
     category: 'working',
-    name: 'Network (comp model)',
+    name: 'UAD - account signal',
     description: 'Composition model prototype — role-based visibility and floatie controls',
     branch: 'network-detail-comp-model',
     owner: '@courtneyb',
     status: 'In progress',
     lastUpdated: 'Feb 25, 2025',
     url: 'https://stripe-network-git-network-detail-comp-model.vercelapp.stripe.dev/network',
+  },
+  {
+    id: 'capability-explorer',
+    category: 'working',
+    name: 'Capability explorer',
+    description:
+      'Products ↔ capabilities mesh plus UAD status-signal playground (config → signal → groups)',
+    branch: 'capability-explorer-v0',
+    owner: '@courtneyb',
+    status: 'In progress',
+    lastUpdated: 'Apr 22, 2026',
+    url: 'https://stripe-network-git-capability-explorer-v0.vercelapp.stripe.dev/network/capability-explorer',
   },
   {
     id: 'component-library',
