@@ -722,12 +722,12 @@ export const statusSignals: StatusSignal[] = [
   },
   {
     id: 'card_issuer',
-    label: 'Card issuer',
+    label: 'Card issuing',
     surfacesAs: 'header',
     capabilityGroups: ['issuing'],
     products: ['issuing'],
     note:
-      'Driven by the Card issuer configuration (config and signal share the same noun). ' +
+      'UAD header chip reads Card issuing; driven by the Card issuer configuration. ' +
       'Also activated by the Card holder role even though card_holder is not in the platform network.',
   },
   {
