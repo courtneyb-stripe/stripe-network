@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Stripe capability visualizations</title>
+<style>
+  :root {
+    --bg: #fafaf7;
+    --surface: #ffffff;
+    --surface-2: #f5f3ec;
+    --text: #1a1a18;
+    --text-secondary: #5f5e5a;
+    --text-tertiary: #a6a49b;
+    --text-quaternary: #d3d1c7;
+    --border: rgba(0,0,0,0.08);
+    --border-strong: rgba(0,0,0,0.15);
+    --pill-bg: #1a1a18;
+    --pill-text: #ffffff;
+    --pill-disabled: #e8e6df;
+    --edge: #5DCAA5;
+    --edge-dot: #1D9E75;
+    --accent: #D85A30;
+    --font-sans: "Söhne", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a18;
+      --surface: #252523;
+      --surface-2: #2c2c2a;
+      --text: #f0efe9;
+      --text-secondary: #b4b2a9;
+      --text-tertiary: #6a6864;
+      --text-quaternary: #3d3d3a;
+      --border: rgba(255,255,255,0.08);
+      --border-strong: rgba(255,255,255,0.15);
+      --pill-bg: #f0efe9;
+      --pill-text: #1a1a18;
+      --pill-disabled: #2c2c2a;
+      --edge: #5DCAA5;
+      --edge-dot: #9FE1CB;
+      --accent: #F0997B;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    margin: 0 auto;
+    padding: 32px 24px;
+    max-width: 740px;
+    line-height: 1.5;
+  }
+  h1 { font-size: 20px; font-weight: 500; margin: 0 0 8px; }
+  .subtitle { font-size: 13px; color: var(--text-secondary); margin: 0 0 20px; }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    background: var(--surface-2);
+    border-radius: 8px;
+    padding: 3px;
+    width: fit-content;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    padding: 7px 14px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 0 0 0.5px var(--border);
+  }
+  .view-caption {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin: 0 0 12px;
+    line-height: 1.5;
+  }
+  .mesh-container {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 16px;
+  }
+  .controls {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 0.5px solid var(--border);
+    font-size: 12px;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+  }
+  .controls label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .controls input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--text);
+  }
+  .controls label.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  svg { display: block; width: 100%; height: auto; }
+  .pill-group.active { cursor: pointer; }
+  .pill-group.disabled { cursor: not-allowed; }
+  .info-box {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border-radius: 8px;
+    margin-top: 12px;
+    min-height: 40px;
+  }
+  .info-box strong { color: var(--text); font-weight: 500; }
+  .info-box code { font-family: var(--font-mono); font-size: 11px; }
+  .buttons { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  button.action {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    padding: 6px 12px;
+    background: transparent;
+    color: var(--text);
+    border: 0.5px solid var(--border-strong);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button.action:hover { background: var(--surface-2); }
+  button.action:active { transform: scale(0.98); }
+  .view[hidden] { display: none; }
+  .footer { font-size: 12px; color: var(--text-tertiary); margin-top: 20px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<h1>Stripe capability visualizations</h1>
+<p class="subtitle">Three views of the doc's data plus an interactive configuration view.</p>
+
+<div class="tabs" role="tablist">
+  <button class="tab-btn active" data-tab="product" role="tab">Products ↔ capabilities</button>
+  <button class="tab-btn" data-tab="configs" role="tab">UAD–status signals</button>
+</div>
+
+<div class="view active" id="view-product">
+  <p class="view-caption">How Stripe's user-facing products map to capability groups, and how those groups contain granular capabilities. Click a product to see which capability groups it touches; click a group to drill into its granular capabilities.</p>
+  <div class="mesh-container">
+    <svg viewBox="0 0 680 500" role="img" id="mesh-product" xmlns="http://www.w3.org/2000/svg">
+      <title>Products to capability groups to granular capabilities</title>
+      <g id="p-edges" fill="none"></g>
+      <g id="p-products"></g>
+      <g id="p-groups"></g>
+      <g id="p-caps"></g>
+    </svg>
+    <div class="info-box"><span id="p-info">Click a product on the left to see which capability groups it touches.</span></div>
+    <div class="buttons">
+      <button class="action" onclick="pSelectProduct('payments')">Payments</button>
+      <button class="action" onclick="pSelectProduct('treasury')">Treasury</button>
+      <button class="action" onclick="pSelectProduct('connect')">Connect</button>
+      <button class="action" onclick="pSelectProduct('issuing')">Issuing</button>
+      <button class="action" onclick="pResetFirst()">Clear</button>
+    </div>
+  </div>
+</div>
+
+<div class="view" id="view-configs" hidden>
+  <p class="view-caption">Toggle configurations (roles) to see which status signals light up, and which capability groups and products come with them. Fold rules and auto-selects apply live.</p>
+  <div class="mesh-container">
+    <div class="controls">
+      <label id="billing-toggle-label">
+        <input type="checkbox" id="billing-toggle">
+        <span>Billing enabled</span>
+      </label>
+      <label id="tax-toggle-label">
+        <input type="checkbox" id="tax-toggle">
+        <span>Tax reporting</span>
+      </label>
+      <span id="relationship-indicator" style="color:var(--text-tertiary);display:none;">Relationship-only (no compliance badge)</span>
+    </div>
+    <svg viewBox="0 0 680 500" role="img" id="mesh-configs" xmlns="http://www.w3.org/2000/svg">
+      <title>Configuration to signal to caps and products</title>
+      <g id="c-edges" fill="none"></g>
+      <g id="c-configs"></g>
+      <g id="c-signals"></g>
+      <g id="c-right"></g>
+    </svg>
+    <div class="info-box"><span id="c-info">Toggle configurations to see the effect.</span></div>
+    <div class="buttons">
+      <button class="action" onclick="cPreset('default')">Default (Merchant + Customer)</button>
+      <button class="action" onclick="cPreset('fold')">Show fold rule (Storer + Recipient)</button>
+      <button class="action" onclick="cPreset('full')">Full platform</button>
+      <button class="action" onclick="cPreset('clear')">Clear all</button>
+    </div>
+  </div>
+</div>
+
+<p class="footer">
+  TS data model lives in <code style="font-family:var(--font-mono);font-size:11px;">capabilityModel.ts</code>. This viz inlines the same data for rendering. Keep them in sync when the model changes.
+</p>
+
+<script>
+(function () {
+  'use strict';
+
+  const SVGNS = 'http://www.w3.org/2000/svg';
+
+  // ═══════════════════════════════════════════════════════════════════
+  // First tab data (Products → Capability groups → Granular caps)
+  // ═══════════════════════════════════════════════════════════════════
+
+  // User-facing products. `touches` lists capability groups they back
+  // (solid edge) or require (dashed edge — e.g., Billing requires
+  // card_payments from the payment_methods group).
+  const FIRST_TAB_PRODUCTS = [
+    { id:'payments',  label:'Payments',  touches:[ {group:'core',kind:'backs'}, {group:'payment_methods',kind:'backs'} ] },
+    { id:'connect',   label:'Connect',   touches:[ {group:'core',kind:'backs'}, {group:'misc',kind:'backs'} ] },
+    { id:'issuing',   label:'Issuing',   touches:[ {group:'issuing',kind:'backs'} ] },
+    { id:'treasury',  label:'Treasury',  touches:[ {group:'banking',kind:'backs'}, {group:'storer',kind:'backs'} ] },
+    { id:'capital',   label:'Capital',   touches:[ {group:'lending',kind:'backs'} ] },
+    { id:'tax',       label:'Tax',       touches:[ {group:'tax',kind:'backs'} ] },
+    { id:'atlas',     label:'Atlas',     touches:[ {group:'atlas',kind:'backs'} ] },
+    { id:'billing',   label:'Billing',   touches:[ {group:'payment_methods',kind:'requires'} ] },
+    { id:'checkout',  label:'Checkout',  touches:[ {group:'payment_methods',kind:'requires'} ] },
+    { id:'terminal',  label:'Terminal',  touches:[ {group:'payment_methods',kind:'requires'} ] },
+  ];
+
+  // Doc-level capability groups. `count` is the total granular caps in
+  // the group; `approximate` flags groups where the doc names ~N but
+  // the system has more (payment methods variants, issuing variants).
+  const FIRST_TAB_GROUPS = [
+    { id:'core',            label:'Core / Infrastructure', count:7 },
+    { id:'payment_methods', label:'Payment methods',       count:90, approximate:true },
+    { id:'issuing',         label:'Card issuing',          count:17, approximate:true },
+    { id:'banking',         label:'Banking (v1)',          count:4 },
+    { id:'storer',          label:'Storer (v2 FA)',        count:17 },
+    { id:'crypto',          label:'Crypto',                count:8 },
+    { id:'lending',         label:'Capital / lending',     count:4 },
+    { id:'tax',             label:'Tax',                   count:3 },
+    { id:'atlas',           label:'Atlas',                 count:1 },
+    { id:'misc',            label:'Misc / emerging',       count:15, approximate:true },
+  ];
+
+  // Granular capabilities per group. Representative — the `count` above
+  // may exceed the list length for approximate groups; we show ~8-13 and
+  // note the remainder via "+N more".
+  const FIRST_TAB_CAPS = {
+    core: [
+      'account', 'payouts', 'core_payments', 'platform_payments',
+      'legacy_payments', 'payments', 'transfers',
+    ],
+    payment_methods: [
+      'card_payments', 'us_bank_account_ach_payments', 'ach_debit_payments',
+      'sepa_debit_payments', 'bacs_debit_payments', 'paypal_payments',
+      'klarna_payments', 'afterpay_clearpay_payments', 'cashapp_payments',
+      'affirm_payments', 'bank_transfer_payments', 'pix_payments',
+      'cartes_bancaires_payments',
+    ],
+    issuing: [
+      'card_issuing', 'card_issuing_consumer', 'card_issuing_charge_card',
+      'card_issuing_consumer_prepaid_card_cross_river',
+      'card_issuing_fa_spend_card_celtic',
+    ],
+    banking: [
+      'banking', 'banking_evolve', 'banking_goldman_sachs', 'banking_fifth_third',
+    ],
+    storer: [
+      'storer_holds_currencies_usd', 'storer_holds_currencies_eur',
+      'storer_holds_currencies_gbp', 'storer_holds_currencies_usdc',
+      'storer_inbound_transfers_bank_accounts',
+      'storer_outbound_payments_bank_accounts',
+      'storer_outbound_payments_cards',
+      'storer_financial_addresses_bank_accounts',
+    ],
+    crypto: [
+      'crypto_payments', 'crypto_transfers', 'crypto_transfers_platform',
+      'crypto_financial_accounts', 'crypto_financial_account_recipients',
+      'consumer_crypto_financial_accounts',
+      'link_balance_withdrawals_bank_accounts',
+      'link_balance_withdrawals_crypto',
+    ],
+    lending: [
+      'cash_advances', 'loans', 'funding_credit', 'stripe_funded_fee_credits',
+    ],
+    tax: [
+      'tax_reporting_us_1099_k', 'tax_reporting_us_1099_misc', 'automatic_indirect_tax',
+    ],
+    atlas: [
+      'company_formation',
+    ],
+    misc: [
+      'corporate_cards_charge_card', 'stripe_card', 'verified',
+      'dispute_resolution', 'agentic_payments', 'beneficiary_transfers',
+      'received_credits',
+    ],
+  };
+
+  const CONFIGS = [
+    { id:'merchant',          label:'Merchant',            direction:'distributes', hasCompliance:true,  platformNetwork:true,  signals:['payments'] },
+    { id:'customer',          label:'Customer',            direction:'direct',      hasCompliance:false, platformNetwork:true,  signals:['payments'] },
+    { id:'recipient',         label:'Recipient',           direction:'direct',      hasCompliance:true,  platformNetwork:true,  signals:['transfers','payouts'] },
+    { id:'storer',            label:'Storer',              direction:'direct',      hasCompliance:true,  platformNetwork:true,  signals:['financial_accounts'], autoSelects:['recipient'] },
+    { id:'borrower',          label:'Borrower',            direction:'direct',      hasCompliance:true,  platformNetwork:true,  signals:['financing'] },
+    { id:'card_issuer',       label:'Card issuer',         direction:'direct',      hasCompliance:true,  platformNetwork:true,  signals:['card_issuer'] },
+    { id:'card_holder',       label:'Card holder',         direction:'indirect',    hasCompliance:false, platformNetwork:false, signals:[], derivedFrom:'card_issuer' },
+    { id:'merchant_customer', label:"Merchant's customer", direction:'indirect',    hasCompliance:false, platformNetwork:false, signals:[], derivedFrom:'merchant' },
+  ];
+
+  // Config pill sub-label. Just reflects direction; compliance/network
+  // distinctions are shown via section header + top indicator.
+  function configSubLabel(cfg) {
+    if (cfg.direction === 'distributes') return 'distributes';
+    if (cfg.direction === 'indirect') return cfg.derivedFrom ? 'derived from ' + (CONFIG_LABEL[cfg.derivedFrom] || cfg.derivedFrom) : 'indirect';
+    return 'direct relationship';
+  }
+
+  // Small helper since configSubLabel now needs to look up labels
+  const CONFIG_LABEL = {
+    merchant: 'Merchant',
+    customer: 'Customer',
+    recipient: 'Recipient',
+    storer: 'Storer',
+    borrower: 'Borrower',
+    card_issuer: 'Card issuer',
+    card_holder: 'Card holder',
+    merchant_customer: "Merchant's customer",
+  };
+
+  const SIGNALS = [
+    { id:'payments',           label:'Payments',           surfacesAs:'header' },
+    { id:'payouts',            label:'Payouts',            surfacesAs:'header' },
+    { id:'transfers',          label:'Transfers',          surfacesAs:'header' },
+    { id:'billing',            label:'Billing',            surfacesAs:'header' },
+    { id:'financial_accounts', label:'Financial accounts', surfacesAs:'header' },
+    { id:'financing',          label:'Financing',          surfacesAs:'header' },
+    { id:'card_issuer',        label:'Card issuer',        surfacesAs:'header' },
+    { id:'tax_reporting',      label:'Tax reporting',      surfacesAs:'actions_required' },
+  ];
+
+  const CAP_GROUPS = [
+    { id:'core',            label:'Core / Infrastructure', signals:['payments','payouts','transfers'] },
+    { id:'payment_methods', label:'Payment methods',       signals:['payments'] },
+    { id:'issuing',         label:'Card issuing',          signals:['card_issuer'] },
+    { id:'banking',         label:'Banking (v1)',          signals:['financial_accounts'] },
+    { id:'storer',          label:'Storer (v2 FA)',        signals:['financial_accounts'] },
+    { id:'crypto',          label:'Crypto',                signals:['payments','transfers','financial_accounts'] },
+    { id:'lending',         label:'Capital / lending',     signals:['financing'] },
+    { id:'tax',             label:'Tax',                   signals:['tax_reporting'] },
+    { id:'atlas',           label:'Atlas',                 signals:[] },
+    { id:'misc',            label:'Misc / emerging',       signals:['payments','transfers','financial_accounts'] },
+  ];
+
+  const CONFIG_PRODUCTS = [
+    { id:'payments',            label:'Payments',             signals:['payments'] },
+    { id:'connect',             label:'Connect',              signals:['transfers'] },
+    { id:'issuing',             label:'Issuing',              signals:['card_issuer'] },
+    { id:'treasury',            label:'Treasury',             signals:['financial_accounts'] },
+    { id:'capital',             label:'Capital',              signals:['financing'] },
+    { id:'tax',                 label:'Tax',                  signals:['tax_reporting'] },
+    { id:'atlas',               label:'Atlas',                signals:[] },
+    { id:'billing',             label:'Billing',              signals:['billing','payments'] },
+    { id:'checkout',            label:'Checkout',             signals:['payments'] },
+    { id:'payment_links',       label:'Payment Links',        signals:['payments'] },
+    { id:'radar',               label:'Radar',                signals:['payments'] },
+    { id:'terminal',            label:'Terminal',             signals:['payments'] },
+    { id:'sigma',               label:'Sigma',                signals:[] },
+    { id:'climate',             label:'Climate',              signals:[] },
+    { id:'revenue_recognition', label:'Revenue recognition',  signals:[] },
+  ];
+
+  const FOLD_RULES = [
+    { signal:'transfers', foldInto:'financial_accounts', whenConfigurationsActive:['storer','recipient'] },
+  ];
+
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const tab = btn.getAttribute('data-tab');
+      document.querySelectorAll('.tab-btn').forEach(function (b) {
+        b.classList.toggle('active', b === btn);
+      });
+      document.querySelectorAll('.view').forEach(function (v) {
+        const show = v.id === 'view-' + tab;
+        v.hidden = !show;
+        v.classList.toggle('active', show);
+      });
+    });
+  });
+
+  // Kept for the configuration view (first tab has its own constants).
+  const DOT_R = 3;
+
+
+  const firstTabState = {
+    activeProduct: null,  // string | null — which product pill is selected
+    focusedGroup: null,   // string | null — which cap group is drilled into
+  };
+
+  const firstTabPositions = {
+    products: {},  // id → { x (right edge), y (center) }
+    groups: {},    // id → { leftX, rightX, y }
+  };
+
+  // Layout
+  const P1_PROD_X = 20,  P1_PROD_W = 140, P1_PROD_H = 30, P1_PROD_GAP = 6;
+  const P1_GROUP_X = 200, P1_GROUP_W = 180, P1_GROUP_H = 26, P1_GROUP_GAP = 4;
+  const P1_CAP_X = 420,  P1_CAP_W = 240, P1_CAP_H = 18, P1_CAP_GAP = 2;
+  const P1_START_Y = 30;
+
+  function buildProductCapView() {
+    const edgesLayer = document.getElementById('p-edges');
+    const productsLayer = document.getElementById('p-products');
+    const groupsLayer = document.getElementById('p-groups');
+    const capsLayer = document.getElementById('p-caps');
+    if (!edgesLayer || !productsLayer || !groupsLayer || !capsLayer) return;
+
+    // Column headers
+    const headerY = P1_START_Y - 12;
+    function h(x, text) {
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', x); t.setAttribute('y', headerY);
+      t.setAttribute('style', 'fill:var(--text-secondary);font-size:10px;font-weight:500;letter-spacing:0.08em;');
+      t.textContent = text;
+      return t;
+    }
+    productsLayer.appendChild(h(P1_PROD_X, 'PRODUCTS'));
+    groupsLayer.appendChild(h(P1_GROUP_X, 'CAPABILITY GROUPS'));
+    capsLayer.appendChild(h(P1_CAP_X, 'GRANULAR CAPABILITIES'));
+
+    // Products column (pills)
+    FIRST_TAB_PRODUCTS.forEach(function (prod, i) {
+      const y = P1_START_Y + i * (P1_PROD_H + P1_PROD_GAP);
+      firstTabPositions.products[prod.id] = { x: P1_PROD_X + P1_PROD_W, y: y + P1_PROD_H / 2 };
+      const g = document.createElementNS(SVGNS, 'g');
+      g.setAttribute('class', 'pill-group active');
+      g.setAttribute('data-product', prod.id);
+      const r = document.createElementNS(SVGNS, 'rect');
+      r.setAttribute('x', P1_PROD_X); r.setAttribute('y', y);
+      r.setAttribute('width', P1_PROD_W); r.setAttribute('height', P1_PROD_H);
+      r.setAttribute('rx', P1_PROD_H / 2);
+      r.setAttribute('fill', 'transparent');
+      r.setAttribute('stroke', 'var(--text-quaternary)');
+      r.setAttribute('stroke-width', '0.75');
+      r.setAttribute('data-role', 'bg');
+      g.appendChild(r);
+      const t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', P1_PROD_X + 14); t.setAttribute('y', y + P1_PROD_H / 2);
+      t.setAttribute('dominant-baseline', 'central');
+      t.setAttribute('style', 'font-size:13px;fill:var(--text);font-weight:500;');
+      t.setAttribute('data-role', 'label');
+      t.textContent = prod.label;
+      g.appendChild(t);
+      g.addEventListener('click', function () { selectProduct(prod.id); });
+      productsLayer.appendChild(g);
+    });
+
+    // Capability groups column (rows with count badge)
+    FIRST_TAB_GROUPS.forEach(function (grp, i) {
+      const y = P1_START_Y + i * (P1_GROUP_H + P1_GROUP_GAP);
+      const cy = y + P1_GROUP_H / 2;
+      firstTabPositions.groups[grp.id] = { leftX: P1_GROUP_X, rightX: P1_GROUP_X + P1_GROUP_W, y: cy };
+      const g = document.createElementNS(SVGNS, 'g');
+      g.setAttribute('class', 'group-row');
+      g.setAttribute('data-group', grp.id);
+      // Background (subtle, changes on focus)
+      const r = document.createElementNS(SVGNS, 'rect');
+      r.setAttribute('x', P1_GROUP_X); r.setAttribute('y', y);
+      r.setAttribute('width', P1_GROUP_W); r.setAttribute('height', P1_GROUP_H);
+      r.setAttribute('rx', 4);
+      r.setAttribute('fill', 'transparent');
+      r.setAttribute('data-role', 'bg');
+      g.appendChild(r);
+      const dot = document.createElementNS(SVGNS, 'circle');
+      dot.setAttribute('cx', P1_GROUP_X + 8); dot.setAttribute('cy', cy);
+      dot.setAttribute('r', DOT_R);
+      dot.setAttribute('fill', 'var(--text-quaternary)');
+      dot.setAttribute('data-role', 'dot');
+      g.appendChild(dot);
+      const label = document.createElementNS(SVGNS, 'text');
+      label.setAttribute('x', P1_GROUP_X + 18); label.setAttribute('y', cy);
+      label.setAttribute('dominant-baseline', 'central');
+      label.setAttribute('style', 'font-size:12.5px;fill:var(--text-tertiary);');
+      label.setAttribute('data-role', 'label');
+      label.textContent = grp.label;
+      g.appendChild(label);
+      const countTxt = document.createElementNS(SVGNS, 'text');
+      countTxt.setAttribute('x', P1_GROUP_X + P1_GROUP_W - 8); countTxt.setAttribute('y', cy);
+      countTxt.setAttribute('dominant-baseline', 'central');
+      countTxt.setAttribute('text-anchor', 'end');
+      countTxt.setAttribute('style', 'font-family:var(--font-mono);font-size:10px;fill:var(--text-tertiary);');
+      countTxt.setAttribute('data-role', 'count');
+      countTxt.textContent = grp.count + (grp.approximate ? '+' : '');
+      g.appendChild(countTxt);
+      g.style.cursor = 'pointer';
+      g.addEventListener('click', function () { focusGroup(grp.id); });
+      groupsLayer.appendChild(g);
+    });
+
+    renderFirstTab();
+  }
+
+  function selectProduct(productId) {
+    if (firstTabState.activeProduct === productId) {
+      firstTabState.activeProduct = null;
+    } else {
+      firstTabState.activeProduct = productId;
+    }
+    // Reset group focus when switching products
+    firstTabState.focusedGroup = null;
+    renderFirstTab();
+  }
+
+  function focusGroup(groupId) {
+    if (firstTabState.focusedGroup === groupId) {
+      firstTabState.focusedGroup = null;
+    } else {
+      firstTabState.focusedGroup = groupId;
+    }
+    renderFirstTab();
+  }
+
+  function renderFirstTab() {
+    const activeProd = firstTabState.activeProduct
+      ? FIRST_TAB_PRODUCTS.find(function (p) { return p.id === firstTabState.activeProduct; })
+      : null;
+    const touchedGroupIds = new Set();
+    const touchedGroupKinds = {};  // groupId → 'backs' | 'requires'
+    if (activeProd) {
+      activeProd.touches.forEach(function (t) {
+        touchedGroupIds.add(t.group);
+        touchedGroupKinds[t.group] = t.kind;
+      });
+    }
+
+    // Products column: active pill filled, others outlined
+    FIRST_TAB_PRODUCTS.forEach(function (prod) {
+      const g = document.querySelector('#p-products .pill-group[data-product="' + prod.id + '"]');
+      if (!g) return;
+      const bg = g.querySelector('[data-role="bg"]');
+      const label = g.querySelector('[data-role="label"]');
+      const isActive = firstTabState.activeProduct === prod.id;
+      if (isActive) {
+        if (bg) { bg.setAttribute('fill', 'var(--pill-bg)'); bg.setAttribute('stroke', 'var(--pill-bg)'); }
+        if (label) label.setAttribute('style', 'font-size:13px;fill:var(--pill-text);font-weight:500;');
+      } else {
+        if (bg) { bg.setAttribute('fill', 'transparent'); bg.setAttribute('stroke', 'var(--text-quaternary)'); }
+        if (label) label.setAttribute('style', 'font-size:13px;fill:var(--text);font-weight:500;');
+      }
+    });
+
+    // Groups column: highlight touched, distinct style for focused
+    FIRST_TAB_GROUPS.forEach(function (grp) {
+      const g = document.querySelector('#p-groups .group-row[data-group="' + grp.id + '"]');
+      if (!g) return;
+      const bg = g.querySelector('[data-role="bg"]');
+      const dot = g.querySelector('[data-role="dot"]');
+      const label = g.querySelector('[data-role="label"]');
+      const count = g.querySelector('[data-role="count"]');
+      const isTouched = touchedGroupIds.has(grp.id);
+      const isFocused = firstTabState.focusedGroup === grp.id;
+
+      if (isFocused) {
+        if (bg) bg.setAttribute('fill', 'var(--surface-2)');
+      } else {
+        if (bg) bg.setAttribute('fill', 'transparent');
+      }
+      if (isTouched || isFocused) {
+        if (dot) dot.setAttribute('fill', 'var(--edge-dot)');
+        if (label) label.setAttribute('style', 'font-size:12.5px;fill:var(--text);font-weight:500;');
+        if (count) count.setAttribute('style', 'font-family:var(--font-mono);font-size:10px;fill:var(--text-secondary);');
+      } else {
+        if (dot) dot.setAttribute('fill', 'var(--text-quaternary)');
+        if (label) label.setAttribute('style', 'font-size:12.5px;fill:var(--text-tertiary);');
+        if (count) count.setAttribute('style', 'font-family:var(--font-mono);font-size:10px;fill:var(--text-tertiary);');
+      }
+    });
+
+    // Caps column: rebuild for the focused group
+    const capsLayer = document.getElementById('p-caps');
+    if (capsLayer) {
+      // Clear everything except the header (first child)
+      while (capsLayer.children.length > 1) capsLayer.removeChild(capsLayer.lastChild);
+
+      if (firstTabState.focusedGroup) {
+        const grp = FIRST_TAB_GROUPS.find(function (x) { return x.id === firstTabState.focusedGroup; });
+        const caps = FIRST_TAB_CAPS[firstTabState.focusedGroup] || [];
+        caps.forEach(function (capName, i) {
+          const y = P1_START_Y + i * (P1_CAP_H + P1_CAP_GAP);
+          const cy = y + P1_CAP_H / 2;
+          const t = document.createElementNS(SVGNS, 'text');
+          t.setAttribute('x', P1_CAP_X); t.setAttribute('y', cy);
+          t.setAttribute('dominant-baseline', 'central');
+          t.setAttribute('style', 'font-family:var(--font-mono);font-size:10.5px;fill:var(--text);');
+          t.textContent = capName;
+          capsLayer.appendChild(t);
+        });
+        // "+N more" if group has more caps than listed
+        if (grp && grp.count > caps.length) {
+          const overflow = grp.count - caps.length;
+          const y = P1_START_Y + caps.length * (P1_CAP_H + P1_CAP_GAP) + 4;
+          const t = document.createElementNS(SVGNS, 'text');
+          t.setAttribute('x', P1_CAP_X); t.setAttribute('y', y + P1_CAP_H / 2);
+          t.setAttribute('dominant-baseline', 'central');
+          t.setAttribute('style', 'font-size:10.5px;fill:var(--text-tertiary);font-style:italic;');
+          t.textContent = '+ ' + overflow + ' more' + (grp.approximate ? ' (approximate)' : '');
+          capsLayer.appendChild(t);
+        }
+      }
+    }
+
+    // Edges (products → groups only when a product is active; source edges
+    // colored by relationship: solid for backs, dashed for requires)
+    const edgesLayer = document.getElementById('p-edges');
+    if (edgesLayer) {
+      while (edgesLayer.firstChild) edgesLayer.removeChild(edgesLayer.firstChild);
+      if (activeProd) {
+        activeProd.touches.forEach(function (t) {
+          const src = firstTabPositions.products[activeProd.id];
+          const dst = firstTabPositions.groups[t.group];
+          if (!src || !dst) return;
+          const mx = (src.x + dst.leftX) / 2;
+          const path = document.createElementNS(SVGNS, 'path');
+          path.setAttribute('d', 'M' + src.x + ',' + src.y + ' C' + mx + ',' + src.y + ' ' + mx + ',' + dst.y + ' ' + dst.leftX + ',' + dst.y);
+          path.setAttribute('stroke', 'var(--edge)');
+          path.setAttribute('stroke-width', '1');
+          path.setAttribute('opacity', '0.7');
+          path.setAttribute('fill', 'none');
+          if (t.kind === 'requires') path.setAttribute('stroke-dasharray', '3 2');
+          edgesLayer.appendChild(path);
+        });
+      }
+    }
+
+    // Info box
+    const info = document.getElementById('p-info');
+    if (info) {
+      if (!activeProd && !firstTabState.focusedGroup) {
+        info.innerHTML = '<strong>Click a product</strong> to see which capability groups it touches. <strong>Click a group</strong> to drill into its granular capabilities.';
+      } else {
+        const parts = [];
+        if (activeProd) {
+          const touchLabels = activeProd.touches.map(function (t) {
+            const g = FIRST_TAB_GROUPS.find(function (x) { return x.id === t.group; });
+            return (g ? g.label : t.group) + ' (' + t.kind + ')';
+          });
+          parts.push('<strong>' + activeProd.label + '</strong> touches ' + touchLabels.join(', '));
+        }
+        if (firstTabState.focusedGroup) {
+          const grp = FIRST_TAB_GROUPS.find(function (x) { return x.id === firstTabState.focusedGroup; });
+          const shown = (FIRST_TAB_CAPS[firstTabState.focusedGroup] || []).length;
+          parts.push('Showing ' + shown + ' of ' + grp.count + (grp.approximate ? '+' : '') + ' caps in <strong>' + grp.label + '</strong>');
+        }
+        info.innerHTML = parts.join(' · ');
+      }
+    }
+
+    // ViewBox sizing
+    const svg = document.getElementById('mesh-product');
+    const productsH = P1_START_Y + FIRST_TAB_PRODUCTS.length * (P1_PROD_H + P1_PROD_GAP);
+    const groupsH = P1_START_Y + FIRST_TAB_GROUPS.length * (P1_GROUP_H + P1_GROUP_GAP);
+    let capsH = P1_START_Y;
+    if (firstTabState.focusedGroup) {
+      const caps = FIRST_TAB_CAPS[firstTabState.focusedGroup] || [];
+      capsH += caps.length * (P1_CAP_H + P1_CAP_GAP) + 24;
+    }
+    const needed = Math.max(productsH, groupsH, capsH) + 20;
+    if (svg) svg.setAttribute('viewBox', '0 0 680 ' + needed);
+  }
+
+  window.pSelectProduct = function (id) { selectProduct(id); };
+  window.pResetFirst = function () {
+    firstTabState.activeProduct = null;
+    firstTabState.focusedGroup = null;
+    renderFirstTab();
+  };
+
+  // Configuration view
+  const configState = {
+    active: new Set(),
+    billingEnabled: false,
+    taxEnabled: false,
+  };
+
+  // Per-config accent colors shown on the dot, active-state fill accent,
+  // and the config → signal edge. Matches the color tokens from the
+  // design direction.
+  const CONFIG_COLORS = {
+    merchant:    '#3B82F6',  // blue
+    customer:    '#F97316',  // orange
+    recipient:   '#06B6D4',  // cyan
+    storer:      '#EF4444',  // red
+    borrower:    '#A855F7',  // purple
+    card_issuer: '#10B981',  // green
+    card_holder: '#EAB308',  // amber (distinct — not platform network)
+  };
+
+  function configColor(cfgId) {
+    return CONFIG_COLORS[cfgId] || 'var(--edge-dot)';
+  }
+
+  const C_CFG_X = 20, C_CFG_W = 130, C_CFG_H = 34, C_CFG_GAP = 6, C_CFG_START_Y = 30;
+  const C_SIG_X = 170, C_SIG_W = 150, C_SIG_H = 28, C_SIG_GAP = 6, C_SIG_START_Y = 30;
+  const C_CG_X = 340, C_CG_W = 150;
+  const C_PROD_X = 510, C_PROD_W = 150;
+  const C_RIGHT_ITEM_H = 22;
+
+  const configPositions = {};
+  const signalPositions = {};
+  const capGroupPositions = {};
+  const productPositions = {};
+
+  // Section header helper for sectioned columns
+  function appendSectionHeader(parentLayer, x, y, text) {
+    const h = document.createElementNS(SVGNS, 'text');
+    h.setAttribute('x', x);
+    h.setAttribute('y', y);
+    h.setAttribute('style', 'fill:var(--text-secondary);font-size:10px;font-weight:500;letter-spacing:0.08em;');
+    h.textContent = text;
+    parentLayer.appendChild(h);
+  }
+
+  const CFG_SECTION_HEADER_H = 14;  // vertical space a section header takes
+  const CFG_SECTION_GAP = 14;       // gap between sections
+
+  function buildConfigView() {
+    const configsLayer = document.getElementById('c-configs');
+    const signalsLayer = document.getElementById('c-signals');
+    const edgesLayer = document.getElementById('c-edges');
+    if (!configsLayer || !signalsLayer || !edgesLayer) return;
+
+    // ── Configurations column (sectioned: Platform network / Not platform network) ──
+    const configSections = [
+      { label: 'PLATFORM NETWORK',     items: CONFIGS.filter(function (c) { return c.platformNetwork; }) },
+      { label: 'NOT PLATFORM NETWORK', items: CONFIGS.filter(function (c) { return !c.platformNetwork; }) },
+    ];
+    let cfgY = C_CFG_START_Y;
+    configSections.forEach(function (section, sectionIdx) {
+      if (sectionIdx > 0) cfgY += CFG_SECTION_GAP;
+      appendSectionHeader(configsLayer, C_CFG_X, cfgY, section.label);
+      cfgY += CFG_SECTION_HEADER_H;
+      section.items.forEach(function (cfg) {
+        const isDerived = !!cfg.derivedFrom;
+        if (isDerived) {
+          // Derived items: non-pill, non-selectable indicator.
+          // Height is smaller than a pill; anchored to same x as pills.
+          const derivedH = 24;
+          const y = cfgY;
+          const cy = y + derivedH / 2;
+          // Edge anchor at the right side of where a pill would end, so
+          // any future edges from derived items connect cleanly.
+          configPositions[cfg.id] = { x: C_CFG_X + C_CFG_W, y: cy };
+          const g = document.createElementNS(SVGNS, 'g');
+          g.setAttribute('class', 'derived-group');
+          g.setAttribute('data-config', cfg.id);
+          // Hit area for hover (non-interactive, but keeps the group shape)
+          const hit = document.createElementNS(SVGNS, 'rect');
+          hit.setAttribute('x', C_CFG_X); hit.setAttribute('y', y);
+          hit.setAttribute('width', C_CFG_W); hit.setAttribute('height', derivedH);
+          hit.setAttribute('fill', 'transparent');
+          g.appendChild(hit);
+          // Small dot — muted, unlike pill dots which use config color
+          const dot = document.createElementNS(SVGNS, 'circle');
+          dot.setAttribute('cx', C_CFG_X + DOT_R); dot.setAttribute('cy', cy);
+          dot.setAttribute('r', DOT_R);
+          dot.setAttribute('fill', 'var(--text-quaternary)');
+          dot.setAttribute('data-role', 'dot');
+          g.appendChild(dot);
+          const t = document.createElementNS(SVGNS, 'text');
+          t.setAttribute('x', C_CFG_X + DOT_R + 10);
+          t.setAttribute('y', cy - 2);
+          t.setAttribute('dominant-baseline', 'central');
+          t.setAttribute('style', 'font-size:12.5px;fill:var(--text-tertiary);font-style:italic;');
+          t.setAttribute('data-role', 'label');
+          t.textContent = cfg.label;
+          g.appendChild(t);
+          const sub = document.createElementNS(SVGNS, 'text');
+          sub.setAttribute('x', C_CFG_X + DOT_R + 10);
+          sub.setAttribute('y', cy + 9);
+          sub.setAttribute('dominant-baseline', 'central');
+          sub.setAttribute('style', 'font-size:9.5px;fill:var(--text-tertiary);');
+          sub.setAttribute('data-role', 'sub');
+          sub.textContent = 'derived from ' + (CONFIG_LABEL[cfg.derivedFrom] || cfg.derivedFrom);
+          g.appendChild(sub);
+          configsLayer.appendChild(g);
+          cfgY += derivedH + C_CFG_GAP;
+          return;
+        }
+        // Selectable pill — existing treatment
+        const y = cfgY;
+        configPositions[cfg.id] = { x: C_CFG_X + C_CFG_W, y: y + C_CFG_H / 2 };
+        const g = document.createElementNS(SVGNS, 'g');
+        g.setAttribute('class', 'pill-group active');
+        g.setAttribute('data-config', cfg.id);
+        const r = document.createElementNS(SVGNS, 'rect');
+        r.setAttribute('x', C_CFG_X); r.setAttribute('y', y);
+        r.setAttribute('width', C_CFG_W); r.setAttribute('height', C_CFG_H);
+        r.setAttribute('rx', C_CFG_H / 2);
+        r.setAttribute('fill', 'transparent');
+        r.setAttribute('stroke', 'var(--text-quaternary)');
+        r.setAttribute('stroke-width', '0.75');
+        r.setAttribute('data-role', 'bg');
+        g.appendChild(r);
+        const dot = document.createElementNS(SVGNS, 'circle');
+        dot.setAttribute('cx', C_CFG_X + 14); dot.setAttribute('cy', y + C_CFG_H / 2);
+        dot.setAttribute('r', 3.5);
+        dot.setAttribute('fill', configColor(cfg.id));
+        dot.setAttribute('data-role', 'dot');
+        g.appendChild(dot);
+        const t = document.createElementNS(SVGNS, 'text');
+        t.setAttribute('x', C_CFG_X + 26); t.setAttribute('y', y + C_CFG_H / 2 - 2);
+        t.setAttribute('dominant-baseline', 'central');
+        t.setAttribute('style', 'font-size:13px;fill:var(--text);font-weight:500;');
+        t.setAttribute('data-role', 'label');
+        t.textContent = cfg.label;
+        g.appendChild(t);
+        const sub = document.createElementNS(SVGNS, 'text');
+        sub.setAttribute('x', C_CFG_X + 26); sub.setAttribute('y', y + C_CFG_H / 2 + 10);
+        sub.setAttribute('dominant-baseline', 'central');
+        sub.setAttribute('style', 'font-size:10px;fill:var(--text-tertiary);');
+        sub.setAttribute('data-role', 'sub');
+        sub.textContent = configSubLabel(cfg);
+        g.appendChild(sub);
+        g.addEventListener('click', function () { toggleConfig(cfg.id); });
+        configsLayer.appendChild(g);
+        cfgY += C_CFG_H + C_CFG_GAP;
+      });
+    });
+
+    // ── Signals column (sectioned: In header / Actions required) ──
+    const signalSections = [
+      { label: 'IN HEADER',        items: SIGNALS.filter(function (s) { return s.surfacesAs === 'header'; }) },
+      { label: 'ACTIONS REQUIRED', items: SIGNALS.filter(function (s) { return s.surfacesAs === 'actions_required'; }) },
+    ];
+    let sigY = C_SIG_START_Y;
+    signalSections.forEach(function (section, sectionIdx) {
+      if (sectionIdx > 0) sigY += CFG_SECTION_GAP;
+      appendSectionHeader(signalsLayer, C_SIG_X, sigY, section.label);
+      sigY += CFG_SECTION_HEADER_H;
+      section.items.forEach(function (sig) {
+        const y = sigY;
+        const cy = y + C_SIG_H / 2;
+        signalPositions[sig.id] = { leftX: C_SIG_X, rightX: C_SIG_X + C_SIG_W, y: cy };
+        const g = document.createElementNS(SVGNS, 'g');
+        g.setAttribute('class', 'signal-group');
+        g.setAttribute('data-signal', sig.id);
+        g.setAttribute('data-surfaces-as', sig.surfacesAs);
+        const r = document.createElementNS(SVGNS, 'rect');
+        r.setAttribute('x', C_SIG_X); r.setAttribute('y', y);
+        r.setAttribute('width', C_SIG_W); r.setAttribute('height', C_SIG_H);
+        r.setAttribute('rx', C_SIG_H / 2);
+        r.setAttribute('fill', 'transparent');
+        r.setAttribute('stroke', 'var(--text-quaternary)');
+        r.setAttribute('stroke-width', '0.75');
+        // Tax reporting (and any future actions_required signal) gets a dotted outline
+        // to signal it's not a UAD header chip like the rest.
+        if (sig.surfacesAs === 'actions_required') {
+          r.setAttribute('stroke-dasharray', '3 2');
+        }
+        r.setAttribute('data-role', 'bg');
+        g.appendChild(r);
+        const dot = document.createElementNS(SVGNS, 'circle');
+        dot.setAttribute('cx', C_SIG_X + 14); dot.setAttribute('cy', cy);
+        dot.setAttribute('r', 3.5);
+        dot.setAttribute('fill', 'var(--text-quaternary)');
+        dot.setAttribute('data-role', 'dot');
+        g.appendChild(dot);
+        const t = document.createElementNS(SVGNS, 'text');
+        t.setAttribute('x', C_SIG_X + 26); t.setAttribute('y', cy);
+        t.setAttribute('dominant-baseline', 'central');
+        t.setAttribute('style', 'font-size:12.5px;fill:var(--text-tertiary);');
+        t.setAttribute('data-role', 'label');
+        t.textContent = sig.label;
+        g.appendChild(t);
+        signalsLayer.appendChild(g);
+        sigY += C_SIG_H + C_SIG_GAP;
+      });
+    });
+
+    // Right column (cap groups + products) is built on each render. See renderConfigState.
+
+    // Size viewBox to the tallest column. cfgY and sigY now hold the y after
+    // all pills + section headers have been laid out.
+    const svg = document.getElementById('mesh-configs');
+    const rightMaxItems = Math.max(CAP_GROUPS.length, CONFIG_PRODUCTS.length);
+    const rightH = C_SIG_START_Y + rightMaxItems * C_RIGHT_ITEM_H;
+    const neededH = Math.max(cfgY, sigY, rightH) + 20;
+    if (svg) svg.setAttribute('viewBox', '0 0 680 ' + neededH);
+
+    renderConfigState();
+  }
+
+  function expandAutoSelects(activeSet) {
+    const out = new Set(activeSet);
+    activeSet.forEach(function (id) {
+      const cfg = CONFIGS.find(function (c) { return c.id === id; });
+      if (cfg && cfg.autoSelects) {
+        cfg.autoSelects.forEach(function (auto) { out.add(auto); });
+      }
+    });
+    return out;
+  }
+
+  function resolveActiveSignals(activeSet, billingEnabled, taxEnabled) {
+    const expanded = expandAutoSelects(activeSet);
+    const signals = new Set();
+    expanded.forEach(function (cfgId) {
+      const cfg = CONFIGS.find(function (c) { return c.id === cfgId; });
+      if (cfg) cfg.signals.forEach(function (s) { signals.add(s); });
+    });
+    if (expanded.has('merchant') && billingEnabled) signals.add('billing');
+    if (expanded.has('merchant') && taxEnabled) signals.add('tax_reporting');
+    let foldFired = false;
+    FOLD_RULES.forEach(function (rule) {
+      const allActive = rule.whenConfigurationsActive.every(function (c) { return expanded.has(c); });
+      if (allActive && signals.has(rule.signal)) {
+        signals.delete(rule.signal);
+        signals.add(rule.foldInto);
+        foldFired = true;
+      }
+    });
+    return { signals: signals, expanded: expanded, foldFired: foldFired };
+  }
+
+  function toggleConfig(configId) {
+    if (configState.active.has(configId)) {
+      configState.active.delete(configId);
+    } else {
+      configState.active.add(configId);
+    }
+    renderConfigState();
+  }
+
+  function renderConfigState() {
+    const resolved = resolveActiveSignals(configState.active, configState.billingEnabled, configState.taxEnabled);
+    const activeSignals = resolved.signals;
+    const expanded = resolved.expanded;
+
+    // ── Config pills (selectable only). Derived items handled separately. ──
+    CONFIGS.forEach(function (cfg) {
+      if (cfg.derivedFrom) return;  // handled in derived loop below
+      const g = document.querySelector('#c-configs .pill-group[data-config="' + cfg.id + '"]');
+      if (!g) return;
+      const bg = g.querySelector('[data-role="bg"]');
+      const dot = g.querySelector('[data-role="dot"]');
+      const label = g.querySelector('[data-role="label"]');
+      const sub = g.querySelector('[data-role="sub"]');
+      const isUserActive = configState.active.has(cfg.id);
+      const isAutoActive = !isUserActive && expanded.has(cfg.id);
+      const isActive = isUserActive || isAutoActive;
+      // Dot color is always the config color — inactive or active.
+      if (dot) dot.setAttribute('fill', configColor(cfg.id));
+      if (isActive) {
+        if (bg) { bg.setAttribute('fill', 'var(--pill-bg)'); bg.setAttribute('stroke', 'var(--pill-bg)'); }
+        if (label) label.setAttribute('style', 'font-size:13px;fill:var(--pill-text);font-weight:500;');
+        if (sub) {
+          sub.textContent = isAutoActive ? 'auto-selected' : configSubLabel(cfg);
+          sub.setAttribute('style', 'font-size:10px;fill:var(--pill-text);opacity:0.7;');
+        }
+      } else {
+        if (bg) { bg.setAttribute('fill', 'transparent'); bg.setAttribute('stroke', 'var(--text-quaternary)'); }
+        if (label) label.setAttribute('style', 'font-size:13px;fill:var(--text);font-weight:500;');
+        if (sub) {
+          sub.textContent = configSubLabel(cfg);
+          sub.setAttribute('style', 'font-size:10px;fill:var(--text-tertiary);');
+        }
+      }
+    });
+
+    // ── Derived configurations: show when parent is active, hide when not ──
+    // Exception: in the empty state (nothing active), show them all dimmed
+    // as a structural preview, matching the right-column behavior.
+    const nothingActiveAtAll = expanded.size === 0 && !configState.billingEnabled && !configState.taxEnabled;
+    CONFIGS.forEach(function (cfg) {
+      if (!cfg.derivedFrom) return;
+      const g = document.querySelector('#c-configs .derived-group[data-config="' + cfg.id + '"]');
+      if (!g) return;
+      const parentActive = expanded.has(cfg.derivedFrom);
+      const visible = parentActive || nothingActiveAtAll;
+      g.setAttribute('display', visible ? 'inline' : 'none');
+      const dot = g.querySelector('[data-role="dot"]');
+      const label = g.querySelector('[data-role="label"]');
+      const sub = g.querySelector('[data-role="sub"]');
+      if (parentActive) {
+        // Lit — use parent's color for the dot to show the association
+        if (dot) dot.setAttribute('fill', configColor(cfg.derivedFrom));
+        if (label) label.setAttribute('style', 'font-size:12.5px;fill:var(--text);font-style:italic;');
+        if (sub) sub.setAttribute('style', 'font-size:9.5px;fill:var(--text-secondary);');
+      } else {
+        // Dimmed (shown only in the empty state)
+        if (dot) dot.setAttribute('fill', 'var(--text-quaternary)');
+        if (label) label.setAttribute('style', 'font-size:12.5px;fill:var(--text-tertiary);font-style:italic;');
+        if (sub) sub.setAttribute('style', 'font-size:9.5px;fill:var(--text-tertiary);');
+      }
+    });
+
+    // ── Signal pills: outlined, stroke colors when active ──
+    SIGNALS.forEach(function (sig) {
+      const g = document.querySelector('#c-signals .signal-group[data-signal="' + sig.id + '"]');
+      if (!g) return;
+      const bg = g.querySelector('[data-role="bg"]');
+      const dot = g.querySelector('[data-role="dot"]');
+      const label = g.querySelector('[data-role="label"]');
+      const isActive = activeSignals.has(sig.id);
+      // Actions-required signals keep their dotted outline regardless of active state.
+      const dashArray = sig.surfacesAs === 'actions_required' ? '3 2' : '';
+      if (isActive) {
+        if (bg) {
+          bg.setAttribute('stroke', 'var(--edge-dot)');
+          bg.setAttribute('stroke-width', '1');
+          if (dashArray) bg.setAttribute('stroke-dasharray', dashArray);
+          else bg.removeAttribute('stroke-dasharray');
+        }
+        if (dot) dot.setAttribute('fill', 'var(--edge-dot)');
+        if (label) label.setAttribute('style', 'font-size:12.5px;fill:var(--text);font-weight:500;');
+      } else {
+        if (bg) {
+          bg.setAttribute('stroke', 'var(--text-quaternary)');
+          bg.setAttribute('stroke-width', '0.75');
+          if (dashArray) bg.setAttribute('stroke-dasharray', dashArray);
+          else bg.removeAttribute('stroke-dasharray');
+        }
+        if (dot) dot.setAttribute('fill', 'var(--text-quaternary)');
+        if (label) label.setAttribute('style', 'font-size:12.5px;fill:var(--text-tertiary);');
+      }
+    });
+
+    // ── Right column: rebuild from scratch. Either all items dimmed (empty
+    //    active state) or only the items lit by active signals. ──
+    const rightLayer = document.getElementById('c-right');
+    Object.keys(capGroupPositions).forEach(function (k) { delete capGroupPositions[k]; });
+    Object.keys(productPositions).forEach(function (k) { delete productPositions[k]; });
+    if (rightLayer) {
+      while (rightLayer.firstChild) rightLayer.removeChild(rightLayer.firstChild);
+
+      const nothingActive = activeSignals.size === 0;
+      const visibleCapGroups = nothingActive
+        ? CAP_GROUPS
+        : CAP_GROUPS.filter(function (cg) { return cg.signals.some(function (s) { return activeSignals.has(s); }); });
+      const visibleProducts = nothingActive
+        ? CONFIG_PRODUCTS
+        : CONFIG_PRODUCTS.filter(function (p) { return p.signals.some(function (s) { return activeSignals.has(s); }); });
+
+      // Column header and items: cap groups
+      appendSectionHeader(rightLayer, C_CG_X, C_SIG_START_Y - 10, 'CAPABILITY GROUPS');
+      visibleCapGroups.forEach(function (cg, i) {
+        const y = C_SIG_START_Y + i * C_RIGHT_ITEM_H;
+        const cy = y + C_RIGHT_ITEM_H / 2;
+        capGroupPositions[cg.id] = { leftX: C_CG_X + DOT_R + 2, y: cy };
+        const isActive = !nothingActive && cg.signals.some(function (s) { return activeSignals.has(s); });
+        const g = document.createElementNS(SVGNS, 'g');
+        g.setAttribute('class', 'capgroup-group');
+        g.setAttribute('data-capgroup', cg.id);
+        const dot = document.createElementNS(SVGNS, 'circle');
+        dot.setAttribute('cx', C_CG_X + DOT_R); dot.setAttribute('cy', cy);
+        dot.setAttribute('r', DOT_R);
+        dot.setAttribute('fill', isActive ? 'var(--edge-dot)' : 'var(--text-quaternary)');
+        g.appendChild(dot);
+        const t = document.createElementNS(SVGNS, 'text');
+        t.setAttribute('x', C_CG_X + DOT_R + 10); t.setAttribute('y', cy);
+        t.setAttribute('dominant-baseline', 'central');
+        t.setAttribute('style', 'font-family:var(--font-mono);font-size:11px;fill:' + (isActive ? 'var(--text)' : 'var(--text-tertiary)') + (isActive ? ';font-weight:500' : '') + ';');
+        t.textContent = cg.label;
+        g.appendChild(t);
+        rightLayer.appendChild(g);
+      });
+
+      // Column header and items: products
+      appendSectionHeader(rightLayer, C_PROD_X, C_SIG_START_Y - 10, 'PRODUCTS');
+      visibleProducts.forEach(function (prod, i) {
+        const y = C_SIG_START_Y + i * C_RIGHT_ITEM_H;
+        const cy = y + C_RIGHT_ITEM_H / 2;
+        productPositions[prod.id] = { leftX: C_PROD_X + DOT_R + 2, y: cy };
+        const isActive = !nothingActive && prod.signals.some(function (s) { return activeSignals.has(s); });
+        const g = document.createElementNS(SVGNS, 'g');
+        g.setAttribute('class', 'product-group');
+        g.setAttribute('data-product', prod.id);
+        const dot = document.createElementNS(SVGNS, 'circle');
+        dot.setAttribute('cx', C_PROD_X + DOT_R); dot.setAttribute('cy', cy);
+        dot.setAttribute('r', DOT_R);
+        dot.setAttribute('fill', isActive ? 'var(--edge-dot)' : 'var(--text-quaternary)');
+        g.appendChild(dot);
+        const t = document.createElementNS(SVGNS, 'text');
+        t.setAttribute('x', C_PROD_X + DOT_R + 10); t.setAttribute('y', cy);
+        t.setAttribute('dominant-baseline', 'central');
+        t.setAttribute('style', 'font-size:12.5px;fill:' + (isActive ? 'var(--text)' : 'var(--text-tertiary)') + (isActive ? ';font-weight:500' : '') + ';');
+        t.textContent = prod.label;
+        g.appendChild(t);
+        rightLayer.appendChild(g);
+      });
+    }
+
+    // ── Edges: config → signal edges use the config's color ──
+    const edgesLayer = document.getElementById('c-edges');
+    if (edgesLayer) {
+      while (edgesLayer.firstChild) edgesLayer.removeChild(edgesLayer.firstChild);
+
+      expanded.forEach(function (cfgId) {
+        const cfg = CONFIGS.find(function (c) { return c.id === cfgId; });
+        if (!cfg) return;
+        const strokeColor = configColor(cfgId);
+        cfg.signals.forEach(function (sigId) {
+          const src = configPositions[cfgId];
+          let targetSigId = sigId;
+          FOLD_RULES.forEach(function (rule) {
+            const allActive = rule.whenConfigurationsActive.every(function (c) { return expanded.has(c); });
+            if (allActive && sigId === rule.signal) targetSigId = rule.foldInto;
+          });
+          const dst = signalPositions[targetSigId];
+          if (!src || !dst) return;
+          const path = document.createElementNS(SVGNS, 'path');
+          const mx = (src.x + dst.leftX) / 2;
+          path.setAttribute('d', 'M' + src.x + ',' + src.y + ' C' + mx + ',' + src.y + ' ' + mx + ',' + dst.y + ' ' + dst.leftX + ',' + dst.y);
+          path.setAttribute('stroke', strokeColor);
+          path.setAttribute('stroke-width', '1.25');
+          path.setAttribute('opacity', '0.5');
+          path.setAttribute('fill', 'none');
+          edgesLayer.appendChild(path);
+        });
+        // Merchant → Billing dashed edge when billing is on
+        if (cfgId === 'merchant' && configState.billingEnabled) {
+          const src = configPositions['merchant'];
+          const dst = signalPositions['billing'];
+          if (src && dst) {
+            const path = document.createElementNS(SVGNS, 'path');
+            const mx = (src.x + dst.leftX) / 2;
+            path.setAttribute('d', 'M' + src.x + ',' + src.y + ' C' + mx + ',' + src.y + ' ' + mx + ',' + dst.y + ' ' + dst.leftX + ',' + dst.y);
+            path.setAttribute('stroke', strokeColor);
+            path.setAttribute('stroke-width', '1.25');
+            path.setAttribute('opacity', '0.5');
+            path.setAttribute('stroke-dasharray', '3 2');
+            path.setAttribute('fill', 'none');
+            edgesLayer.appendChild(path);
+          }
+        }
+      });
+
+      // Signal → cap group + product edges (neutral green, downstream cascade)
+      activeSignals.forEach(function (sigId) {
+        const src = signalPositions[sigId];
+        if (!src) return;
+        CAP_GROUPS.forEach(function (cg) {
+          if (cg.signals.indexOf(sigId) === -1) return;
+          const dst = capGroupPositions[cg.id];
+          if (!dst) return;
+          const mx = (src.rightX + dst.leftX) / 2;
+          const path = document.createElementNS(SVGNS, 'path');
+          path.setAttribute('d', 'M' + src.rightX + ',' + src.y + ' C' + mx + ',' + src.y + ' ' + mx + ',' + dst.y + ' ' + dst.leftX + ',' + dst.y);
+          path.setAttribute('stroke', 'var(--edge)');
+          path.setAttribute('stroke-width', '0.75');
+          path.setAttribute('opacity', '0.5');
+          path.setAttribute('fill', 'none');
+          edgesLayer.appendChild(path);
+        });
+        CONFIG_PRODUCTS.forEach(function (prod) {
+          if (prod.signals.indexOf(sigId) === -1) return;
+          const dst = productPositions[prod.id];
+          if (!dst) return;
+          const mx = (src.rightX + dst.leftX) / 2;
+          const path = document.createElementNS(SVGNS, 'path');
+          path.setAttribute('d', 'M' + src.rightX + ',' + src.y + ' C' + mx + ',' + src.y + ' ' + mx + ',' + dst.y + ' ' + dst.leftX + ',' + dst.y);
+          path.setAttribute('stroke', 'var(--edge)');
+          path.setAttribute('stroke-width', '0.75');
+          path.setAttribute('opacity', '0.5');
+          path.setAttribute('fill', 'none');
+          edgesLayer.appendChild(path);
+        });
+      });
+    }
+
+    // ── Relationship-only indicator ──
+    const relEl = document.getElementById('relationship-indicator');
+    if (relEl) {
+      let anyCompliance = false;
+      expanded.forEach(function (cfgId) {
+        const cfg = CONFIGS.find(function (c) { return c.id === cfgId; });
+        if (cfg && cfg.hasCompliance) anyCompliance = true;
+      });
+      const hasAny = expanded.size > 0;
+      relEl.style.display = (hasAny && !anyCompliance) ? 'inline' : 'none';
+    }
+
+    // ── Billing + Tax toggles: only enabled when Merchant is active ──
+    const merchantActive = expanded.has('merchant');
+    const billingLabel = document.getElementById('billing-toggle-label');
+    const billingInput = document.getElementById('billing-toggle');
+    if (billingLabel && billingInput) {
+      billingLabel.classList.toggle('disabled', !merchantActive);
+      billingInput.disabled = !merchantActive;
+    }
+    const taxLabel = document.getElementById('tax-toggle-label');
+    const taxInput = document.getElementById('tax-toggle');
+    if (taxLabel && taxInput) {
+      taxLabel.classList.toggle('disabled', !merchantActive);
+      taxInput.disabled = !merchantActive;
+    }
+
+    // ── Info box: shows active configs, lit signals, fold notice ──
+    const info = document.getElementById('c-info');
+    if (info) {
+      if (expanded.size === 0 && !configState.taxEnabled) {
+        info.innerHTML = '<strong>Nothing active.</strong> Toggle configs on the left — or Billing / Tax reporting above — to see signals and downstream effects.';
+      } else {
+        const parts = [];
+        if (expanded.size > 0) {
+          const configLabels = [];
+          expanded.forEach(function (id) {
+            const c = CONFIGS.find(function (x) { return x.id === id; });
+            if (c) configLabels.push(c.label);
+          });
+          parts.push('<strong>Active configs:</strong> ' + configLabels.join(', '));
+        }
+        if (activeSignals.size > 0) {
+          const sigLabels = [];
+          activeSignals.forEach(function (id) {
+            const s = SIGNALS.find(function (x) { return x.id === id; });
+            if (s) sigLabels.push(s.label);
+          });
+          parts.push('<strong>Signals lit:</strong> ' + sigLabels.join(', '));
+        }
+        if (resolved.foldFired) {
+          parts.push('<strong style="color:var(--accent);">⚡ Transfers folded into Financial accounts.</strong>');
+        }
+        info.innerHTML = parts.join(' · ');
+      }
+    }
+  }
+
+  window.cPreset = function (name) {
+    if (name === 'default') {
+      configState.active = new Set(['merchant', 'customer']);
+      configState.billingEnabled = false;
+      configState.taxEnabled = false;
+    } else if (name === 'fold') {
+      configState.active = new Set(['storer', 'recipient']);
+      configState.billingEnabled = false;
+      configState.taxEnabled = false;
+    } else if (name === 'full') {
+      // Selectable platform-network configs only. card_holder and merchant_customer
+      // are derived and will appear automatically because their parents are active.
+      configState.active = new Set(['merchant', 'customer', 'recipient', 'storer', 'borrower', 'card_issuer']);
+      configState.billingEnabled = true;
+      configState.taxEnabled = true;
+    } else if (name === 'clear') {
+      configState.active = new Set();
+      configState.billingEnabled = false;
+      configState.taxEnabled = false;
+    }
+    const billingInput = document.getElementById('billing-toggle');
+    const taxInput = document.getElementById('tax-toggle');
+    if (billingInput) billingInput.checked = configState.billingEnabled;
+    if (taxInput) taxInput.checked = configState.taxEnabled;
+    renderConfigState();
+  };
+
+  function init() {
+    try {
+      buildProductCapView();
+      buildConfigView();
+
+      const billingInput = document.getElementById('billing-toggle');
+      if (billingInput) {
+        billingInput.addEventListener('change', function () {
+          configState.billingEnabled = billingInput.checked;
+          renderConfigState();
+        });
+      }
+      const taxInput = document.getElementById('tax-toggle');
+      if (taxInput) {
+        taxInput.addEventListener('change', function () {
+          configState.taxEnabled = taxInput.checked;
+          renderConfigState();
+        });
+      }
+    } catch (err) {
+      console.error('Init error:', err);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+</body>
+</html>
