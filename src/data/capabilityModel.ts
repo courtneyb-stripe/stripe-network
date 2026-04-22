@@ -918,8 +918,7 @@ export const configurations: Configuration[] = [
     platformNetwork: true,
     hasCompliance: true,
     signals: ['financial_accounts'],
-    autoSelects: ['recipient'],
-    note: 'Holds and moves funds (v2 FA). Auto-selects Recipient.',
+    note: 'Holds and moves funds (v2 FA).',
   },
   {
     id: 'borrower',
@@ -1014,6 +1013,32 @@ export function getConfiguration(id: ConfigurationId): Configuration | undefined
 /** All capabilities in a given doc capability group */
 export function getCapabilitiesInGroup(groupId: CapabilityGroupId): Capability[] {
   return capabilities.filter((c) => c.group === groupId)
+}
+
+/**
+ * For explorer UI: when a group's `approximate` is exactly true, the enumerated
+ * `capabilities` rows are a partial sample vs `group.count` — list up to this many,
+ * then "+N more (approximate)" with N = count - displayed.length.
+ * When `approximate` is false or undefined, the model is complete: show every row, no tail line.
+ */
+export const APPROXIMATE_CAPABILITY_GROUP_LIST_LIMIT = 13
+
+export function getGranularCapabilitiesDisplay(groupId: CapabilityGroupId): {
+  displayed: Capability[]
+  /** Additional caps implied by `group.count` but not listed; only >0 when `approximate === true`. */
+  approximateTailCount: number
+} {
+  const group = getCapabilityGroup(groupId)
+  const caps = getCapabilitiesInGroup(groupId)
+  if (group == null) {
+    return { displayed: [], approximateTailCount: 0 }
+  }
+  if (group.approximate !== true) {
+    return { displayed: caps, approximateTailCount: 0 }
+  }
+  const displayed = caps.slice(0, APPROXIMATE_CAPABILITY_GROUP_LIST_LIMIT)
+  const approximateTailCount = Math.max(0, group.count - displayed.length)
+  return { displayed, approximateTailCount }
 }
 
 /** All capabilities that surface under a given status signal */
@@ -1126,15 +1151,17 @@ export function expandConfigurationsWithAutoSelect(
 
 /**
  * Resolve status signals given active configurations. Applies auto-select
- * and fold rules. Adds Billing signal when merchant is active and
- * billingEnabled is true.
+ * and fold rules. Adds Billing when merchant is active and billingEnabled is
+ * true; adds Tax reporting when merchant is active and taxEnabled is true
+ * (same gating as Billing — the third parameter parallels billingEnabled).
  *
  * Returns a Set (order is arbitrary). Use CAPABILITY_GROUP_DISPLAY_ORDER
  * from configMatrix.ts or your own ordering if presentation order matters.
  */
 export function resolveSignalsForConfigurations(
   activeConfigs: ReadonlySet<ConfigurationId>,
-  billingEnabled: boolean = false
+  billingEnabled: boolean = false,
+  taxEnabled?: boolean
 ): Set<StatusSignalId> {
   const expandedConfigs = expandConfigurationsWithAutoSelect(activeConfigs)
 
@@ -1148,6 +1175,10 @@ export function resolveSignalsForConfigurations(
 
   if (expandedConfigs.has('merchant') && billingEnabled) {
     signals.add('billing')
+  }
+
+  if (expandedConfigs.has('merchant') && taxEnabled) {
+    signals.add('tax_reporting')
   }
 
   for (const rule of foldRules) {

@@ -175,3 +175,19 @@ body {
   animation: hub-gradient-pulse 5s ease-in-out infinite;
 }
 
+/* Capability explorer — signal stroke + mesh tokens (stripe-capability-mesh.html) */
+.capability-explorer-mesh {
+  --explorer-edge-dot: #1d9e75;
+  --explorer-signal-border-muted: #d3d1c7;
+  /* Signal → capability group / product (neutral cascade) */
+  --explorer-mesh-downstream-stroke: var(--color-neutral-300);
+}
+
+@media (prefers-color-scheme: dark) {
+  .capability-explorer-mesh {
+    --explorer-edge-dot: #9fe1cb;
+    --explorer-signal-border-muted: #3d3d3a;
+    --explorer-mesh-downstream-stroke: #6c7688;
+  }
+}
+
