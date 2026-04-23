@@ -1,8 +1,11 @@
-import type { CapabilityGroupId, ProductId } from '../../../data/capabilityModel'
-import { capabilityGroups, getProduct } from '../../../data/capabilityModel'
+import type { CapabilityGroupId, ConfigurationId, ProductId } from '../../../data/capabilityModel'
+import { capabilityGroups, getConfiguration, getProduct } from '../../../data/capabilityModel'
+import type { CapabilitiesMapEntityMode } from './ProductsMeshEdges'
 
 type CapabilityGroupsColumnProps = {
+  mapEntityMode: CapabilitiesMapEntityMode
   selectedProductId: ProductId | null
+  selectedConfigurationId: ConfigurationId | null
   focusedGroupId: CapabilityGroupId | null
   onSelectGroup: (id: CapabilityGroupId) => void
 }
@@ -20,22 +23,36 @@ const HIGHLIGHT_ROW =
 const HIGHLIGHT_COUNT = 'font-semibold text-default'
 
 export default function CapabilityGroupsColumn({
+  mapEntityMode,
   selectedProductId,
+  selectedConfigurationId,
   focusedGroupId,
   onSelectGroup,
 }: CapabilityGroupsColumnProps) {
   const product = selectedProductId ? getProduct(selectedProductId) : undefined
-  const touchedGroupIds = new Set(product?.capabilityGroups ?? [])
+  const configuration = selectedConfigurationId
+    ? getConfiguration(selectedConfigurationId)
+    : undefined
+  const touchedByProduct = new Set(product?.capabilityGroups ?? [])
+  const touchedByConfig = new Set(configuration?.capabilityGroups ?? [])
 
   return (
     <div className="flex min-w-0 max-w-sm flex-1 flex-col gap-2" data-name="Capability groups column">
       <h3 className="m-0 font-label-small-emphasized text-subdued">Capability groups</h3>
       <div className="flex flex-col gap-1" role="list" aria-label="Doc-level capability groups">
         {capabilityGroups.map((g) => {
-          const touchedByProduct = selectedProductId != null && touchedGroupIds.has(g.id)
+          const litByProduct =
+            mapEntityMode === 'products' && selectedProductId != null && touchedByProduct.has(g.id)
+          const litByConfig =
+            mapEntityMode === 'configs' &&
+            selectedConfigurationId != null &&
+            touchedByConfig.has(g.id)
           const focusedAlone =
-            selectedProductId == null && focusedGroupId != null && focusedGroupId === g.id
-          const highlighted = touchedByProduct || focusedAlone
+            selectedProductId == null &&
+            selectedConfigurationId == null &&
+            focusedGroupId != null &&
+            focusedGroupId === g.id
+          const highlighted = litByProduct || litByConfig || focusedAlone
 
           const rowClass = highlighted
             ? HIGHLIGHT_ROW

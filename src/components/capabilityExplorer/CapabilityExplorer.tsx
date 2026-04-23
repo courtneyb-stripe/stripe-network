@@ -2,12 +2,16 @@ import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type { ExplorerTabId } from './TabSwitcher'
 import TabSwitcher from './TabSwitcher'
+import MappingTab from './mapping/MappingTab'
 import ProductsTab from './products/ProductsTab'
 import SignalsTab from './signals/SignalsTab'
 
 function parseTabParam(raw: string | null): ExplorerTabId {
-  if (raw === 'products' || raw === 'signals') return raw
-  return 'signals'
+  if (raw === 'uad' || raw === 'mapping' || raw === 'map') return raw
+  /** Legacy URLs */
+  if (raw === 'signals') return 'uad'
+  if (raw === 'products') return 'map'
+  return 'uad'
 }
 
 export default function CapabilityExplorer() {
@@ -23,8 +27,7 @@ export default function CapabilityExplorer() {
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev)
-          if (id === 'signals') next.set('tab', 'signals')
-          else next.set('tab', 'products')
+          next.set('tab', id)
           return next
         },
         { replace: true }
@@ -35,13 +38,19 @@ export default function CapabilityExplorer() {
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-4" data-name="Capability explorer">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex w-full min-w-0 flex-col items-start gap-2">
         <h2 className="m-0 font-heading-xlarge" id="capability-explorer-title">
           Capability explorer
         </h2>
         <TabSwitcher activeId={activeTab} onChange={setTab} />
       </div>
-      {activeTab === 'products' ? <ProductsTab /> : <SignalsTab />}
+      {activeTab === 'uad' ? (
+        <SignalsTab />
+      ) : activeTab === 'mapping' ? (
+        <MappingTab />
+      ) : (
+        <ProductsTab />
+      )}
     </div>
   )
 }

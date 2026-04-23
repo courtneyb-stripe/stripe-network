@@ -1058,6 +1058,20 @@ export function getCapabilitiesInGroup(groupId: CapabilityGroupId): Capability[]
   return capabilities.filter((c) => c.group === groupId)
 }
 
+/** Enumerated caps in a group for the granular column (+ approximate tail when the doc lists more than we enumerate). */
+export function getGranularCapabilitiesDisplay(groupId: CapabilityGroupId): {
+  displayed: Capability[]
+  approximateTailCount: number
+} {
+  const meta = getCapabilityGroup(groupId)
+  const listed = getCapabilitiesInGroup(groupId)
+  if (!meta) return { displayed: listed, approximateTailCount: 0 }
+  if (meta.approximate && listed.length < meta.count) {
+    return { displayed: listed, approximateTailCount: meta.count - listed.length }
+  }
+  return { displayed: listed, approximateTailCount: 0 }
+}
+
 /** All capabilities that surface under a given status signal */
 export function getCapabilitiesForSignal(signalId: StatusSignalId): Capability[] {
   return capabilities.filter((c) => c.signals.includes(signalId))

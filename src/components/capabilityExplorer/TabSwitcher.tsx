@@ -1,10 +1,11 @@
-import BabySegmentedControl from '../BabySegmentedControl'
+import TabBar from '../TabBar'
 
-export type ExplorerTabId = 'signals' | 'products'
+export type ExplorerTabId = 'uad' | 'mapping' | 'map'
 
-const TAB_OPTIONS: { id: ExplorerTabId; label: string }[] = [
-  { id: 'signals', label: 'UAD–status signals' },
-  { id: 'products', label: 'Products ↔ capabilities' },
+const TABS: readonly { id: string; label: string }[] = [
+  { id: 'uad', label: 'UAD status groups' },
+  { id: 'mapping', label: 'Capability ↔ Status groups' },
+  { id: 'map', label: 'Capabilities map' },
 ]
 
 type TabSwitcherProps = {
@@ -14,11 +15,12 @@ type TabSwitcherProps = {
 
 export default function TabSwitcher({ activeId, onChange }: TabSwitcherProps) {
   return (
-    <BabySegmentedControl<ExplorerTabId>
-      options={TAB_OPTIONS}
-      selectedId={activeId}
-      onChange={onChange}
-      aria-label="Capability explorer views"
-    />
+    <div className="w-full min-w-0" aria-label="Capability explorer views" role="presentation">
+      <TabBar
+        tabs={TABS}
+        activeId={activeId}
+        onChange={(id) => onChange(id as ExplorerTabId)}
+      />
+    </div>
   )
 }

@@ -1,13 +1,18 @@
-import type { CapabilityGroupId, ProductId } from '../../../data/capabilityModel'
+import type { Capability, CapabilityGroupId, ConfigurationId, ProductId } from '../../../data/capabilityModel'
 import {
   capabilityGroups,
   getCapabilityGroup,
+  getConfiguration,
   getGranularCapabilitiesDisplay,
   getProduct,
+  getRelevantCapsForConfigInGroup,
 } from '../../../data/capabilityModel'
+import type { CapabilitiesMapEntityMode } from './ProductsMeshEdges'
 
 type GranularCapsColumnProps = {
+  mapEntityMode: CapabilitiesMapEntityMode
   selectedProductId: ProductId | null
+  selectedConfigurationId: ConfigurationId | null
   focusedGroupId: CapabilityGroupId | null
 }
 
@@ -47,6 +52,22 @@ function OneGroupCapsBody({ groupId }: OneGroupBodyProps) {
   )
 }
 
+function OneGroupCapsBodyFromList({ caps }: { caps: readonly Capability[] }) {
+  return (
+    <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+      {caps.map((c) => (
+        <li
+          key={c.id}
+          className="font-mono text-[10.5px] leading-snug text-subdued"
+          data-capability-id={c.id}
+        >
+          {c.id}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function SectionHeader({
   label,
   count,
@@ -69,23 +90,28 @@ function SectionHeader({
 }
 
 export default function GranularCapsColumn({
+  mapEntityMode,
   selectedProductId,
+  selectedConfigurationId,
   focusedGroupId,
 }: GranularCapsColumnProps) {
-  const empty = selectedProductId == null && focusedGroupId == null
+  const empty =
+    selectedProductId == null &&
+    selectedConfigurationId == null &&
+    focusedGroupId == null
 
   if (empty) {
     return (
       <div className="flex min-w-0 max-w-sm flex-1 flex-col gap-2" data-name="Granular capabilities column">
         <h3 className="m-0 font-label-small-emphasized text-subdued">Granular capabilities</h3>
         <p className="m-0 mt-2 font-label-small leading-relaxed text-subdued">
-          Click a product or group to explore.
+          Click a product, configuration, or group to explore.
         </p>
       </div>
     )
   }
 
-  if (selectedProductId != null) {
+  if (mapEntityMode === 'products' && selectedProductId != null) {
     const product = getProduct(selectedProductId)
     const ordered = product ? groupSectionOrderForProduct(product.capabilityGroups) : []
 
@@ -104,6 +130,31 @@ export default function GranularCapsColumn({
                   approximate={meta.approximate}
                 />
                 <OneGroupCapsBody groupId={gid} />
+              </section>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  if (mapEntityMode === 'configs' && selectedConfigurationId != null) {
+    const cfg = getConfiguration(selectedConfigurationId)
+    const ordered = cfg ? groupSectionOrderForProduct(cfg.capabilityGroups) : []
+
+    return (
+      <div className="flex min-w-0 max-w-sm flex-1 flex-col gap-2" data-name="Granular capabilities column">
+        <h3 className="m-0 font-label-small-emphasized text-subdued">Granular capabilities</h3>
+        <div className="mt-1 flex flex-col gap-5">
+          {ordered.map((gid) => {
+            const meta = getCapabilityGroup(gid)
+            if (!meta) return null
+            const relevant = getRelevantCapsForConfigInGroup(selectedConfigurationId, gid)
+            if (relevant.length === 0) return null
+            return (
+              <section key={gid} aria-label={meta.label}>
+                <SectionHeader label={meta.label.toUpperCase()} count={relevant.length} />
+                <OneGroupCapsBodyFromList caps={relevant} />
               </section>
             )
           })}

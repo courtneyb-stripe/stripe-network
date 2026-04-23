@@ -1,14 +1,19 @@
 import { useCallback, useLayoutEffect, useState } from 'react'
-import type { ProductId } from '../../../data/capabilityModel'
-import { getProduct } from '../../../data/capabilityModel'
+import type { ConfigurationId, ProductId } from '../../../data/capabilityModel'
+import { getConfiguration, getProduct, isPartialMapping } from '../../../data/capabilityModel'
 
 const NODE_R = 2.5
 /** Place group endpoint in the gutter left of the row so nodes don’t sit on the filled row background */
 const GROUP_EDGE_INSET_PX = 10
 
+export type CapabilitiesMapEntityMode = 'products' | 'configs'
+
 type EdgePath = {
   d: string
+  /** Products mode: dashed = requires */
   dashed?: boolean
+  /** Configs mode: dotted = partial mapping to group */
+  dotted?: boolean
   x0: number
   y0: number
   x1: number
@@ -69,15 +74,77 @@ function buildProductToGroupEdges(
   return strokeEdges
 }
 
+function buildConfigToGroupEdges(
+  meshEl: HTMLElement,
+  selectedConfigurationId: ConfigurationId | null
+): EdgePath[] {
+  if (selectedConfigurationId == null) return []
+  const config = getConfiguration(selectedConfigurationId)
+  if (!config) return []
+
+  const cr = meshEl.getBoundingClientRect()
+  const el = (suffix: string) =>
+    meshEl.querySelector<HTMLElement>(`[data-mesh-anchor="${suffix}"]`)
+
+  const pointRight = (element: HTMLElement) => {
+    const r = element.getBoundingClientRect()
+    return { x: r.right - cr.left, y: r.top - cr.top + r.height / 2 }
+  }
+
+  const pointLeft = (element: HTMLElement) => {
+    const r = element.getBoundingClientRect()
+    return {
+      x: r.left - cr.left - GROUP_EDGE_INSET_PX,
+      y: r.top - cr.top + r.height / 2,
+    }
+  }
+
+  const cubic = (x0: number, y0: number, x1: number, y1: number) => {
+    const mx = (x0 + x1) / 2
+    return `M ${x0} ${y0} C ${mx} ${y0} ${mx} ${y1} ${x1} ${y1}`
+  }
+
+  const srcEl = el(`p1-cfg-${selectedConfigurationId}`)
+  if (!srcEl) return []
+
+  const s = pointRight(srcEl)
+  const strokeEdges: EdgePath[] = []
+
+  for (const gid of config.capabilityGroups) {
+    const dstEl = el(`p1-grp-${gid}`)
+    if (!dstEl) continue
+    const t = pointLeft(dstEl)
+    const dotted = isPartialMapping(selectedConfigurationId, gid)
+    strokeEdges.push({
+      d: cubic(s.x, s.y, t.x, t.y),
+      dotted,
+      x0: s.x,
+      y0: s.y,
+      x1: t.x,
+      y1: t.y,
+    })
+  }
+
+  return strokeEdges
+}
+
 type ProductsMeshEdgesProps = {
   meshRef: React.RefObject<HTMLElement | null>
+  mapEntityMode: CapabilitiesMapEntityMode
   selectedProductId: ProductId | null
+  selectedConfigurationId: ConfigurationId | null
 }
 
 /**
- * Products → capability groups: neutral stroke + endpoint nodes; dashed when requires.
+ * Products or configs → capability groups: neutral stroke + endpoint nodes.
+ * Products: dashed when requires. Configs: dotted when partial mapping to a group.
  */
-export default function ProductsMeshEdges({ meshRef, selectedProductId }: ProductsMeshEdgesProps) {
+export default function ProductsMeshEdges({
+  meshRef,
+  mapEntityMode,
+  selectedProductId,
+  selectedConfigurationId,
+}: ProductsMeshEdgesProps) {
   const [svgState, setSvgState] = useState<{
     w: number
     h: number
@@ -90,12 +157,16 @@ export default function ProductsMeshEdges({ meshRef, selectedProductId }: Produc
     const w = el.clientWidth
     const h = el.clientHeight
     if (w === 0 || h === 0) return
+    const edges =
+      mapEntityMode === 'products'
+        ? buildProductToGroupEdges(el, selectedProductId)
+        : buildConfigToGroupEdges(el, selectedConfigurationId)
     setSvgState({
       w,
       h,
-      edges: buildProductToGroupEdges(el, selectedProductId),
+      edges,
     })
-  }, [meshRef, selectedProductId])
+  }, [meshRef, mapEntityMode, selectedProductId, selectedConfigurationId])
 
   useLayoutEffect(() => {
     recompute()
@@ -137,7 +208,9 @@ export default function ProductsMeshEdges({ meshRef, selectedProductId }: Produc
             strokeLinecap="butt"
             strokeLinejoin="miter"
             opacity={0.5}
-            strokeDasharray={e.dashed ? '3 2' : undefined}
+            strokeDasharray={
+              e.dotted ? '2 4' : e.dashed ? '3 2' : undefined
+            }
           />
           <circle
             cx={e.x0}
