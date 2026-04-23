@@ -115,6 +115,7 @@ export type ConfigurationId =
   | 'merchant'
   | 'customer'
   | 'recipient'
+  | 'gp_recipient'
   | 'storer'
   | 'borrower'
   | 'card_issuer'
@@ -217,6 +218,10 @@ export interface Configuration {
    * typically have no signals — they're outcomes, not drivers.
    */
   signals: StatusSignalId[]
+  /**
+   * Doc-level capability group families (for restructure; optional until wired).
+   */
+  capabilityGroups?: CapabilityGroupId[]
   /** Configurations auto-added when this is activated (ROLE_AUTO_SELECT) */
   autoSelects?: ConfigurationId[]
   /**
@@ -690,7 +695,7 @@ export const statusSignals: StatusSignal[] = [
     capabilityGroups: ['core', 'crypto', 'misc'],
     products: ['connect'],
     note:
-      'Folds into Financial accounts when Storer + Recipient both active ' +
+      'Folds into Financial accounts when Storer is active ' +
       '(see foldRules). crypto_transfers surfaces here.',
   },
   {
@@ -711,7 +716,7 @@ export const statusSignals: StatusSignal[] = [
     products: ['treasury'],
     note:
       'Spans v1 Treasury (banking_*), v2 Storer, crypto financial accounts, ' +
-      'and fund_and_send. Receives folded Transfers when Storer + Recipient active.',
+      'and fund_and_send. Receives folded Transfers when Storer is active.',
   },
   {
     id: 'financing',
@@ -885,7 +890,7 @@ export const configurations: Configuration[] = [
     direction: 'distributes',
     platformNetwork: true,
     hasCompliance: true,
-    signals: ['payments'],
+    signals: ['payments', 'payouts'],
     note:
       'Accepts payments from end customers. Only configuration that distributes — ' +
       'merchants have their own downstream customers. Also enables Billing signal ' +
@@ -909,7 +914,17 @@ export const configurations: Configuration[] = [
     platformNetwork: true,
     hasCompliance: true,
     signals: ['transfers', 'payouts'],
-    note: 'Receives funds from a platform. Transfers folds into Financial accounts when Storer also active.',
+    note: 'Receives funds from a platform. Transfers folds into Financial accounts when Storer is active.',
+  },
+  {
+    id: 'gp_recipient',
+    label: 'GP Recipient',
+    direction: 'direct',
+    platformNetwork: true,
+    hasCompliance: true,
+    signals: ['payouts'],
+    capabilityGroups: ['core'],
+    note: 'Connect payouts recipient; surfaces under Payouts only.',
   },
   {
     id: 'storer',
@@ -917,8 +932,8 @@ export const configurations: Configuration[] = [
     direction: 'direct',
     platformNetwork: true,
     hasCompliance: true,
-    signals: ['financial_accounts'],
-    note: 'Holds and moves funds (v2 FA).',
+    signals: ['financial_accounts', 'transfers', 'payouts'],
+    note: 'Holds and moves funds (v2 FA). Owns Transfers; Transfers always folds into Financial accounts when Storer is active.',
   },
   {
     id: 'borrower',
@@ -975,10 +990,10 @@ export const foldRules: FoldRule[] = [
   {
     signal: 'transfers',
     foldInto: 'financial_accounts',
-    whenConfigurationsActive: ['storer', 'recipient'],
+    whenConfigurationsActive: ['storer'],
     note:
-      'When both Storer and Recipient are active, Transfers folds into Financial ' +
-      'accounts — the UAD shows one chip instead of two. Mirrors configMatrix.ts GROUP_FOLD_RULES.',
+      'When Storer is active, Transfers folds into Financial accounts — the UAD shows one chip ' +
+      'instead of two. Mirrors configMatrix.ts GROUP_FOLD_RULES.',
   },
 ]
 

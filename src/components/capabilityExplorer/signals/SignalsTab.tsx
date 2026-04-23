@@ -67,9 +67,8 @@ export default function SignalsTab() {
       data-name="SignalsTab"
     >
       <p className="m-0 max-w-2xl text-subdued font-label-small leading-relaxed">
-        Toggle configurations to see which signal groups light up and what capability group they map to.
-        Note: when Storer and Recipient are both active, Transfers folds into Financial accounts signal
-        group.
+        Toggle configurations to see which status signals light up. Whenever Storer is active, Transfers
+        folds into Financial accounts.
       </p>
       <PlaygroundControls
         merchantActive={merchantActive}

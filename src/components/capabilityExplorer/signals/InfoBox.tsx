@@ -9,7 +9,7 @@ type InfoBoxProps = {
 }
 
 /**
- * Fold notice only — visible when the Storer + Recipient fold rule is active.
+ * Fold notice only — visible when a fold rule from `foldRules` is active (e.g. Storer: Transfers → FA).
  */
 export default function InfoBox({ expandedConfigs }: InfoBoxProps) {
   if (!foldRuleActive(expandedConfigs)) return null
