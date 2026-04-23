@@ -16,7 +16,9 @@ export default function PlatformNetwork({ userSelected, onToggle }: PlatformNetw
           const isActive = userSelected.has(id)
           const config = getConfiguration(id)
           const label = config?.label ?? id
-          const dot = CONFIGURATION_DOT_COLOR[id] ?? 'var(--color-subdued)'
+          const dot = isActive
+            ? (CONFIGURATION_DOT_COLOR[id] ?? 'var(--color-icon-subdued)')
+            : 'var(--color-neutral-300)'
 
           return (
             <button

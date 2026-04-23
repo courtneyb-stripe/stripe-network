@@ -97,6 +97,74 @@ function buildConfigToSignalEdges(
         })
       }
     }
+
+    if (cfgId === 'customer' && billingEnabled) {
+      const srcEl = elFor('config', 'customer')
+      const dstEl = elFor('signal', 'billing')
+      if (srcEl && dstEl) {
+        const s = pointRight(srcEl)
+        const t = pointLeft(dstEl)
+        const customerStroke = CONFIGURATION_DOT_COLOR.customer ?? '#F97316'
+        out.push({
+          d: cubic(s.x, s.y, t.x, t.y),
+          stroke: customerStroke,
+          dotted: true,
+          strokeWidth: 1.25,
+          opacity: 0.5,
+        })
+      }
+    }
+  }
+
+  if (expanded.has('card_issuer')) {
+    const srcEl = elFor('config', 'card_holder')
+    const dstEl = elFor('signal', 'card_issuer')
+    if (srcEl && dstEl) {
+      const s = pointRight(srcEl)
+      const t = pointLeft(dstEl)
+      out.push({
+        d: cubic(s.x, s.y, t.x, t.y),
+        stroke: CONFIGURATION_DOT_COLOR.card_holder ?? 'var(--explorer-edge-dot)',
+        dotted: true,
+        strokeWidth: 1.25,
+        opacity: 0.5,
+      })
+    }
+  }
+
+  if (expanded.has('merchant')) {
+    const srcEl = elFor('config', 'merchant_customer')
+    if (srcEl) {
+      const derivedStroke =
+        CONFIGURATION_DOT_COLOR.merchant_customer ?? CONFIGURATION_DOT_COLOR.merchant ?? 'var(--explorer-edge-dot)'
+
+      const payDst = elFor('signal', 'payments')
+      if (payDst) {
+        const s = pointRight(srcEl)
+        const t = pointLeft(payDst)
+        out.push({
+          d: cubic(s.x, s.y, t.x, t.y),
+          stroke: derivedStroke,
+          dotted: true,
+          strokeWidth: 1.25,
+          opacity: 0.5,
+        })
+      }
+      if (billingEnabled) {
+        const billDst = elFor('signal', 'billing')
+        if (billDst) {
+          const s = pointRight(srcEl)
+          const t = pointLeft(billDst)
+          out.push({
+            d: cubic(s.x, s.y, t.x, t.y),
+            stroke: derivedStroke,
+            dotted: true,
+            strokeWidth: 1.25,
+            opacity: 0.5,
+          })
+        }
+      }
+    }
   }
 
   return out

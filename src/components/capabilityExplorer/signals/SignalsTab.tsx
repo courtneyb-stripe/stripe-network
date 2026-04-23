@@ -3,6 +3,7 @@ import type { ConfigurationId } from '../../../data/capabilityModel'
 import {
   expandConfigurationsWithAutoSelect,
   isRelationshipOnly,
+  resolveSignalsBeforeFold,
   resolveSignalsForConfigurations,
 } from '../../../data/capabilityModel'
 import { PLATFORM_NETWORK_CONFIG_IDS } from '../configColors'
@@ -44,8 +45,13 @@ export default function SignalsTab() {
   }, [])
 
   const activeSignals = useMemo(
-    () => resolveSignalsForConfigurations(userSelected, billingEnabled, taxEnabled),
-    [userSelected, billingEnabled, taxEnabled]
+    () => resolveSignalsForConfigurations(userSelected, billingEnabled),
+    [userSelected, billingEnabled]
+  )
+
+  const preFoldSignals = useMemo(
+    () => resolveSignalsBeforeFold(userSelected, billingEnabled),
+    [userSelected, billingEnabled]
   )
 
   const merchantActive = expandedConfigs.has('merchant')
@@ -63,12 +69,12 @@ export default function SignalsTab() {
 
   return (
     <div
-      className="flex w-full min-w-0 flex-col gap-4 rounded-lg border border-neutral-100 bg-surface p-5"
+      className="flex w-full min-w-0 flex-col gap-4"
       data-name="SignalsTab"
     >
       <p className="m-0 max-w-2xl text-subdued font-label-small leading-relaxed">
-        Toggle configurations to see which status signals light up. Whenever Storer is active, Transfers
-        folds into Financial accounts.
+        Toggle configurations to see which status signals light up (solid = required capabilities and
+        dotted = does not require capabilities).
       </p>
       <PlaygroundControls
         merchantActive={merchantActive}
@@ -98,7 +104,7 @@ export default function SignalsTab() {
             billingEnabled={billingEnabled}
             taxEnabled={taxEnabled}
           />
-          <SignalsColumn activeSignals={activeSignals} />
+          <SignalsColumn activeSignals={activeSignals} preFoldSignals={preFoldSignals} />
           <RightColumn activeSignals={activeSignals} />
         </div>
       </div>

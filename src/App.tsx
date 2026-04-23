@@ -25,6 +25,8 @@ function App() {
           <Route path="/" element={<PrototypeHub />} />
           <Route path="/overview" element={<Shell><Overview /></Shell>} />
           <Route path="/network" element={<Shell><NetworkList /></Shell>} />
+          {/* Also at root so this never competes with /network/:id (static segment must win, but this is easier to reason about). */}
+          <Route path="/capability-explorer" element={<Shell><CapabilityExplorerPage /></Shell>} />
           <Route path="/network/capability-explorer" element={<Shell><CapabilityExplorerPage /></Shell>} />
           <Route path="/network/:id" element={<Shell><AccountDetail /></Shell>} />
           <Route path="/network/:id/settings" element={<Shell><SettingsPage /></Shell>} />

@@ -1018,10 +1018,10 @@ export const foldRules: FoldRule[] = [
     foldInto: 'financial_accounts',
     whenConfigurationsActive: ['storer'],
     note:
-      'Whenever Storer is active, Transfers folds into Financial accounts — the ' +
-      "UAD shows one chip instead of two. This absorbs both Storer's own Transfers " +
-      "contribution and any Transfers contributed by Recipient (if Recipient is " +
-      'also active). Simplification for prototype; may be refined later.',
+      'Whenever Storer is active, Transfers folds into Financial accounts in the ' +
+      'cascade. The Signals tab UAD column keeps a suppressed Transfers chip with a ' +
+      'fold caption; the resolved signal set has Financial accounts, not Transfers. ' +
+      "Absorbs Storer's Transfers and Recipient's when Recipient is also active.",
   },
 ]
 
@@ -1241,6 +1241,36 @@ export function expandConfigurationsWithAutoSelect(
   return expanded
 }
 
+function collectSignalsUnfolded(
+  activeConfigs: ReadonlySet<ConfigurationId>,
+  billingEnabled: boolean
+): { expandedConfigs: Set<ConfigurationId>; baseSignals: Set<StatusSignalId> } {
+  const expandedConfigs = expandConfigurationsWithAutoSelect(activeConfigs)
+  const baseSignals = new Set<StatusSignalId>()
+  for (const configId of expandedConfigs) {
+    const config = getConfiguration(configId)
+    if (config) {
+      for (const sig of config.signals) baseSignals.add(sig)
+    }
+  }
+  if (expandedConfigs.has('merchant') && billingEnabled) {
+    baseSignals.add('billing')
+  }
+  return { expandedConfigs, baseSignals }
+}
+
+/**
+ * Config-derived status signals plus conditional Billing, before {@link foldRules}
+ * are applied. Compare with the folded output of {@link resolveSignalsForConfigurations}
+ * to implement fold UI (e.g. show Transfers as visually folded into Financial accounts).
+ */
+export function resolveSignalsBeforeFold(
+  activeConfigs: ReadonlySet<ConfigurationId>,
+  billingEnabled: boolean = false
+): Set<StatusSignalId> {
+  return new Set(collectSignalsUnfolded(activeConfigs, billingEnabled).baseSignals)
+}
+
 /**
  * Resolve status signals given active configurations. Applies auto-select
  * and fold rules. Adds Billing signal when merchant is active and
@@ -1253,20 +1283,8 @@ export function resolveSignalsForConfigurations(
   activeConfigs: ReadonlySet<ConfigurationId>,
   billingEnabled: boolean = false
 ): Set<StatusSignalId> {
-  const expandedConfigs = expandConfigurationsWithAutoSelect(activeConfigs)
-
-  const signals = new Set<StatusSignalId>()
-  for (const configId of expandedConfigs) {
-    const config = getConfiguration(configId)
-    if (config) {
-      for (const sig of config.signals) signals.add(sig)
-    }
-  }
-
-  if (expandedConfigs.has('merchant') && billingEnabled) {
-    signals.add('billing')
-  }
-
+  const { expandedConfigs, baseSignals } = collectSignalsUnfolded(activeConfigs, billingEnabled)
+  const signals = new Set<StatusSignalId>(baseSignals)
   for (const rule of foldRules) {
     const allPresent = rule.whenConfigurationsActive.every((c) => expandedConfigs.has(c))
     if (allPresent && signals.has(rule.signal)) {
@@ -1274,7 +1292,6 @@ export function resolveSignalsForConfigurations(
       signals.add(rule.foldInto)
     }
   }
-
   return signals
 }
 

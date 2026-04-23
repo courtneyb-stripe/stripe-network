@@ -15,10 +15,10 @@ export const CONFIGURATION_DOT_COLOR: Partial<Record<ConfigurationId, string>> =
   merchant: '#3B82F6',
   customer: '#F97316',
   recipient: '#06B6D4',
-  gp_recipient: '#14B8A6', // teal — distinct from cyan (recipient family)
+  gp_recipient: '#22C55E',
   storer: '#EF4444',
   borrower: '#A855F7',
-  card_issuer: '#10B981',
+  card_issuer: '#F59E0B',
   /** Derived configs — preview / identity; when parent is active the dot uses the parent color instead. */
   card_holder: '#EAB308',
   merchant_customer: '#EAB308',

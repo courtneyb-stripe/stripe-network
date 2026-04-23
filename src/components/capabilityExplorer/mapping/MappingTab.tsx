@@ -80,8 +80,7 @@ export default function MappingTab() {
     <div className="flex w-full min-w-0 flex-col gap-4" data-name="MappingTab">
       <p className="m-0 max-w-2xl text-subdued font-label-small leading-relaxed">
         How capability groups map to UAD status groups. All edges shown by default; click a cap group
-        to raise its outbound mappings, or a signal to see which groups back it. Some mappings carry
-        design rationale — see inline notes.
+        to raise its outbound mappings, or a signal to see which groups back it.
       </p>
       <div
         ref={meshRef}
@@ -92,7 +91,7 @@ export default function MappingTab() {
           selectedGroupId={selectedGroupId}
           selectedSignalId={selectedSignalId}
         />
-        <div className="relative z-[1] mx-auto flex w-full max-w-5xl flex-wrap justify-center gap-10 lg:flex-nowrap lg:items-start">
+        <div className="relative z-[1] mx-auto flex w-full max-w-5xl flex-wrap justify-center gap-20 py-10 lg:flex-nowrap lg:items-start">
           <div className="flex min-w-0 w-full max-w-sm flex-1 flex-col gap-2">
             <h3 className="m-0 font-label-small-emphasized text-subdued">Capability groups</h3>
             <div className="flex flex-col gap-1" role="list" aria-label="Capability groups">
