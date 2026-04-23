@@ -37,15 +37,18 @@
  * signals themselves (derived items don't drive UAD state; their parent
  * configs do).
  *
- *     Config               →  Signal group             Relationship    Network
- *     merchant             →  Payments                 distributes     platform
- *     customer             →  Payments                 direct          platform (no compliance)
- *     recipient            →  Transfers and/or Payouts direct          platform
- *     storer               →  Financial accounts       direct          platform
- *     borrower             →  Financing                direct          platform
- *     card_issuer          →  Card issuer              direct          platform
- *     card_holder          →  (none)                   indirect        external, derived from card_issuer
- *     merchant_customer    →  (none)                   indirect        external, derived from merchant
+ *     Config               →  Signal group                     Relationship    Network
+ *     merchant             →  Payments + Payouts               distributes     platform
+ *     customer             →  Payments                         direct          platform (no compliance)
+ *     recipient            →  Transfers + Payouts              direct          platform
+ *     storer               →  Financial accounts + Transfers   direct          platform
+ *                             + Payouts (Transfers always
+ *                             folds into FA when active)
+ *     gp_recipient         →  Payouts                          direct          platform
+ *     borrower             →  Financing                        direct          platform
+ *     card_issuer          →  Card issuer                      direct          platform
+ *     card_holder          →  (none)                           indirect        external, derived from card_issuer
+ *     merchant_customer    →  (none)                           indirect        external, derived from merchant
  */
 
 // ═══ Types ════════════════════════════════════════════════════════════
@@ -115,12 +118,12 @@ export type ConfigurationId =
   | 'merchant'
   | 'customer'
   | 'recipient'
-  | 'gp_recipient'
   | 'storer'
   | 'borrower'
   | 'card_issuer'
   | 'card_holder'
   | 'merchant_customer'
+  | 'gp_recipient'
 
 export interface Capability {
   id: CapabilityId
@@ -219,9 +222,14 @@ export interface Configuration {
    */
   signals: StatusSignalId[]
   /**
-   * Doc-level capability group families (for restructure; optional until wired).
+   * Capability groups that back this configuration's functionality — the
+   * compliance containers the role requires to operate. Distinct from the
+   * derived-via-signals cascade: this is the direct, primary mapping.
+   *
+   * Empty array for relationship-only configs (e.g., customer) and derived
+   * configs (e.g., card_holder, merchant_customer).
    */
-  capabilityGroups?: CapabilityGroupId[]
+  capabilityGroups: CapabilityGroupId[]
   /** Configurations auto-added when this is activated (ROLE_AUTO_SELECT) */
   autoSelects?: ConfigurationId[]
   /**
@@ -695,7 +703,7 @@ export const statusSignals: StatusSignal[] = [
     capabilityGroups: ['core', 'crypto', 'misc'],
     products: ['connect'],
     note:
-      'Folds into Financial accounts when Storer is active ' +
+      'Folds into Financial accounts whenever Storer is active ' +
       '(see foldRules). crypto_transfers surfaces here.',
   },
   {
@@ -716,7 +724,7 @@ export const statusSignals: StatusSignal[] = [
     products: ['treasury'],
     note:
       'Spans v1 Treasury (banking_*), v2 Storer, crypto financial accounts, ' +
-      'and fund_and_send. Receives folded Transfers when Storer is active.',
+      'and fund_and_send. Receives folded Transfers whenever Storer is active.',
   },
   {
     id: 'financing',
@@ -727,12 +735,12 @@ export const statusSignals: StatusSignal[] = [
   },
   {
     id: 'card_issuer',
-    label: 'Card issuing',
+    label: 'Card issuer',
     surfacesAs: 'header',
     capabilityGroups: ['issuing'],
     products: ['issuing'],
     note:
-      'UAD header chip reads Card issuing; driven by the Card issuer configuration. ' +
+      'Driven by the Card issuer configuration (config and signal share the same noun). ' +
       'Also activated by the Card holder role even though card_holder is not in the platform network.',
   },
   {
@@ -891,6 +899,7 @@ export const configurations: Configuration[] = [
     platformNetwork: true,
     hasCompliance: true,
     signals: ['payments', 'payouts'],
+    capabilityGroups: ['core', 'payment_methods'],
     note:
       'Accepts payments from end customers. Only configuration that distributes — ' +
       'merchants have their own downstream customers. Also enables Billing signal ' +
@@ -903,9 +912,11 @@ export const configurations: Configuration[] = [
     platformNetwork: true,
     hasCompliance: false,
     signals: ['payments'],
+    capabilityGroups: [],
     note:
       'Pays the platform/operator. Direct relationship but no compliance — ' +
-      'the only platform-network config without compliance requirements.',
+      'the only platform-network config without compliance requirements. ' +
+      'Has no backing capability groups; surfaces in UAD only via relationship.',
   },
   {
     id: 'recipient',
@@ -914,7 +925,11 @@ export const configurations: Configuration[] = [
     platformNetwork: true,
     hasCompliance: true,
     signals: ['transfers', 'payouts'],
-    note: 'Receives funds from a platform. Transfers folds into Financial accounts when Storer is active.',
+    capabilityGroups: ['core'],
+    note:
+      'Receives funds from a platform. When Storer is also active, Transfers ' +
+      'folds into Financial accounts (fold rule triggers on Storer alone — ' +
+      "Recipient's Transfers contribution is absorbed).",
   },
   {
     id: 'gp_recipient',
@@ -924,7 +939,9 @@ export const configurations: Configuration[] = [
     hasCompliance: true,
     signals: ['payouts'],
     capabilityGroups: ['core'],
-    note: 'Connect payouts recipient; surfaces under Payouts only.',
+    note:
+      'Global Payouts recipient. Requires payout capabilities only (no transfers, ' +
+      'no financial accounts). Distinct from Recipient, which receives funds to hold.',
   },
   {
     id: 'storer',
@@ -933,7 +950,12 @@ export const configurations: Configuration[] = [
     platformNetwork: true,
     hasCompliance: true,
     signals: ['financial_accounts', 'transfers', 'payouts'],
-    note: 'Holds and moves funds (v2 FA). Owns Transfers; Transfers always folds into Financial accounts when Storer is active.',
+    capabilityGroups: ['storer'],
+    note:
+      'Holds and moves funds (v2 FA). Owns FA + Transfers + Payouts signals, but ' +
+      'Transfers is always folded into Financial accounts whenever Storer is ' +
+      'active (see foldRules). Auto-select to Recipient has been removed per Eng ' +
+      'direction — the two roles are now independently togglable.',
   },
   {
     id: 'borrower',
@@ -942,6 +964,7 @@ export const configurations: Configuration[] = [
     platformNetwork: true,
     hasCompliance: true,
     signals: ['financing'],
+    capabilityGroups: ['lending'],
     note: 'Receives loan or cash advance.',
   },
   {
@@ -951,6 +974,7 @@ export const configurations: Configuration[] = [
     platformNetwork: true,
     hasCompliance: true,
     signals: ['card_issuer'],
+    capabilityGroups: ['issuing'],
     note: 'Issues cards. Configuration and signal share the same noun.',
   },
   {
@@ -960,6 +984,7 @@ export const configurations: Configuration[] = [
     platformNetwork: false,
     hasCompliance: false,
     signals: [],
+    capabilityGroups: [],
     derivedFrom: 'card_issuer',
     selectable: false,
     note:
@@ -974,6 +999,7 @@ export const configurations: Configuration[] = [
     platformNetwork: false,
     hasCompliance: false,
     signals: [],
+    capabilityGroups: [],
     derivedFrom: 'merchant',
     selectable: false,
     note:
@@ -992,8 +1018,10 @@ export const foldRules: FoldRule[] = [
     foldInto: 'financial_accounts',
     whenConfigurationsActive: ['storer'],
     note:
-      'When Storer is active, Transfers folds into Financial accounts — the UAD shows one chip ' +
-      'instead of two. Mirrors configMatrix.ts GROUP_FOLD_RULES.',
+      'Whenever Storer is active, Transfers folds into Financial accounts — the ' +
+      "UAD shows one chip instead of two. This absorbs both Storer's own Transfers " +
+      "contribution and any Transfers contributed by Recipient (if Recipient is " +
+      'also active). Simplification for prototype; may be refined later.',
   },
 ]
 
@@ -1030,32 +1058,6 @@ export function getCapabilitiesInGroup(groupId: CapabilityGroupId): Capability[]
   return capabilities.filter((c) => c.group === groupId)
 }
 
-/**
- * For explorer UI: when a group's `approximate` is exactly true, the enumerated
- * `capabilities` rows are a partial sample vs `group.count` — list up to this many,
- * then "+N more (approximate)" with N = count - displayed.length.
- * When `approximate` is false or undefined, the model is complete: show every row, no tail line.
- */
-export const APPROXIMATE_CAPABILITY_GROUP_LIST_LIMIT = 13
-
-export function getGranularCapabilitiesDisplay(groupId: CapabilityGroupId): {
-  displayed: Capability[]
-  /** Additional caps implied by `group.count` but not listed; only >0 when `approximate === true`. */
-  approximateTailCount: number
-} {
-  const group = getCapabilityGroup(groupId)
-  const caps = getCapabilitiesInGroup(groupId)
-  if (group == null) {
-    return { displayed: [], approximateTailCount: 0 }
-  }
-  if (group.approximate !== true) {
-    return { displayed: caps, approximateTailCount: 0 }
-  }
-  const displayed = caps.slice(0, APPROXIMATE_CAPABILITY_GROUP_LIST_LIMIT)
-  const approximateTailCount = Math.max(0, group.count - displayed.length)
-  return { displayed, approximateTailCount }
-}
-
 /** All capabilities that surface under a given status signal */
 export function getCapabilitiesForSignal(signalId: StatusSignalId): Capability[] {
   return capabilities.filter((c) => c.signals.includes(signalId))
@@ -1064,6 +1066,67 @@ export function getCapabilitiesForSignal(signalId: StatusSignalId): Capability[]
 /** Products that depend on a capability group (backed or requires) */
 export function getProductsByCapabilityGroup(groupId: CapabilityGroupId): Product[] {
   return products.filter((p) => p.capabilityGroups.includes(groupId))
+}
+
+/** Configurations that require a capability group (direct mapping) */
+export function getConfigurationsByCapabilityGroup(
+  groupId: CapabilityGroupId
+): Configuration[] {
+  return configurations.filter((c) => c.capabilityGroups.includes(groupId))
+}
+
+/** Capability groups that back the given signal (via cap-group-to-signal mapping) */
+export function getCapabilityGroupsBySignal(
+  signalId: StatusSignalId
+): CapabilityGroup[] {
+  return capabilityGroups.filter((cg) => {
+    const capsInGroup = capabilities.filter((c) => c.group === cg.id)
+    return capsInGroup.some((c) => c.signals.includes(signalId))
+  })
+}
+
+/** Status signals that a capability group feeds (via its member capabilities) */
+export function getSignalsByCapabilityGroup(
+  groupId: CapabilityGroupId
+): StatusSignalId[] {
+  const capsInGroup = capabilities.filter((c) => c.group === groupId)
+  const signals = new Set<StatusSignalId>()
+  capsInGroup.forEach((c) => c.signals.forEach((s) => signals.add(s)))
+  return Array.from(signals)
+}
+
+/**
+ * Capabilities within a group that are RELEVANT to a given configuration.
+ * Relevance is derived from signal overlap: a cap is relevant if its signals
+ * intersect with the config's signals. Used to show "partial mapping" in
+ * the Capabilities map view — e.g., Recipient maps to the Core group but
+ * only needs `transfers` and `payouts` caps from it, not all 7.
+ */
+export function getRelevantCapsForConfigInGroup(
+  configId: ConfigurationId,
+  groupId: CapabilityGroupId
+): Capability[] {
+  const config = configurations.find((c) => c.id === configId)
+  if (!config) return []
+  const capsInGroup = capabilities.filter((c) => c.group === groupId)
+  return capsInGroup.filter((cap) =>
+    cap.signals.some((s) => config.signals.includes(s))
+  )
+}
+
+/**
+ * True if a config's mapping to a cap group is partial — i.e., the config
+ * only needs a subset of the group's caps. Drives dotted-edge treatment
+ * in the Capabilities map view's Config mode.
+ */
+export function isPartialMapping(
+  configId: ConfigurationId,
+  groupId: CapabilityGroupId
+): boolean {
+  const totalCaps = capabilities.filter((c) => c.group === groupId).length
+  if (totalCaps === 0) return false
+  const relevant = getRelevantCapsForConfigInGroup(configId, groupId).length
+  return relevant > 0 && relevant < totalCaps
 }
 
 /** Products that participate in a status signal */
@@ -1166,17 +1229,15 @@ export function expandConfigurationsWithAutoSelect(
 
 /**
  * Resolve status signals given active configurations. Applies auto-select
- * and fold rules. Adds Billing when merchant is active and billingEnabled is
- * true; adds Tax reporting when merchant is active and taxEnabled is true
- * (same gating as Billing — the third parameter parallels billingEnabled).
+ * and fold rules. Adds Billing signal when merchant is active and
+ * billingEnabled is true.
  *
  * Returns a Set (order is arbitrary). Use CAPABILITY_GROUP_DISPLAY_ORDER
  * from configMatrix.ts or your own ordering if presentation order matters.
  */
 export function resolveSignalsForConfigurations(
   activeConfigs: ReadonlySet<ConfigurationId>,
-  billingEnabled: boolean = false,
-  taxEnabled?: boolean
+  billingEnabled: boolean = false
 ): Set<StatusSignalId> {
   const expandedConfigs = expandConfigurationsWithAutoSelect(activeConfigs)
 
@@ -1190,10 +1251,6 @@ export function resolveSignalsForConfigurations(
 
   if (expandedConfigs.has('merchant') && billingEnabled) {
     signals.add('billing')
-  }
-
-  if (expandedConfigs.has('merchant') && taxEnabled) {
-    signals.add('tax_reporting')
   }
 
   for (const rule of foldRules) {
