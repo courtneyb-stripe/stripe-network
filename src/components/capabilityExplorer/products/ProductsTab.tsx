@@ -55,8 +55,8 @@ export default function ProductsTab() {
       <BabySegmentedControl<CapabilitiesMapEntityMode>
         aria-label="Capabilities map entity type"
         options={[
-          { id: 'products', label: 'Products' },
-          { id: 'configs', label: 'Configs' },
+          { id: 'products', label: 'View by Product' },
+          { id: 'configs', label: 'View by Configuration' },
         ]}
         selectedId={mapEntityMode}
         onChange={onMapEntityModeChange}
