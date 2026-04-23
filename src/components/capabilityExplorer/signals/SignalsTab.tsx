@@ -45,13 +45,13 @@ export default function SignalsTab() {
   }, [])
 
   const activeSignals = useMemo(
-    () => resolveSignalsForConfigurations(userSelected, billingEnabled),
-    [userSelected, billingEnabled]
+    () => resolveSignalsForConfigurations(userSelected, billingEnabled, taxEnabled),
+    [userSelected, billingEnabled, taxEnabled]
   )
 
   const preFoldSignals = useMemo(
-    () => resolveSignalsBeforeFold(userSelected, billingEnabled),
-    [userSelected, billingEnabled]
+    () => resolveSignalsBeforeFold(userSelected, billingEnabled, taxEnabled),
+    [userSelected, billingEnabled, taxEnabled]
   )
 
   const merchantActive = expandedConfigs.has('merchant')
@@ -93,6 +93,7 @@ export default function SignalsTab() {
           meshRef={meshRef}
           expandedConfigs={expandedConfigs}
           billingEnabled={billingEnabled}
+          taxEnabled={taxEnabled}
           activeSignals={activeSignals}
           relationshipOnly={relationshipOnly}
         />

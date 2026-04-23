@@ -1243,7 +1243,8 @@ export function expandConfigurationsWithAutoSelect(
 
 function collectSignalsUnfolded(
   activeConfigs: ReadonlySet<ConfigurationId>,
-  billingEnabled: boolean
+  billingEnabled: boolean,
+  taxEnabled: boolean
 ): { expandedConfigs: Set<ConfigurationId>; baseSignals: Set<StatusSignalId> } {
   const expandedConfigs = expandConfigurationsWithAutoSelect(activeConfigs)
   const baseSignals = new Set<StatusSignalId>()
@@ -1256,6 +1257,9 @@ function collectSignalsUnfolded(
   if (expandedConfigs.has('merchant') && billingEnabled) {
     baseSignals.add('billing')
   }
+  if (expandedConfigs.has('merchant') && taxEnabled) {
+    baseSignals.add('tax_reporting')
+  }
   return { expandedConfigs, baseSignals }
 }
 
@@ -1263,12 +1267,14 @@ function collectSignalsUnfolded(
  * Config-derived status signals plus conditional Billing, before {@link foldRules}
  * are applied. Compare with the folded output of {@link resolveSignalsForConfigurations}
  * to implement fold UI (e.g. show Transfers as visually folded into Financial accounts).
+ * {@link taxEnabled} adds `tax_reporting` when Merchant is expanded (playground only).
  */
 export function resolveSignalsBeforeFold(
   activeConfigs: ReadonlySet<ConfigurationId>,
-  billingEnabled: boolean = false
+  billingEnabled: boolean = false,
+  taxEnabled: boolean = false
 ): Set<StatusSignalId> {
-  return new Set(collectSignalsUnfolded(activeConfigs, billingEnabled).baseSignals)
+  return new Set(collectSignalsUnfolded(activeConfigs, billingEnabled, taxEnabled).baseSignals)
 }
 
 /**
@@ -1278,12 +1284,19 @@ export function resolveSignalsBeforeFold(
  *
  * Returns a Set (order is arbitrary). Use CAPABILITY_GROUP_DISPLAY_ORDER
  * from configMatrix.ts or your own ordering if presentation order matters.
+ * When {@link taxEnabled} is true and Merchant is active, includes the
+ * `tax_reporting` signal (playground “Uses Tax Reporting”).
  */
 export function resolveSignalsForConfigurations(
   activeConfigs: ReadonlySet<ConfigurationId>,
-  billingEnabled: boolean = false
+  billingEnabled: boolean = false,
+  taxEnabled: boolean = false
 ): Set<StatusSignalId> {
-  const { expandedConfigs, baseSignals } = collectSignalsUnfolded(activeConfigs, billingEnabled)
+  const { expandedConfigs, baseSignals } = collectSignalsUnfolded(
+    activeConfigs,
+    billingEnabled,
+    taxEnabled
+  )
   const signals = new Set<StatusSignalId>(baseSignals)
   for (const rule of foldRules) {
     const allPresent = rule.whenConfigurationsActive.every((c) => expandedConfigs.has(c))

@@ -35,7 +35,8 @@ function foldedSignalTarget(
 function buildConfigToSignalEdges(
   meshEl: HTMLElement,
   expanded: ReadonlySet<ConfigurationId>,
-  billingEnabled: boolean
+  billingEnabled: boolean,
+  taxEnabled: boolean
 ): EdgePath[] {
   const cr = meshEl.getBoundingClientRect()
   const out: EdgePath[] = []
@@ -92,6 +93,22 @@ function buildConfigToSignalEdges(
           d: cubic(s.x, s.y, t.x, t.y),
           stroke: merchantStroke,
           dashed: true,
+          strokeWidth: 1.25,
+          opacity: 0.5,
+        })
+      }
+    }
+
+    if (cfgId === 'merchant' && taxEnabled) {
+      const srcEl = elFor('config', 'merchant')
+      const dstEl = elFor('signal', 'tax_reporting')
+      if (srcEl && dstEl) {
+        const s = pointRight(srcEl)
+        const t = pointLeft(dstEl)
+        const merchantStroke = CONFIGURATION_DOT_COLOR.merchant ?? '#3B82F6'
+        out.push({
+          d: cubic(s.x, s.y, t.x, t.y),
+          stroke: merchantStroke,
           strokeWidth: 1.25,
           opacity: 0.5,
         })
@@ -242,6 +259,7 @@ type ConfigSignalEdgesProps = {
   meshRef: React.RefObject<HTMLElement | null>
   expandedConfigs: ReadonlySet<ConfigurationId>
   billingEnabled: boolean
+  taxEnabled: boolean
   activeSignals: ReadonlySet<StatusSignalId>
   /** All active configs are non-compliance — downstream links are dotted (no cap backing). */
   relationshipOnly: boolean
@@ -254,6 +272,7 @@ export default function ConfigSignalEdges({
   meshRef,
   expandedConfigs,
   billingEnabled,
+  taxEnabled,
   activeSignals,
   relationshipOnly,
 }: ConfigSignalEdgesProps) {
@@ -269,14 +288,14 @@ export default function ConfigSignalEdges({
     const w = el.clientWidth
     const h = el.clientHeight
     if (w === 0 || h === 0) return
-    const upstream = buildConfigToSignalEdges(el, expandedConfigs, billingEnabled)
+    const upstream = buildConfigToSignalEdges(el, expandedConfigs, billingEnabled, taxEnabled)
     const downstream = buildSignalToRightEdges(el, activeSignals, relationshipOnly)
     setSvgState({
       w,
       h,
       edges: [...upstream, ...downstream],
     })
-  }, [meshRef, expandedConfigs, billingEnabled, activeSignals, relationshipOnly])
+  }, [meshRef, expandedConfigs, billingEnabled, taxEnabled, activeSignals, relationshipOnly])
 
   useLayoutEffect(() => {
     recompute()

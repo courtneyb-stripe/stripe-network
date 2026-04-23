@@ -34,7 +34,7 @@ export default function PlaygroundControls({
               disabled={!merchantActive}
               onChange={(e) => onBillingChange(e.target.checked)}
             />
-            <span>Billing enabled</span>
+            <span>Uses Billing</span>
           </label>
           <label
             className={`inline-flex cursor-pointer items-center gap-2 ${!merchantActive ? 'cursor-not-allowed opacity-50' : ''}`}
@@ -46,7 +46,7 @@ export default function PlaygroundControls({
               disabled={!merchantActive}
               onChange={(e) => onTaxChange(e.target.checked)}
             />
-            <span>Tax reporting</span>
+            <span>Uses Tax Reporting</span>
           </label>
         </div>
         {showClearAll && (

@@ -61,39 +61,53 @@ export default function ProductsTab() {
         selectedId={mapEntityMode}
         onChange={onMapEntityModeChange}
       />
-      <div
-        ref={meshRef}
-        className="capability-explorer-mesh relative w-full min-w-0 min-h-[200px]"
-      >
-        <ProductsMeshEdges
-          meshRef={meshRef}
-          mapEntityMode={mapEntityMode}
-          selectedProductId={selectedProductId}
-          selectedConfigurationId={selectedConfigurationId}
-        />
-        <div className="relative z-[1] flex w-full min-w-0 flex-wrap gap-8 lg:flex-nowrap lg:items-start">
-          {mapEntityMode === 'products' ? (
-            <ProductsColumn selectedProductId={selectedProductId} onSelectProduct={onSelectProduct} />
-          ) : (
-            <ConfigsColumn
+      <div className="flex w-full min-w-0 flex-col gap-36">
+        <div
+          ref={meshRef}
+          className="capability-explorer-mesh relative w-full min-w-0 min-h-[200px]"
+        >
+          <ProductsMeshEdges
+            meshRef={meshRef}
+            mapEntityMode={mapEntityMode}
+            selectedProductId={selectedProductId}
+            selectedConfigurationId={selectedConfigurationId}
+          />
+          <div className="relative z-[1] flex w-full min-w-0 flex-wrap gap-8 lg:flex-nowrap lg:items-start">
+            {mapEntityMode === 'products' ? (
+              <ProductsColumn selectedProductId={selectedProductId} onSelectProduct={onSelectProduct} />
+            ) : (
+              <ConfigsColumn
+                selectedConfigurationId={selectedConfigurationId}
+                onSelectConfiguration={onSelectConfiguration}
+              />
+            )}
+            <CapabilityGroupsColumn
+              mapEntityMode={mapEntityMode}
+              selectedProductId={selectedProductId}
               selectedConfigurationId={selectedConfigurationId}
-              onSelectConfiguration={onSelectConfiguration}
+              focusedGroupId={focusedGroupId}
+              onSelectGroup={onSelectGroup}
             />
-          )}
-          <CapabilityGroupsColumn
-            mapEntityMode={mapEntityMode}
-            selectedProductId={selectedProductId}
-            selectedConfigurationId={selectedConfigurationId}
-            focusedGroupId={focusedGroupId}
-            onSelectGroup={onSelectGroup}
-          />
-          <GranularCapsColumn
-            mapEntityMode={mapEntityMode}
-            selectedProductId={selectedProductId}
-            selectedConfigurationId={selectedConfigurationId}
-            focusedGroupId={focusedGroupId}
-          />
+            <GranularCapsColumn
+              mapEntityMode={mapEntityMode}
+              selectedProductId={selectedProductId}
+              selectedConfigurationId={selectedConfigurationId}
+              focusedGroupId={focusedGroupId}
+            />
+          </div>
         </div>
+        <p className="m-0 max-w-2xl text-subdued font-label-small leading-relaxed">
+          Capability groupings derived from{' '}
+          <a
+            href="https://docs.google.com/document/d/10UiqF4j7_oSo2D6t5Rg5rOI-CfG6pPiuvr44xgdaVfE/edit?usp=sharing"
+            className="text-action-primary underline underline-offset-2 decoration-neutral-300 transition-opacity hover:opacity-90"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Stripe Capability ↔ Product Mapping — Summary & Key Takeaways
+          </a>
+          .
+        </p>
       </div>
     </div>
   )
