@@ -5,6 +5,7 @@
  */
 
 import { useState } from 'react'
+import PrototypeHubNetworkArtwork from '../components/PrototypeHubNetworkArtwork'
 import { ROW_HEIGHT } from '../constants/table'
 import { ViewChip } from '../components/NetworkFilterGroup'
 import { PillBadge, type PillBadgeVariant } from '../components/PillBadge'
@@ -17,6 +18,12 @@ import {
 export type HubFilterId = 'all' | PrototypeCategory
 
 const SLACK_CHANNEL_URL = 'https://join.slack.com/share/enQtMTA1NjkwNjA4NjU0NTktNmEyMzdiNGY1OGQ4NDBhOWJkMjFhYTdkNzEyOTJiNzBiYmE3ZGJkYTVhZDM5MmI4MWE1MWZmYWQxOWMxMGJmMQ'
+
+/** Set to `true` to show bottom network SVG + effects (`PrototypeHubNetworkArtwork`). */
+const SHOW_HUB_NETWORK_ART = false
+
+/** Set to `true` to show the full-viewport radial gradient (Figma 45:11049) + `hub-gradient-pulse`. */
+const SHOW_HUB_RADIAL_GRADIENT = false
 
 /** Figma 45:11049 — radial gradient background (full opacity). */
 const HUB_BACKGROUND_IMAGE = `url("data:image/svg+xml;utf8,<svg viewBox='0 0 1947.4 1570.1' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%25' width='100%25' fill='url(%23grad)' opacity='1'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(-0.021845 121 -213.37 -0.03852 973.72 1634)'><stop stop-color='rgba(203,131,255,1)' offset='0.0418'/><stop stop-color='rgba(255,144,185,1)' offset='0.17846'/><stop stop-color='rgba(255,173,152,1)' offset='0.23463'/><stop stop-color='rgba(255,201,119,1)' offset='0.29081'/><stop stop-color='rgba(255,215,156,1)' offset='0.37446'/><stop stop-color='rgba(255,230,193,1)' offset='0.45812'/><stop stop-color='rgba(255,249,240,1)' offset='0.57839'/><stop stop-color='rgba(255,255,255,1)' offset='0.688'/></radialGradient></defs></svg>")`
@@ -216,65 +223,28 @@ export default function PrototypeHub() {
 
   return (
     <div
-      className="min-h-screen w-full relative"
+      className="min-h-screen w-full relative bg-surface"
       data-name="Prototype Hub"
     >
-      <div
-        className="hub-gradient-pulse absolute inset-0 size-full"
-        style={{
-          backgroundImage: HUB_BACKGROUND_IMAGE,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-        aria-hidden
-        data-node-id="45:11049"
-      />
+      {SHOW_HUB_RADIAL_GRADIENT ? (
+        <div
+          className="hub-gradient-pulse absolute inset-0 size-full"
+          style={{
+            backgroundImage: HUB_BACKGROUND_IMAGE,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+          aria-hidden
+          data-node-id="45:11049"
+        />
+      ) : null}
+      {SHOW_HUB_NETWORK_ART ? <PrototypeHubNetworkArtwork /> : null}
       <div className="relative z-10 mx-auto max-w-[1200px] px-8 py-12">
         <header className="mb-10">
           <h1 className="font-heading-xlarge text-default mb-4">
             Stripe Network prototypes
           </h1>
           <ul className="font-label-medium text-subdued list-none space-y-1">
-            <li>
-              Design DRI →{' '}
-              <a
-                href="https://home.corp.stripe.com/people/courtneyb"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-action-primary hover:underline"
-              >
-                @courtneyb
-              </a>
-            </li>
-            <li>
-              Contributors →{' '}
-              <a
-                href="https://home.corp.stripe.com/people/angelal"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-action-primary hover:underline"
-              >
-                @angelal
-              </a>
-              {' '}
-              <a
-                href="https://home.corp.stripe.com/people/robinfan"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-action-primary hover:underline"
-              >
-                @robinfan
-              </a>
-              {' '}
-              <a
-                href="https://home.corp.stripe.com/people/grabelnikov"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-action-primary hover:underline"
-              >
-                @grabelnikov
-              </a>
-            </li>
             <li>
               Questions? →{' '}
               <a

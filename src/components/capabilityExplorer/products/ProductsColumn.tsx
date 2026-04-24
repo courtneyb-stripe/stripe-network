@@ -10,7 +10,12 @@ type ProductsColumnProps = {
 export default function ProductsColumn({ selectedProductId, onSelectProduct }: ProductsColumnProps) {
   return (
     <div className="flex min-w-0 max-w-sm flex-1 flex-col gap-2" data-name="Products column">
-      <h3 className="m-0 font-label-small-emphasized text-subdued">Products</h3>
+      <div>
+        <h3 className="m-0 font-label-small-emphasized text-subdued">Products</h3>
+        <p className="m-0 mt-1 max-w-[280px] font-label-small leading-snug text-subdued">
+          User-facing product lines; map each to capability groups and granular caps in this view.
+        </p>
+      </div>
       <div className="flex flex-col gap-2" role="list" aria-label="User-facing products">
         {EXPLORER_TAB1_PRODUCT_IDS.map((id) => {
           const product = getProduct(id)

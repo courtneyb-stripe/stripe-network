@@ -1,6 +1,6 @@
 import type { ProductId } from '../../../data/capabilityModel'
 
-/** Ten user-facing products for the Products ↔ capabilities explorer (spec order). */
+/** User-facing product lines for the Capabilities map (spec order; includes Atlas / formation). */
 export const EXPLORER_TAB1_PRODUCT_IDS: readonly ProductId[] = [
   'payments',
   'connect',

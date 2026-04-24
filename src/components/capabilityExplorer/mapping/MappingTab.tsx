@@ -18,12 +18,14 @@ const HIGHLIGHT_ROW =
 const HIGHLIGHT_COUNT = 'font-semibold text-default'
 const ROW_DIM = 'opacity-[0.72]'
 
+/** Omitted on this tab (shown on the Capabilities map as a product line instead). */
+const MAPPING_TAB_HIDDEN_GROUP_IDS: ReadonlySet<CapabilityGroupId> = new Set(['atlas'])
+
 const GROUP_RATIONALE: Partial<Record<CapabilityGroupId, string>> = {
   core:
     'Contains heterogeneous caps — each feeds different signals (e.g., `payouts` → Payouts only, `transfers` → Transfers only). Not every cap in Core feeds every listed signal.',
   crypto:
     'Feeds 3 signals (Payments, Transfers, Financial accounts — not Payouts). Cap group only — not a product.',
-  atlas: 'No UAD signal — `company_formation` cap exists but does not surface in UAD header.',
   storer:
     'Transfers contribution always folds into Financial accounts when Storer is active (see UAD tab).',
 }
@@ -46,12 +48,21 @@ function formatCountBadge(count: number, approximate?: boolean): string {
 function isGroupHighlighted(gid: CapabilityGroupId, sel: Selection): boolean {
   if (!sel) return false
   if (sel.kind === 'group') return sel.id === gid
-  return getCapabilityGroupsBySignal(sel.id).some((g) => g.id === gid)
+  if (getCapabilityGroupsBySignal(sel.id).some((g) => g.id === gid)) return true
+  // Storer fold: FA signal selection also highlights cap groups that only map to Transfers
+  if (sel.kind === 'signal' && sel.id === 'financial_accounts') {
+    return getCapabilityGroupsBySignal('transfers').some((g) => g.id === gid)
+  }
+  return false
 }
 
 function isSignalHighlighted(sid: StatusSignalId, sel: Selection): boolean {
   if (!sel) return false
-  if (sel.kind === 'signal') return sel.id === sid
+  if (sel.kind === 'signal') {
+    if (sel.id === sid) return true
+    if (sel.id === 'financial_accounts' && sid === 'transfers') return true
+    return false
+  }
   return getSignalsByCapabilityGroup(sel.id).includes(sid)
 }
 
@@ -79,7 +90,7 @@ export default function MappingTab() {
   return (
     <div className="flex w-full min-w-0 flex-col gap-4" data-name="MappingTab">
       <p className="m-0 max-w-2xl text-subdued font-label-small leading-relaxed">
-        How capability groups map to UAD status groups. All edges shown by default; click a cap group
+        How capability groups map to UAD signal groups. All edges shown by default; click a cap group
         to raise its outbound mappings, or a signal to see which groups back it.
       </p>
       <div
@@ -95,7 +106,9 @@ export default function MappingTab() {
           <div className="flex min-w-0 w-full max-w-sm flex-1 flex-col gap-2">
             <h3 className="m-0 font-label-small-emphasized text-subdued">Capability groups</h3>
             <div className="flex flex-col gap-1" role="list" aria-label="Capability groups">
-              {capabilityGroups.map((g) => {
+              {capabilityGroups
+                .filter((g) => !MAPPING_TAB_HIDDEN_GROUP_IDS.has(g.id))
+                .map((g) => {
                 const highlighted = isGroupHighlighted(g.id, selection)
                 const dim = selection != null && !highlighted
                 const rowClass = highlighted
@@ -142,7 +155,7 @@ export default function MappingTab() {
           </div>
 
           <div className="flex min-w-0 w-full max-w-sm flex-1 flex-col gap-4">
-            <h3 className="m-0 font-label-small-emphasized text-subdued">UAD status signals</h3>
+            <h3 className="m-0 font-label-small-emphasized text-subdued">UAD signal groups</h3>
             <div>
               <p className="m-0 mb-2 font-label-small text-subdued">In header</p>
               <div className="flex flex-col gap-1" role="list">

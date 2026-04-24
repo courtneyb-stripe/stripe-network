@@ -2,7 +2,10 @@ import { useCallback, useLayoutEffect, useMemo, useState } from 'react'
 import type { CapabilityGroupId, StatusSignalId } from '../../../data/capabilityModel'
 import { capabilityGroups, getSignalsByCapabilityGroup } from '../../../data/capabilityModel'
 
-const GROUP_EDGE_INSET_PX = 10
+/** End nodes sit this far to the **left** of the UAD signal pill’s left edge (into the column gap) */
+const SIGNAL_PILL_INSET_PX = 8
+/** Start nodes: shift out from the cap group row (right edge) into the gap, away from row fills */
+const CAP_GROUP_ANCHOR_NUDGE_RIGHT_PX = 8
 
 type MeshEdge = {
   groupId: CapabilityGroupId
@@ -21,13 +24,16 @@ function collectEdges(meshEl: HTMLElement): MeshEdge[] {
 
   const pointRight = (element: HTMLElement) => {
     const r = element.getBoundingClientRect()
-    return { x: r.right - cr.left, y: r.top - cr.top + r.height / 2 }
+    return {
+      x: r.right - cr.left + CAP_GROUP_ANCHOR_NUDGE_RIGHT_PX,
+      y: r.top - cr.top + r.height / 2,
+    }
   }
 
-  const pointLeft = (element: HTMLElement) => {
+  const pointLeftOfSignalPill = (element: HTMLElement) => {
     const r = element.getBoundingClientRect()
     return {
-      x: r.left - cr.left - GROUP_EDGE_INSET_PX,
+      x: r.left - cr.left - SIGNAL_PILL_INSET_PX,
       y: r.top - cr.top + r.height / 2,
     }
   }
@@ -48,7 +54,7 @@ function collectEdges(meshEl: HTMLElement): MeshEdge[] {
     for (const signalId of signals) {
       const dstEl = el(`mapping-sig-${signalId}`)
       if (!dstEl) continue
-      const t = pointLeft(dstEl)
+      const t = pointLeftOfSignalPill(dstEl)
       out.push({
         groupId: g.id,
         signalId,
@@ -64,6 +70,17 @@ function collectEdges(meshEl: HTMLElement): MeshEdge[] {
   return out
 }
 
+function edgeMatchesSelectedSignal(
+  edgeSignalId: StatusSignalId,
+  selectedSignalId: StatusSignalId | null
+): boolean {
+  if (selectedSignalId == null) return false
+  if (edgeSignalId === selectedSignalId) return true
+  // Storer fold: FA subsumes Transfers in the model — show both edge bundles when FA is selected
+  if (selectedSignalId === 'financial_accounts' && edgeSignalId === 'transfers') return true
+  return false
+}
+
 function edgeOpacity(
   e: MeshEdge,
   selectedGroupId: CapabilityGroupId | null,
@@ -73,7 +90,7 @@ function edgeOpacity(
   if (selectedGroupId != null) {
     return e.groupId === selectedGroupId ? 0.62 : 0.12
   }
-  return e.signalId === selectedSignalId ? 0.62 : 0.12
+  return edgeMatchesSelectedSignal(e.signalId, selectedSignalId) ? 0.62 : 0.12
 }
 
 type MappingMeshEdgesProps = {

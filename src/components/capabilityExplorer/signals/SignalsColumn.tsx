@@ -36,6 +36,8 @@ function SignalPill({
   suppressed?: boolean
 }) {
   const isDotted = variant === 'actions_required_dotted'
+  /** Transfers folded (Storer): show medium gray accent, not lit green */
+  const storerFoldedTransfers = Boolean(caption && suppressed)
   const borderStyle = isDotted
     ? {
         borderWidth: isLit ? '1px' : '0.75px',
@@ -45,7 +47,11 @@ function SignalPill({
     : {
         borderWidth: isLit ? '1px' : '0.75px',
         borderStyle: 'solid' as const,
-        borderColor: isLit ? 'var(--explorer-edge-dot)' : 'var(--explorer-signal-border-muted)',
+        borderColor: storerFoldedTransfers
+          ? 'var(--explorer-signal-storer-fold)'
+          : isLit
+            ? 'var(--explorer-edge-dot)'
+            : 'var(--explorer-signal-border-muted)',
       }
 
   if (caption) {
@@ -67,7 +73,11 @@ function SignalPill({
           <span
             className="h-2 w-2 shrink-0 self-center rounded-full"
             style={{
-              background: isLit ? 'var(--explorer-edge-dot)' : 'var(--explorer-signal-border-muted)',
+              background: storerFoldedTransfers
+                ? 'var(--explorer-signal-storer-fold)'
+                : isLit
+                  ? 'var(--explorer-edge-dot)'
+                  : 'var(--explorer-signal-border-muted)',
             }}
             aria-hidden
           />
