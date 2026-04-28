@@ -70,6 +70,18 @@ const PROTOTYPES_ALL: PrototypeRow[] = [
     url: 'https://stripe-network-git-network-detail-comp-model.vercelapp.stripe.dev/network',
   },
   {
+    id: 'capability-explorer',
+    category: 'working',
+    name: 'Capability explorer',
+    description:
+      'Products ↔ capabilities mesh plus UAD status-signal playground (config → signal → groups)',
+    branch: 'capability-explorer-v0',
+    owner: '@courtneyb',
+    status: 'In progress',
+    lastUpdated: 'Apr 22, 2026',
+    url: 'https://stripe-network-git-capability-explorer-v0.vercelapp.stripe.dev/capability-explorer',
+  },
+  {
     id: 'component-library',
     category: 'resources',
     name: 'Component library',
