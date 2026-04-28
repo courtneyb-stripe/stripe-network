@@ -79,7 +79,7 @@ const PROTOTYPES_ALL: PrototypeRow[] = [
     owner: '@courtneyb',
     status: 'In progress',
     lastUpdated: 'Apr 22, 2026',
-    url: '/capability-explorer',
+    url: 'https://stripe-network-git-capability-explorer-v0.vercelapp.stripe.dev/capability-explorer',
   },
   {
     id: 'component-library',
