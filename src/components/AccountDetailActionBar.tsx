@@ -57,7 +57,7 @@ import {
   type CapabilityGroupId,
   type CapabilityStatus,
 } from '../data/configMatrix'
-import { signalGroupsForConfigureModal } from '../data/uadVisibility'
+import { resolveCapabilityGroups, signalGroupsForConfigureModal } from '../data/uadVisibility'
 import { parseGutterBleed } from '../utils/gutterBleed'
 
 function signalPopoverHeading(popoverId: string, billingAsSubscriptions?: boolean): string {
@@ -796,6 +796,20 @@ export default function AccountDetailActionBar({
   )
 
   const activeRolesKey = prototype ? [...prototype.activeRoles].sort().join(',') : ''
+  /** Intersect visibility flags with `resolveCapabilityGroups` so customer-only never shows Payouts, etc. */
+  const signalChipsFromRoles = useMemo(() => {
+    if (!prototype) {
+      return { payments: v.showPayments, payouts: v.showPayouts }
+    }
+    const groups = new Set(
+      resolveCapabilityGroups(prototype.activeRoles, prototype.billingEnabled)
+    )
+    return {
+      payments: v.showPayments && groups.has('payments'),
+      payouts: v.showPayouts && groups.has('payouts'),
+    }
+  }, [prototype, activeRolesKey, v.showPayments, v.showPayouts])
+
   const extraActiveCapabilityChips = useMemo(() => {
     if (!prototype) return []
     /** Same groups as Configure modal — Transfers omitted when Storer (treasury) is active. */
@@ -819,8 +833,8 @@ export default function AccountDetailActionBar({
   const modalInitialSegment = isControlled ? (actionsModalInitialSegment ?? 'actions') : 'actions'
 
   const showStatus =
-    v.showPayouts ||
-    v.showPayments ||
+    signalChipsFromRoles.payouts ||
+    signalChipsFromRoles.payments ||
     showBillingButton ||
     extraActiveCapabilityChips.length > 0
   const signalPillRowRef = useRef<HTMLDivElement>(null)
@@ -829,8 +843,8 @@ export default function AccountDetailActionBar({
   const signalRowWithDivider = (
     <SignalGroup ref={signalPillRowRef}>
       <AccountDetailHeaderStatusButtons
-        showPayouts={v.showPayouts}
-        showPayments={v.showPayments}
+        showPayouts={signalChipsFromRoles.payouts}
+        showPayments={signalChipsFromRoles.payments}
         showBilling={showBillingButton}
         extraActiveCapabilityChips={extraActiveCapabilityChips}
         status={status}

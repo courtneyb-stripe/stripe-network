@@ -3,8 +3,6 @@
  * - `resolveCapabilityGroups` feeds account badge, Actions required, and (with prototype) which header
  *   chips show: `AccountDetailActionBar` intersects config `getActionBarVisibility` with groups from here.
  * - `signalGroupsForConfigureModal` mirrors the same ordering for Configure account.
- * - Customer + `gp_recipient` without `merchant`: skip Customer’s Payments (see loop in `resolveCapabilityGroups`
- *   and `paymentsFromCustomer` in `signalGroupsForConfigureModal`).
  */
 
 import {
@@ -15,7 +13,7 @@ import {
   ROLE_TO_CAPABILITY_GROUPS,
 } from './configMatrix'
 
-/** Union of `ROLE_TO_CAPABILITY_GROUPS` for all active roles + billing when merchant; see module comment for GP/Customer rule. */
+/** Union of `ROLE_TO_CAPABILITY_GROUPS` for all active roles + billing when merchant is on and billing is enabled. */
 export function resolveCapabilityGroups(
   activeRoles: Set<AccountRoleId>,
   billingEnabled: boolean
@@ -26,14 +24,6 @@ export function resolveCapabilityGroups(
 
   const groups = new Set<CapabilityGroupId>()
   for (const role of activeRoles) {
-    /** Customer + GP (no merchant): relationship-only — do not surface Payments from `customer`. */
-    if (
-      role === 'customer' &&
-      activeRoles.has('gp_recipient') &&
-      !activeRoles.has('merchant')
-    ) {
-      continue
-    }
     for (const group of ROLE_TO_CAPABILITY_GROUPS[role]) {
       groups.add(group)
     }
@@ -51,12 +41,11 @@ export function resolveCapabilityGroups(
  */
 export function signalGroupsForConfigureModal(roles: ReadonlySet<AccountRoleId>): CapabilityGroupId[] {
   const out: CapabilityGroupId[] = []
-  const paymentsFromCustomer =
-    roles.has('customer') && !(roles.has('gp_recipient') && !roles.has('merchant'))
+  const paymentsFromCustomer = roles.has('customer')
   const customerOnly = roles.size === 1 && roles.has('customer')
   const recipientOnly = roles.size === 1 && roles.has('recipient')
   if (roles.has('merchant') || paymentsFromCustomer) out.push('payments')
-  if (roles.has('recipient') || roles.has('merchant') || roles.has('gp_recipient')) out.push('payouts')
+  if (roles.has('recipient') || roles.has('merchant')) out.push('payouts')
   if (roles.has('merchant')) out.push('billing')
   else if (customerOnly || recipientOnly) out.push('billing')
   if (roles.has('recipient') && !roles.has('storer')) out.push('transfers')

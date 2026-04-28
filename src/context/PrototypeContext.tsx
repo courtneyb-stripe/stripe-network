@@ -26,6 +26,7 @@ import {
 } from '../data/configMatrix'
 import { getAccountById } from '../data/mockAccounts'
 import { capabilityGroupsWithStatus, resolveCapabilityGroups } from '../data/uadVisibility'
+import { getInitialPrototypeStateFromSearch } from '../data/prototypeUrlState'
 
 export type ActivityFilterMode = 'viewChip' | 'universalToggle'
 
@@ -47,8 +48,6 @@ export const FIDELITY_OPTIONS: { id: FidelityId; label: string }[] = [
 /** @deprecated Use `RiskLevel` from `configMatrix` — kept for existing imports. */
 export type RiskLevelId = RiskLevel
 
-const DEFAULT_ROLES: AccountRoleId[] = ['merchant', 'customer']
-
 const ALL_CAPABILITY_GROUPS: CapabilityGroupId[] = [
   'payments',
   'payouts',
@@ -67,12 +66,6 @@ const ALL_ACTIVE_CAPABILITY_STATUSES: Record<CapabilityGroupId, CapabilityStatus
     },
     {} as Record<CapabilityGroupId, CapabilityStatus>
   )
-
-const DEFAULT_RELATIONSHIP: RelationshipFlags = {
-  hasActiveSubscriptions: false,
-  hasIssuedCard: false,
-  expiredPaymentMethod: false,
-}
 
 function mergeCapabilityStatusesForGroups(
   prev: Partial<Record<CapabilityGroupId, CapabilityStatus>>,
@@ -138,30 +131,43 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
     [location.pathname]
   )
 
+  const initialProto = useMemo(
+    () =>
+      getInitialPrototypeStateFromSearch(
+        typeof window !== 'undefined' ? window.location.search : ''
+      ),
+    []
+  )
+
   const [activityFilter, setActivityFilter] = useState<ActivityFilterMode>('viewChip')
   const [includeThirdPartyActivity, setIncludeThirdPartyActivity] = useState(false)
   const [iaVersion, setIaVersion] = useState<IaVersionId>('v2-money-movement')
   const [fidelity, setFidelity] = useState<FidelityId>('low')
 
-  const [activeRoleList, setActiveRoleList] = useState<AccountRoleId[]>([...DEFAULT_ROLES])
-  const [riskLevel, setRiskLevel] = useState<RiskLevel>('low')
-  const [billingEnabled, setBillingEnabled] = useState(false)
-  const [billingFlavors, setBillingFlavors] = useState<Set<BillingFlavor>>(() => new Set())
-  const [relationship, setRelationship] = useState<RelationshipFlags>({ ...DEFAULT_RELATIONSHIP })
-  const [financingProducts, setFinancingProducts] = useState<FinancingProductSelection>(
-    () => ({ ...DEFAULT_FINANCING_POPOVER })
+  const [activeRoleList, setActiveRoleList] = useState<AccountRoleId[]>(() => [
+    ...initialProto.activeRoleList,
+  ])
+  const [riskLevel, setRiskLevel] = useState<RiskLevel>(() => initialProto.riskLevel)
+  const [billingEnabled, setBillingEnabled] = useState(() => initialProto.billingEnabled)
+  const [billingFlavors, setBillingFlavors] = useState<Set<BillingFlavor>>(
+    () => new Set(initialProto.billingFlavors)
   )
-  const [hasPaymentMethodOnFile, setHasPaymentMethodOnFile] = useState(true)
-  const [hasPayoutSchedule, setHasPayoutSchedule] = useState(true)
-  const [hasFinancialAccounts, setHasFinancialAccounts] = useState(true)
+  const [relationship, setRelationship] = useState<RelationshipFlags>(() => ({
+    ...initialProto.relationship,
+  }))
+  const [financingProducts, setFinancingProducts] = useState<FinancingProductSelection>(() => ({
+    ...initialProto.financingProducts,
+  }))
+  const [hasPaymentMethodOnFile, setHasPaymentMethodOnFile] = useState(
+    () => initialProto.hasPaymentMethodOnFile
+  )
+  const [hasPayoutSchedule, setHasPayoutSchedule] = useState(() => initialProto.hasPayoutSchedule)
+  const [hasFinancialAccounts, setHasFinancialAccounts] = useState(
+    () => initialProto.hasFinancialAccounts
+  )
   const [capabilityStatuses, setCapabilityStatuses] = useState<
     Record<CapabilityGroupId, CapabilityStatus>
-  >(() =>
-    mergeCapabilityStatusesForGroups(
-      ALL_ACTIVE_CAPABILITY_STATUSES,
-      capabilityGroupsWithStatus(resolveCapabilityGroups(new Set(DEFAULT_ROLES), false))
-    )
-  )
+  >(() => ({ ...initialProto.capabilityStatuses }))
   const [taxCapabilityStatus, setTaxCapabilityStatus] = useState<CapabilityStatus>('active')
 
   const activeRoles = useMemo(() => new Set(activeRoleList), [activeRoleList])
@@ -182,12 +188,13 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
     )
   }, [capabilityGroupsForState])
 
-  /** Default risk Low; mock may set elevated/high (e.g. Radar). Re-sync when the :id in /network/:id… changes only. */
+  /** Default risk Low; mock may set elevated/high (e.g. Radar). Skipped when URL supplied `risk`. */
   useEffect(() => {
     if (networkAccountId == null) return
+    if (initialProto.riskSpecified) return
     const mock = getAccountById(networkAccountId)
     setRiskLevel(mock?.riskLevel ?? 'low')
-  }, [networkAccountId])
+  }, [networkAccountId, initialProto.riskSpecified])
 
   const applyActiveRoles = useCallback((roles: Set<AccountRoleId>) => {
     setActiveRoleList([...roles])

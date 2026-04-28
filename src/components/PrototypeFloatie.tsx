@@ -24,10 +24,15 @@ import {
 } from '../data/configMatrix'
 import {
   capabilityGroupsWithStatus,
+  canConfigurePayoutSchedule,
   deriveAccountStatus,
   resolveCapabilityGroups,
   signalGroupsForConfigureModal,
 } from '../data/uadVisibility'
+import {
+  replacePrototypeUrlSearch,
+  serializePrototypeStateToSearchString,
+} from '../data/prototypeUrlState'
 
 const ROLE_LABELS: Record<AccountRoleId, string> = {
   merchant: 'Merchant',
@@ -364,18 +369,50 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
       prototype.setCapabilityStatus(g, s)
     }
     prototype.setRiskLevel(pendingRiskLevel)
-    prototype.setRelationship({
+    const relationshipApplied = {
       ...draftRelationship,
       expiredPaymentMethod: draftPaymentMethodOnFile ? draftRelationship.expiredPaymentMethod : false,
-    })
+    }
+    prototype.setRelationship(relationshipApplied)
     prototype.setFinancingProducts({
       loan: draftFinancingLoan,
       cashAdvance: draftFinancingCashAdvance,
     })
     prototype.setHasPaymentMethodOnFile(draftPaymentMethodOnFile)
-    prototype.setHasPayoutSchedule(draftPayoutSchedule)
+    prototype.setHasPayoutSchedule(
+      canConfigurePayoutSchedule(rolesToApply) ? draftPayoutSchedule : false
+    )
     prototype.setHasFinancialAccounts(draftFinancialAccounts)
     prototype.setTaxCapabilityStatus(draftTaxCapabilityStatus)
+
+    const resolvedCaps = capabilityGroupsWithStatus(
+      resolveCapabilityGroups(rolesToApply, pendingBilling)
+    )
+    const capabilityStatusesSnapshot = {} as Record<CapabilityGroupId, CapabilityStatus>
+    for (const g of resolvedCaps) {
+      let s = draftCapabilityStatuses[g] ?? 'active'
+      if (CAPABILITY_GROUP_SINGLE_SIGNAL.has(g) && s === 'limited') s = 'active'
+      capabilityStatusesSnapshot[g] = s
+    }
+
+    replacePrototypeUrlSearch(
+      serializePrototypeStateToSearchString({
+        activeRoles: rolesToApply,
+        capabilityStatuses: capabilityStatusesSnapshot,
+        riskLevel: pendingRiskLevel,
+        billingEnabled: pendingBilling,
+        billingFlavors: pendingBilling ? new Set(pendingBillingFlavors) : new Set(),
+        hasPaymentMethodOnFile: draftPaymentMethodOnFile,
+        hasPayoutSchedule: canConfigurePayoutSchedule(rolesToApply) ? draftPayoutSchedule : false,
+        hasFinancialAccounts: draftFinancialAccounts,
+        financingProducts: {
+          loan: draftFinancingLoan,
+          cashAdvance: draftFinancingCashAdvance,
+        },
+        relationship: relationshipApplied,
+      })
+    )
+
     onClose()
   }
 
