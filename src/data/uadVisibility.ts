@@ -3,6 +3,7 @@
  * - `resolveCapabilityGroups` feeds account badge, Actions required, and (with prototype) which header
  *   chips show: `AccountDetailActionBar` intersects config `getActionBarVisibility` with groups from here.
  * - `signalGroupsForConfigureModal` mirrors the same ordering for Configure account.
+ * - Customer + `gp_recipient` without `merchant`: skip Customer’s Payments (relationship-only GP rail).
  */
 
 import {
@@ -24,6 +25,14 @@ export function resolveCapabilityGroups(
 
   const groups = new Set<CapabilityGroupId>()
   for (const role of activeRoles) {
+    /** Customer + GP recipient (no merchant): do not surface Payments from `customer`. */
+    if (
+      role === 'customer' &&
+      activeRoles.has('gp_recipient') &&
+      !activeRoles.has('merchant')
+    ) {
+      continue
+    }
     for (const group of ROLE_TO_CAPABILITY_GROUPS[role]) {
       groups.add(group)
     }
@@ -37,17 +46,17 @@ export function resolveCapabilityGroups(
 /**
  * Configure modal section order (and consistent with header “extra” groups). Transfers omitted when
  * Storer is active (folds into Treasury).
- * Customer-only and recipient-only include Billing so “Uses billing” can be toggled (chip/header follows `hasBilling`).
+ * Billing appears only when Merchant or Customer is among selected roles (alone or combined).
+ * Connect Recipient-alone and GP Recipient-alone do not get Billing here.
  */
 export function signalGroupsForConfigureModal(roles: ReadonlySet<AccountRoleId>): CapabilityGroupId[] {
   const out: CapabilityGroupId[] = []
-  const paymentsFromCustomer = roles.has('customer')
-  const customerOnly = roles.size === 1 && roles.has('customer')
-  const recipientOnly = roles.size === 1 && roles.has('recipient')
+  const paymentsFromCustomer =
+    roles.has('customer') && !(roles.has('gp_recipient') && !roles.has('merchant'))
   if (roles.has('merchant') || paymentsFromCustomer) out.push('payments')
-  if (roles.has('recipient') || roles.has('merchant')) out.push('payouts')
+  if (roles.has('recipient') || roles.has('merchant') || roles.has('gp_recipient')) out.push('payouts')
   if (roles.has('merchant')) out.push('billing')
-  else if (customerOnly || recipientOnly) out.push('billing')
+  else if (roles.has('customer')) out.push('billing')
   if (roles.has('recipient') && !roles.has('storer')) out.push('transfers')
   if (roles.has('storer')) out.push('treasury')
   if (roles.has('borrower')) out.push('capital')
@@ -55,9 +64,37 @@ export function signalGroupsForConfigureModal(roles: ReadonlySet<AccountRoleId>)
   return out
 }
 
-/** Merchant or Recipient: show “Has payout schedule” and Payout information well; GP-only uses external-accounts well instead. */
+/** Exactly one role and it is Connect `recipient`. */
+export function isRecipientOnlyRoles(roles: ReadonlySet<AccountRoleId>): boolean {
+  return roles.size === 1 && roles.has('recipient')
+}
+
+/** Exactly one role — Global Payments `gp_recipient`. */
+export function isGpRecipientOnlyRoles(roles: ReadonlySet<AccountRoleId>): boolean {
+  return roles.size === 1 && roles.has('gp_recipient')
+}
+
+/**
+ * GP recipient never models Connect payout schedules (any role combo). Connect recipient-alone ditto.
+ * Drives Configure toggle, URL `payoutSchedule`, prototype flag sync, and payouts popover external well.
+ */
+export function suppressConnectPayoutSchedule(roles: ReadonlySet<AccountRoleId>): boolean {
+  return roles.has('gp_recipient') || isRecipientOnlyRoles(roles)
+}
+
+/**
+ * Whether Configure shows “Has payout schedule” and popover may use the schedule + destinations well.
+ */
 export function canConfigurePayoutSchedule(roles: ReadonlySet<AccountRoleId>): boolean {
+  if (suppressConnectPayoutSchedule(roles)) return false
   return roles.has('merchant') || roles.has('recipient')
+}
+
+/** Popover lower well when explicit schedule block vs external destinations-only. */
+export function payoutsPopoverLowerWellForRoles(
+  roles: ReadonlySet<AccountRoleId>
+): 'payoutInformation' | 'external' | undefined {
+  return suppressConnectPayoutSchedule(roles) ? 'external' : undefined
 }
 
 /** Billing is toggled on/off only; it does not carry capability status or affect account status. */

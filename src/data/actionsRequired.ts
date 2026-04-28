@@ -162,8 +162,8 @@ export function getCapabilitiesPausedByAction(impactsFilter: ImpactsFilter): str
 /** Capability names for "+X more" tooltip (other capability groups paused). Simulated list. */
 const EXTRA_CAPABILITY_NAMES = [
   'Card issuing',
-  'Financial accounts',
-  'Financing',
+  'Treasury',
+  'Capital',
   'Connect',
   'Radar',
 ]

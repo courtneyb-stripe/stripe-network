@@ -38,6 +38,7 @@ const ROLE_LABELS: Record<AccountRoleId, string> = {
   merchant: 'Merchant',
   customer: 'Customer',
   recipient: 'Recipient',
+  gp_recipient: 'GP recipient',
   storer: 'Storer',
   borrower: 'Borrower',
   issuer: 'Issuer',
@@ -49,6 +50,7 @@ const PILL_ROLE_ORDER: AccountRoleId[] = [
   'merchant',
   'customer',
   'recipient',
+  'gp_recipient',
   'storer',
   'borrower',
   'card_holder',
@@ -608,20 +610,22 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
                           {groupId === 'payouts' && (
                             <>
                               {renderCapabilityStatus('payouts')}
-                              <span className="flex items-start gap-2">
-                                <CharcoalSwitch
-                                  id="configure-payouts-schedule"
-                                  checked={draftPayoutSchedule}
-                                  onChange={setDraftPayoutSchedule}
-                                  className="mt-px"
-                                />
-                                <label
-                                  htmlFor="configure-payouts-schedule"
-                                  className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
-                                >
-                                  Has payout schedule
-                                </label>
-                              </span>
+                              {canConfigurePayoutSchedule(pendingRoles) ? (
+                                <span className="flex items-start gap-2">
+                                  <CharcoalSwitch
+                                    id="configure-payouts-schedule"
+                                    checked={draftPayoutSchedule}
+                                    onChange={setDraftPayoutSchedule}
+                                    className="mt-px"
+                                  />
+                                  <label
+                                    htmlFor="configure-payouts-schedule"
+                                    className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
+                                  >
+                                    Has payout schedule
+                                  </label>
+                                </span>
+                              ) : null}
                             </>
                           )}
                           {groupId === 'billing' && (
@@ -711,7 +715,7 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
                                   htmlFor="configure-treasury-fa"
                                   className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
                                 >
-                                  Has financial accounts
+                                  Has Treasury accounts
                                 </label>
                               </span>
                             </>
@@ -730,14 +734,14 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
                                   htmlFor="configure-capital-fin"
                                   className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
                                 >
-                                  Has business financing
+                                  Has Capital
                                 </label>
                               </span>
                               {draftBusinessFinancing && (
                                 <div
                                   className="ml-4 flex flex-col gap-3 border-l border-neutral-100 pl-4"
                                   role="group"
-                                  aria-label="Financing types"
+                                  aria-label="Capital product types"
                                 >
                                   <label className="flex cursor-pointer items-start gap-2 font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default">
                                     <input

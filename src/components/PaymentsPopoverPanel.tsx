@@ -181,12 +181,11 @@ type PaymentsPopoverPanelProps = {
   defaultPaymentMethodExpired?: boolean
   /** Replaces “[Platform name]” in the payment methods heading (e.g. Shopify). */
   paymentMethodsPlatformLabel?: string
-  /** Payouts only: legacy default for lower well when `payoutsLowerWell` is omitted — schedule well if true, else off. */
-  hasPayoutSchedule?: boolean
   /**
-   * Payouts only: bottom grey well. `payoutInformation` = schedule + destinations (Figma 129:59300).
-   * `external` = GP-only or no schedule — external bank list, no schedule. `off` = no lower well.
-   * When omitted, uses legacy: `hasPayoutSchedule ? 'payoutInformation' : 'off'`.
+   * Payouts only: lower grey well when `payoutsLowerWell` is omitted:
+   * — `hasPayoutSchedule` → **Payout information** (schedule + destinations).
+   * — otherwise → **External accounts** (GP / instant payouts style — destinations only; same cards, no schedule block).
+   * Pass **`off`** explicitly to hide any lower well.
    */
   payoutsLowerWell?: 'payoutInformation' | 'external' | 'off'
   /** Financial accounts only: when true (Configure → “Has financial accounts”), show Figma 142:61198 well below capabilities. */
@@ -487,11 +486,11 @@ function FinancialAccountsWithPlatformWell({ platformLabel }: { platformLabel: s
 
 const PAYMENTS_BALANCE_LOGO_SRC = '/sections/payment-balance.svg'
 
-/** Transfers popover — one account row, `payment-balance` icon, label “Payments balance” (Figma `Sections/payment-balance.svg`). */
+/** Transfers popover — one account row; asset `public/sections/payment-balance.svg` (Figma Sections/payment-balance). */
 function TransfersPaymentsBalanceWell() {
   return (
     <div
-      className="flex w-full flex-col rounded-[12px] bg-offset pb-1 pt-3"
+      className="flex w-full flex-col rounded-[12px] bg-offset pb-1 pt-1"
       data-name="transfers-payments-balance"
     >
       <div className={`${WELL_CARD_STACK_CLASS} ${SIGNAL_GROUP_WELL_CARDS_INSET_CLASS}`}>
@@ -832,7 +831,7 @@ export default function PaymentsPopoverPanel({
       ? payoutsLowerWellProp
       : hasPayoutSchedule
         ? 'payoutInformation'
-        : 'off'
+        : 'external'
     : 'off'
   /** Mirrors `CAPABILITY_GROUP_SINGLE_SIGNAL` in configMatrix (payouts + issuing). */
   const singleCapabilityVariant = signalPopoverSingleCapabilityRow(variant)

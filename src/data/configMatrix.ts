@@ -4,6 +4,7 @@ SIGNAL GROUPS — header rendering rules
 COMPLIANCE ROLES → signal group chips + account status badge
   merchant     → Payments (+ Billing if billingEnabled); Payouts are Recipient-only
   recipient    → Transfers, Payouts (Transfers folds into Financial accounts if Storer also active)
+  gp_recipient → Global Payments recipient — Payouts only (no Connect Transfers from this role)
   storer       → Financial accounts
   card_holder  → Card issuing (configure modal + resolver; “Issuer” pill is not selectable — use Card issuer)
   borrower     → Financing
@@ -39,6 +40,7 @@ NON-COMPLIANCE ALERT
 ROLE DIRECTION + COMPLIANCE
   merchant     → distributes, hasCompliance: true
   recipient    → distributes, hasCompliance: true
+  gp_recipient → distributes, hasCompliance: true
   storer       → distributes, hasCompliance: true
   issuer       → distributes, hasCompliance: true
   card_holder  → consumes,    hasCompliance: true
@@ -50,7 +52,7 @@ STORER AUTO-SELECT
 */
 
 export type AccountRoleId =
-  | 'merchant' | 'customer' | 'recipient'
+  | 'merchant' | 'customer' | 'recipient' | 'gp_recipient'
   | 'storer' | 'borrower' | 'issuer' | 'card_holder'
 
 export type CapabilityGroupId =
@@ -131,7 +133,13 @@ export type SignalGroupConfig = {
 }
 
 export const COMPLIANCE_ROLES: AccountRoleId[] = [
-  'merchant', 'recipient', 'storer', 'issuer', 'card_holder', 'borrower'
+  'merchant',
+  'recipient',
+  'gp_recipient',
+  'storer',
+  'issuer',
+  'card_holder',
+  'borrower',
 ]
 
 export const RELATIONSHIP_ROLES: AccountRoleId[] = ['customer']
@@ -142,6 +150,7 @@ export const ROLE_METADATA: Record<AccountRoleId, {
 }> = {
   merchant:    { direction: 'distributes', hasCompliance: true },
   recipient:   { direction: 'distributes', hasCompliance: true },
+  gp_recipient: { direction: 'distributes', hasCompliance: true },
   storer:      { direction: 'distributes', hasCompliance: true },
   issuer:      { direction: 'distributes', hasCompliance: true },
   card_holder: { direction: 'consumes',    hasCompliance: true },
@@ -153,6 +162,8 @@ export const ROLE_TO_CAPABILITY_GROUPS: Record<AccountRoleId, CapabilityGroupId[
   merchant:    ['payments', 'payouts'],
   customer:    ['payments'],
   recipient:   ['transfers', 'payouts'],
+  /** GP recipient — payouts signal only (no Connect Transfers pill from this role). */
+  gp_recipient: ['payouts'],
   storer:      ['treasury'],
   borrower:    ['capital'],
   /** Card Issuing is driven only by Card issuer in the prototype UI (Issuer role is not selectable). */
@@ -163,7 +174,8 @@ export const ROLE_TO_CAPABILITY_GROUPS: Record<AccountRoleId, CapabilityGroupId[
 export const SIGNAL_GROUP_DEFAULTS: Record<AccountRoleId, Partial<SignalGroupConfig>> = {
   merchant:    { hasPaymentMethodOnFile: true, hasPayoutSchedule: true },
   customer:    { hasPaymentMethodOnFile: true },
-  recipient:   { hasPayoutSchedule: true },
+  recipient:   { hasPayoutSchedule: false },
+  gp_recipient: { hasPayoutSchedule: false },
   storer:      { hasFinancialAccounts: true },
   borrower:    { hasBusinessFinancing: true },
   issuer:      {},
@@ -269,8 +281,8 @@ export const CAPABILITY_GROUP_DISPLAY_LABELS: Record<CapabilityGroupId, string> 
   payouts: 'Payouts',
   transfers: 'Transfers',
   billing: 'Billing',
-  treasury: 'Financial accounts',
-  capital: 'Financing',
+  treasury: 'Treasury',
+  capital: 'Capital',
   issuing: 'Card issuing',
 }
 
@@ -300,8 +312,8 @@ export const HEADER_EXTRA_ACTIVE_CAPABILITY_ORDER: CapabilityGroupId[] = [
 /** Ghost button aria-label / tooltip when status is active (header row). */
 export const HEADER_CAPABILITY_ACTIVE_TOOLTIP: Partial<Record<CapabilityGroupId, string>> = {
   transfers: 'Transfers are active for this account.',
-  treasury: 'Financial accounts are active for this account.',
-  capital: 'Financing is active for this account.',
+  treasury: 'Treasury is active for this account.',
+  capital: 'Capital is active for this account.',
   issuing: 'Card issuing is active for this account.',
 }
 

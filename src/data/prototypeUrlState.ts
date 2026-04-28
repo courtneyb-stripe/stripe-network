@@ -12,12 +12,13 @@ import type {
   RiskLevel,
 } from './configMatrix'
 import { DEFAULT_FINANCING_POPOVER } from './configMatrix'
-import { capabilityGroupsWithStatus, resolveCapabilityGroups } from './uadVisibility'
+import { capabilityGroupsWithStatus, resolveCapabilityGroups, suppressConnectPayoutSchedule } from './uadVisibility'
 
 const ROLE_ORDER: AccountRoleId[] = [
   'merchant',
   'customer',
   'recipient',
+  'gp_recipient',
   'storer',
   'borrower',
   'issuer',
@@ -245,7 +246,8 @@ export function getInitialPrototypeStateFromSearch(search: string): InitialProto
   }
 
   const hasPaymentMethodOnFile = parseBool(params.get('paymentMethod')) ?? true
-  const hasPayoutSchedule = parseBool(params.get('payoutSchedule')) ?? true
+  let hasPayoutSchedule = parseBool(params.get('payoutSchedule')) ?? true
+  if (suppressConnectPayoutSchedule(roleSet)) hasPayoutSchedule = false
   const hasFinancialAccounts = parseBool(params.get('financialAccounts')) ?? true
 
   const resolvedGroups = resolveCapabilityGroups(roleSet, billingEnabled)

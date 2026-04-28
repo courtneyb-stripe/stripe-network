@@ -25,7 +25,11 @@ import {
   type RiskLevel,
 } from '../data/configMatrix'
 import { getAccountById } from '../data/mockAccounts'
-import { capabilityGroupsWithStatus, resolveCapabilityGroups } from '../data/uadVisibility'
+import {
+  capabilityGroupsWithStatus,
+  resolveCapabilityGroups,
+  suppressConnectPayoutSchedule,
+} from '../data/uadVisibility'
 import { getInitialPrototypeStateFromSearch } from '../data/prototypeUrlState'
 
 export type ActivityFilterMode = 'viewChip' | 'universalToggle'
@@ -187,6 +191,13 @@ export function PrototypeProvider({ children }: { children: ReactNode }) {
       mergeCapabilityStatusesForGroups(prev, capabilityGroupsForState)
     )
   }, [capabilityGroupsForState])
+
+  /** GP recipient or Connect recipient-alone — never persist Connect payout schedule on prototype state. */
+  useEffect(() => {
+    if (suppressConnectPayoutSchedule(activeRoles)) {
+      setHasPayoutSchedule(false)
+    }
+  }, [activeRoles])
 
   /** Default risk Low; mock may set elevated/high (e.g. Radar). Skipped when URL supplied `risk`. */
   useEffect(() => {

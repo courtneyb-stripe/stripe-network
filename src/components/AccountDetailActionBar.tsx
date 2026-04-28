@@ -57,7 +57,11 @@ import {
   type CapabilityGroupId,
   type CapabilityStatus,
 } from '../data/configMatrix'
-import { resolveCapabilityGroups, signalGroupsForConfigureModal } from '../data/uadVisibility'
+import {
+  payoutsPopoverLowerWellForRoles,
+  resolveCapabilityGroups,
+  signalGroupsForConfigureModal,
+} from '../data/uadVisibility'
 import { parseGutterBleed } from '../utils/gutterBleed'
 
 function signalPopoverHeading(popoverId: string, billingAsSubscriptions?: boolean): string {
@@ -318,7 +322,7 @@ export function AccountDetailHeaderStatusButtons({
     prototype?.activeRoles != null &&
     prototype.activeRoles.size === 1 &&
     prototype.activeRoles.has('recipient')
-  /** Customer-only or recipient-only: billing chip reads “Subscriptions”; popover uses grey-well-only chrome. */
+  /** Customer-only or Connect recipient-only: billing chip reads “Subscriptions”; grey-well-only popover chrome. */
   const billingMinimalPopover = paymentsCustomerOnly || recipientOnly
 
   const renderSignalPopoverBody = useCallback(
@@ -358,6 +362,28 @@ export function AccountDetailHeaderStatusButtons({
               variant="payouts"
               status={prototype?.capabilityStatuses.payouts ?? 'active'}
               hasPayoutSchedule={prototype?.hasPayoutSchedule ?? false}
+              payoutsLowerWell={
+                prototype?.activeRoles != null
+                  ? payoutsPopoverLowerWellForRoles(prototype.activeRoles)
+                  : undefined
+              }
+              onEditCapabilities={
+                onOpenSettingsSection
+                  ? () => {
+                      clearPopoverHoverCloseTimer()
+                      setOpenPopoverId(null)
+                      onOpenSettingsSection('capabilities')
+                    }
+                  : undefined
+              }
+            />
+          )
+        case 'extra:transfers':
+          return (
+            <PaymentsPopoverPanel
+              variant="transfers"
+              status={prototype?.capabilityStatuses.transfers ?? 'active'}
+              transfersShowPaymentsBalanceWell
               onEditCapabilities={
                 onOpenSettingsSection
                   ? () => {
@@ -452,6 +478,8 @@ export function AccountDetailHeaderStatusButtons({
     [
       paymentsCustomerOnly,
       billingMinimalPopover,
+      recipientOnly,
+      prototype?.activeRoles,
       prototype?.capabilityStatuses,
       prototype?.financingProducts,
       prototype?.hasPaymentMethodOnFile,
@@ -786,7 +814,9 @@ export default function AccountDetailActionBar({
   const billingChipUsesExplicitBillingOnly =
     prototype != null &&
     prototype.activeRoles.size === 1 &&
-    (prototype.activeRoles.has('customer') || prototype.activeRoles.has('recipient'))
+    prototype.activeRoles.has('customer') ||
+    prototype.activeRoles.has('recipient') ||
+    prototype.activeRoles.has('gp_recipient')
   const showBillingButton = Boolean(
     prototype &&
       v.showSubscriptions &&
