@@ -150,7 +150,7 @@ export const ROLE_METADATA: Record<AccountRoleId, {
 }
 
 export const ROLE_TO_CAPABILITY_GROUPS: Record<AccountRoleId, CapabilityGroupId[]> = {
-  merchant:    ['payments'],
+  merchant:    ['payments', 'payouts'],
   customer:    ['payments'],
   recipient:   ['transfers', 'payouts'],
   storer:      ['treasury'],
@@ -161,7 +161,7 @@ export const ROLE_TO_CAPABILITY_GROUPS: Record<AccountRoleId, CapabilityGroupId[
 }
 
 export const SIGNAL_GROUP_DEFAULTS: Record<AccountRoleId, Partial<SignalGroupConfig>> = {
-  merchant:    { hasPaymentMethodOnFile: true },
+  merchant:    { hasPaymentMethodOnFile: true, hasPayoutSchedule: true },
   customer:    { hasPaymentMethodOnFile: true },
   recipient:   { hasPayoutSchedule: true },
   storer:      { hasFinancialAccounts: true },

@@ -38,7 +38,7 @@
  * configs do).
  *
  *     Config               →  Signal group             Relationship    Network
- *     merchant             →  Payments                 distributes     platform
+ *     merchant             →  Payments and Payouts    distributes     platform
  *     customer             →  Payments                 direct          platform (no compliance)
  *     recipient            →  Transfers and/or Payouts direct          platform
  *     storer               →  Financial accounts       direct          platform
@@ -885,11 +885,11 @@ export const configurations: Configuration[] = [
     direction: 'distributes',
     platformNetwork: true,
     hasCompliance: true,
-    signals: ['payments'],
+    signals: ['payments', 'payouts'],
     note:
-      'Accepts payments from end customers. Only configuration that distributes — ' +
-      'merchants have their own downstream customers. Also enables Billing signal ' +
-      'when billingEnabled is true (see resolveSignalsForConfigurations).',
+      'Accepts payments from end customers and receives payouts (bundled on UAD). ' +
+      'Only configuration that distributes — merchants have their own downstream customers. ' +
+      'Also enables Billing signal when billingEnabled is true (see resolveSignalsForConfigurations).',
   },
   {
     id: 'customer',
