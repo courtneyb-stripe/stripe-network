@@ -1,18 +1,14 @@
 /**
  * Financial snapshot section for V2 (Money movement) account detail tab.
- * Metrics row (“Financial snapshot”) above Balances; then payouts, recent transactions.
+ * Metrics row (“Financial snapshot”) above Balances; then recent transactions.
  * Low fidelity: metric cards and other blocks use skeletons / gray placeholders where noted.
  */
 
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { PropertyList, PropertyListItem } from '../PropertyList'
 import SectionHeader from '../SectionHeader'
 import TabBar from '../TabBar'
 import TableSkeleton from '../TableSkeleton'
-import TransactionListCard from '../TransactionListCard'
-import type { TransactionListRow } from '../TransactionListCard'
-import { BrandIcon } from '../../icons/SailIcons'
 import { usePrototypeOptional } from '../../context/PrototypeContext'
 import { hasAnyNonActiveComplianceStatus, resolveCapabilityGroups } from '../../data/uadVisibility'
 import MetricCard from '../metrics/MetricCard'
@@ -75,25 +71,8 @@ function BalancesCardPlaceholder({ accountId }: { accountId?: string }) {
   )
 }
 
-function LowFidelityBox({ className = '' }: { className?: string }) {
-  return (
-    <div
-      className={`min-h-[80px] rounded-[12px] bg-neutral-100 flex items-center justify-center ${className}`.trim()}
-      aria-hidden
-    />
-  )
-}
-
 const TOYBOX_LABS_ACCOUNT_ID = 'toybox-labs'
 const TOYBOX_LABS_ACCOUNT_NAME = 'Toybox Labs'
-
-const UPCOMING_PAYOUT_ROWS: TransactionListRow[] = [
-  { id: 'p1', transactionType: 'transfer', description: 'Payout to Bank •••• 7280', subline: 'Mar 1 • Scheduled', amount: '$1,200.00' },
-  { id: 'p2', transactionType: 'transfer', description: 'Payout to Bank •••• 4412', subline: 'Mar 8 • Scheduled', amount: '$2,040.00' },
-  { id: 'p3', transactionType: 'transfer', description: 'Payout — Platform fee', subline: 'Mar 5 • Scheduled', amount: '$15.20' },
-  { id: 'p4', transactionType: 'transfer', description: 'Payout to Bank •••• 9012', subline: 'Mar 12 • Scheduled', amount: '$890.00' },
-  { id: 'p5', transactionType: 'transfer', description: 'Payout to Bank •••• 7280', subline: 'Mar 15 • Scheduled', amount: '$2,100.00' },
-]
 
 const RECENT_TRANSACTION_TABS = [
   { id: 'payments', label: 'Payments' },
@@ -202,46 +181,6 @@ export default function FinancialSnapshotSection({ onRowClick, onOpenActionsModa
           {balancesBlock}
         </>
       )}
-
-      {/* Payout information + Upcoming payouts — just below Balances */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <SectionHeader title="Payout information" size="small" />
-          {isLowFidelity ? (
-            <LowFidelityBox />
-          ) : (
-            <PropertyList orientation="vertical" className="pt-0">
-              <PropertyListItem label="Schedule" value="Daily — 2 day rolling basis" />
-              <PropertyListItem label="Default currency" value="USD" />
-              <PropertyListItem
-                label="Default external account"
-                value={
-                  <div className="flex items-center gap-1.5">
-                    <BrandIcon name="morganchase" size={20} aria-hidden />
-                    <span className="font-label-medium text-default">Chase •••• 7280</span>
-                  </div>
-                }
-              />
-              <PropertyListItem label="Payout statement descriptor" value="–" />
-            </PropertyList>
-          )}
-        </div>
-        <div className="flex flex-col gap-2">
-          {isLowFidelity ? (
-            <>
-              <SectionHeader title="Upcoming payouts" size="small" />
-              <LowFidelityBox />
-            </>
-          ) : (
-            <TransactionListCard
-              variant="upcoming"
-              title="Upcoming payouts"
-              onRowAction={onRowClick ? () => onRowClick() : undefined}
-              rows={UPCOMING_PAYOUT_ROWS}
-            />
-          )}
-        </div>
-      </div>
 
       {/* Recent transactions */}
       <div className="flex flex-col gap-2">

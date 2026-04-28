@@ -356,11 +356,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
             const SectionComponent = SECTION_COMPONENTS[effectiveSectionId]
             if (!SectionComponent) return null
             if (effectiveSectionId === 'moneyMovement') {
-              return (
-                <SectionComponent
-                  onTransactionRowClick={() => setPaymentDrawerOpen(true)}
-                />
-              )
+              return <SectionComponent />
             }
             if (effectiveSectionId === 'transactions') {
               return (

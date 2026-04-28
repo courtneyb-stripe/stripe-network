@@ -6,13 +6,8 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BalancesAndMetricsSection from '../BalancesAndMetricsSection'
-import BalancesCard from '../BalancesCard'
 import FinancialSnapshot from '../FinancialSnapshot'
-import { PropertyList, PropertyListItem } from '../PropertyList'
 import SectionHeader from '../SectionHeader'
-import TransactionListCard from '../TransactionListCard'
-import type { TransactionListRow } from '../TransactionListCard'
-import { BrandIcon } from '../../icons/SailIcons'
 import { TIME_RANGE_OPTIONS, type TimeRange } from '../metrics/constants'
 import TabBar from '../TabBar'
 import ItemsCountLink from '../ItemsCountLink'
@@ -51,14 +46,6 @@ type RecentActivityTabId = (typeof RECENT_ACTIVITY_TABS)[number]['id']
 const RECENT_TRANSACTIONS_LIMIT = 10
 const EMBEDDED_PAYMENTS_TOTAL = 80
 const EMBEDDED_PAYOUTS_TOTAL = 48
-
-const UPCOMING_ROWS: TransactionListRow[] = [
-  { id: 'u1', transactionType: 'transfer', description: 'Payout to Bank •••• 7280', subline: 'Mar 1 • Scheduled', amount: '$1,200.00' },
-  { id: 'u2', transactionType: 'card', description: 'Subscription renewal · Pro plan', subline: 'Mar 3 • Scheduled', amount: '$29.00' },
-  { id: 'u3', transactionType: 'transfer', description: 'Platform fee', subline: 'Mar 5 • Scheduled', amount: '$15.20' },
-  { id: 'u4', transactionType: 'transfer', description: 'Payout to Bank •••• 4412', subline: 'Mar 8 • Scheduled', amount: '$2,040.00' },
-  { id: 'u5', transactionType: 'card', description: 'Card payment · Estimated', subline: 'Mar 12 • Scheduled', amount: '$—' },
-]
 
 export type OverviewSectionProps = {
   config: AccountConfig
@@ -146,40 +133,6 @@ export default function Overview({
             timeRangeOptions={TIME_RANGE_OPTIONS}
             onTimeRangeChange={setFinancialTimeRange}
           />
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <TransactionListCard
-              variant="upcoming"
-              title="Upcoming transactions"
-              accountName="Toybox Labs"
-              onRowAction={onPaymentRowClick}
-              rows={UPCOMING_ROWS}
-            />
-            <div className="flex flex-col gap-2">
-              <SectionHeader title="Payout information" size="small" />
-              <BalancesCard
-                variant="amountRight"
-                iconName="balance"
-                label="Available"
-                subtitle=" "
-                value="$8,234.00"
-                valueSubtitle="Available instantly $2,422.11"
-              />
-              <PropertyList orientation="vertical" className="pt-3">
-                <PropertyListItem label="Schedule" value="Daily — 2 day rolling basis" />
-                <PropertyListItem label="Default currency" value="USD" />
-                <PropertyListItem
-                  label="Default external account"
-                  value={
-                    <div className="flex items-center gap-1.5">
-                      <BrandIcon name="morganchase" size={20} aria-hidden />
-                      <span className="font-label-medium text-default">Chase •••• 7280</span>
-                    </div>
-                  }
-                />
-                <PropertyListItem label="Payout statement descriptor" value="–" />
-              </PropertyList>
-            </div>
-          </div>
         </div>
       )}
 
@@ -271,7 +224,7 @@ export default function Overview({
         </div>
       )}
 
-      {/* Tax forms + Reports — same width as Payout info / Upcoming payouts columns (2-col grid) */}
+      {/* Tax forms + Reports */}
       <div className="grid grid-cols-1 gap-6 pt-10 lg:grid-cols-2">
         <div
           className="flex items-center rounded-[12px] bg-offset px-4 py-3 min-h-[48px]"
