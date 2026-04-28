@@ -73,12 +73,6 @@ export default function AccountDetailsSidebar({
           >
             <p className="text-[14px] text-subdued">Metadata — placeholder</p>
           </div>
-          <div
-            className="flex items-center rounded-[12px] bg-offset px-4 py-3"
-            data-name="Sidebar placeholder: Payment methods"
-          >
-            <p className="text-[14px] text-subdued">Payment methods — placeholder</p>
-          </div>
         </div>
       </div>
     </>

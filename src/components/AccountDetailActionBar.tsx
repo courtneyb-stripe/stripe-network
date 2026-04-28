@@ -57,7 +57,11 @@ import {
   type CapabilityGroupId,
   type CapabilityStatus,
 } from '../data/configMatrix'
-import { signalGroupsForConfigureModal } from '../data/uadVisibility'
+import {
+  canConfigurePayoutSchedule,
+  resolveCapabilityGroups,
+  signalGroupsForConfigureModal,
+} from '../data/uadVisibility'
 import { parseGutterBleed } from '../utils/gutterBleed'
 
 function signalPopoverHeading(popoverId: string): string {
@@ -312,6 +316,13 @@ export function AccountDetailHeaderStatusButtons({
 
   const renderSignalPopoverBody = useCallback(
     (id: string) => {
+      const r = prototype?.activeRoles
+      const payoutsLowerWell =
+        r != null && canConfigurePayoutSchedule(r) && (prototype?.hasPayoutSchedule ?? false)
+          ? ('payoutInformation' as const)
+          : ('external' as const)
+      const transfersShowPaymentsBalanceWell = payoutsLowerWell === 'external'
+
       switch (id) {
         case 'payments':
           return (
@@ -345,7 +356,7 @@ export function AccountDetailHeaderStatusButtons({
             <PaymentsPopoverPanel
               variant="payouts"
               status={prototype?.capabilityStatuses.payouts ?? 'active'}
-              hasPayoutSchedule={prototype?.hasPayoutSchedule ?? false}
+              payoutsLowerWell={payoutsLowerWell}
               onEditCapabilities={
                 onOpenSettingsSection
                   ? () => {
@@ -382,6 +393,23 @@ export function AccountDetailHeaderStatusButtons({
               financingProducts={prototype?.financingProducts ?? DEFAULT_FINANCING_POPOVER}
               financingPlatformLabel="Shopify"
               status={prototype?.capabilityStatuses.capital ?? 'active'}
+              onEditCapabilities={
+                onOpenSettingsSection
+                  ? () => {
+                      clearPopoverHoverCloseTimer()
+                      setOpenPopoverId(null)
+                      onOpenSettingsSection('capabilities')
+                    }
+                  : undefined
+              }
+            />
+          )
+        case 'extra:transfers':
+          return (
+            <PaymentsPopoverPanel
+              variant="transfers"
+              status={prototype?.capabilityStatuses.transfers ?? 'active'}
+              transfersShowPaymentsBalanceWell={transfersShowPaymentsBalanceWell}
               onEditCapabilities={
                 onOpenSettingsSection
                   ? () => {
@@ -441,6 +469,7 @@ export function AccountDetailHeaderStatusButtons({
       prototype?.financingProducts,
       prototype?.hasPaymentMethodOnFile,
       prototype?.hasPayoutSchedule,
+      prototype?.activeRoles,
       prototype?.hasFinancialAccounts,
       prototype?.billingFlavors,
       prototype?.relationship?.hasActiveSubscriptions,
@@ -660,8 +689,15 @@ export function AccountDetailMainActions({
         setMoveMoneyOpen(false)
       }
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    // Defer so the same gesture that opened the menu (mousedown → click) does not see this listener
+    // and the opening click is not treated as an outside close.
+    const t = window.setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside)
+    }, 0)
+    return () => {
+      clearTimeout(t)
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
   }, [moveMoneyOpen])
 
   return (
@@ -671,13 +707,19 @@ export function AccountDetailMainActions({
       data-node-id="145:61890"
     >
       {v.showMoveMoney && (
-        <div className="relative" ref={moveMoneyRef}>
+        <div
+          className={moveMoneyOpen ? 'relative z-[200]' : 'relative'}
+          ref={moveMoneyRef}
+        >
           <ActionButton
             label="Move money"
             tooltipId="actionbar-move-money-tooltip"
             variant="standard"
             className="h-8 gap-1 border-0 !bg-[#f4f7fa] !px-2 !py-0 !text-[#273951] shadow-none hover:!bg-neutral-50"
-            onClick={() => setMoveMoneyOpen((o) => !o)}
+            onClick={(e) => {
+              e.stopPropagation()
+              setMoveMoneyOpen((o) => !o)
+            }}
             aria-haspopup="menu"
             aria-expanded={moveMoneyOpen}
           >
@@ -686,7 +728,7 @@ export function AccountDetailMainActions({
           </ActionButton>
           {moveMoneyOpen && (
             <ul
-              className="absolute left-0 top-full z-20 mt-1 min-w-[180px] rounded-[length:var(--radius-small)] border border-neutral-100 bg-surface py-1 shadow-[0_2px_5px_rgba(64,68,82,0.08),0_3px_9px_rgba(64,68,82,0.08)]"
+              className="absolute left-0 top-full z-[200] mt-1 min-w-[180px] rounded-[length:var(--radius-small)] border border-neutral-100 bg-surface py-1 shadow-[0_2px_5px_rgba(64,68,82,0.08),0_3px_9px_rgba(64,68,82,0.08)]"
               role="menu"
             >
               {MOVE_MONEY_OPTIONS.map((option) => (
@@ -768,6 +810,19 @@ export default function AccountDetailActionBar({
   )
 
   const activeRolesKey = prototype ? [...prototype.activeRoles].sort().join(',') : ''
+  /** When prototype roles are set, Payments / Payouts chips follow `resolveCapabilityGroups` (GP+Customer without Merchant → no Payments). */
+  const signalChipsFromRoles = useMemo(() => {
+    if (!prototype) {
+      return { payments: v.showPayments, payouts: v.showPayouts }
+    }
+    const groups = new Set(
+      resolveCapabilityGroups(prototype.activeRoles, prototype.billingEnabled)
+    )
+    return {
+      payments: v.showPayments && groups.has('payments'),
+      payouts: v.showPayouts && groups.has('payouts'),
+    }
+  }, [prototype, activeRolesKey, v.showPayments, v.showPayouts])
   const extraActiveCapabilityChips = useMemo(() => {
     if (!prototype) return []
     /** Same groups as Configure modal — Transfers omitted when Storer (treasury) is active. */
@@ -791,8 +846,8 @@ export default function AccountDetailActionBar({
   const modalInitialSegment = isControlled ? (actionsModalInitialSegment ?? 'actions') : 'actions'
 
   const showStatus =
-    v.showPayouts ||
-    v.showPayments ||
+    signalChipsFromRoles.payouts ||
+    signalChipsFromRoles.payments ||
     showBillingButton ||
     extraActiveCapabilityChips.length > 0
   const signalPillRowRef = useRef<HTMLDivElement>(null)
@@ -801,8 +856,8 @@ export default function AccountDetailActionBar({
   const signalRowWithDivider = (
     <SignalGroup ref={signalPillRowRef}>
       <AccountDetailHeaderStatusButtons
-        showPayouts={v.showPayouts}
-        showPayments={v.showPayments}
+        showPayouts={signalChipsFromRoles.payouts}
+        showPayments={signalChipsFromRoles.payments}
         showBilling={showBillingButton}
         extraActiveCapabilityChips={extraActiveCapabilityChips}
         status={status}

@@ -20,7 +20,7 @@ export default function InfoBox({ expandedConfigs }: InfoBoxProps) {
       data-name="Info box"
     >
       <p className="m-0 font-label-small-emphasized" style={{ color: 'var(--color-feedback-attention-on)' }}>
-        ⚡ Transfers folded into Financial accounts.
+        ⚡ Transfers folded into Treasury.
       </p>
     </div>
   )

@@ -718,7 +718,7 @@ export const statusSignals: StatusSignal[] = [
   },
   {
     id: 'financial_accounts',
-    label: 'Financial accounts',
+    label: 'Treasury',
     surfacesAs: 'header',
     capabilityGroups: ['banking', 'storer', 'crypto', 'misc'],
     products: ['treasury'],
@@ -728,7 +728,7 @@ export const statusSignals: StatusSignal[] = [
   },
   {
     id: 'financing',
-    label: 'Financing',
+    label: 'Capital',
     surfacesAs: 'header',
     capabilityGroups: ['lending'],
     products: ['capital'],

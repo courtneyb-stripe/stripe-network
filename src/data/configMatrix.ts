@@ -1,20 +1,22 @@
 /*
 SIGNAL GROUPS — header rendering rules
 
-COMPLIANCE ROLES → signal group chips + account status badge
-  merchant     → Payments (+ Billing if billingEnabled); Payouts are Recipient-only
-  recipient    → Transfers, Payouts (Transfers folds into Financial accounts if Storer also active)
-  storer       → Financial accounts
+COMPLIANCE ROLES → signal group chips + account status badge (see `ROLE_TO_CAPABILITY_GROUPS`)
+  merchant     → Payments, Payouts (+ Billing if billingEnabled)
+  recipient    → Transfers, Payouts (Transfers fold into Treasury / FA when Storer also active)
+  gp_recipient → Payouts only (Global Payouts recipient)
+  storer       → Treasury (chip label “Treasury”)
   card_holder  → Card issuing (configure modal + resolver; “Issuer” pill is not selectable — use Card issuer)
-  borrower     → Financing
+  borrower     → Capital (chip label “Capital”)
 
-RELATIONSHIP ROLE → metadata only, no pills, no account status badge
-  customer     → Payments (consume side, no compliance)
+RELATIONSHIP ROLE
+  customer     → contributes Payments in the matrix, but see `uadVisibility.resolveCapabilityGroups`:
+                 if GP recipient is on and Merchant is off, Customer does not add Payments (GP-only payout account).
 
 TRANSFERS FOLD RULE
   Recipient alone     → Transfers pill shows
-  Recipient + Storer  → Transfers folds into Financial accounts (one pill)
-  Storer alone        → Financial accounts only, no Transfers
+  Recipient + Storer  → Transfers folds into Treasury (one pill)
+  Storer alone        → Treasury only, no Transfers
 
 BILLING
   → appears as a signal group chip when Merchant selected
@@ -37,20 +39,21 @@ NON-COMPLIANCE ALERT
   → account status badge unchanged
 
 ROLE DIRECTION + COMPLIANCE
-  merchant     → distributes, hasCompliance: true
-  recipient    → distributes, hasCompliance: true
-  storer       → distributes, hasCompliance: true
-  issuer       → distributes, hasCompliance: true
-  card_holder  → consumes,    hasCompliance: true
-  borrower     → consumes,    hasCompliance: true
-  customer     → consumes,    hasCompliance: false
+  merchant      → distributes, hasCompliance: true
+  recipient     → distributes, hasCompliance: true
+  gp_recipient  → distributes, hasCompliance: true
+  storer        → distributes, hasCompliance: true
+  issuer        → distributes, hasCompliance: true
+  card_holder   → consumes,    hasCompliance: true
+  borrower      → consumes,    hasCompliance: true
+  customer      → consumes,    hasCompliance: false
 
 STORER AUTO-SELECT
   Selecting Storer automatically adds Recipient if not already active (nudge, not hard block)
 */
 
 export type AccountRoleId =
-  | 'merchant' | 'customer' | 'recipient'
+  | 'merchant' | 'customer' | 'recipient' | 'gp_recipient'
   | 'storer' | 'borrower' | 'issuer' | 'card_holder'
 
 export type CapabilityGroupId =
@@ -67,6 +70,7 @@ export const CAPABILITY_GROUP_SINGLE_SIGNAL = new Set<CapabilityGroupId>(['payou
 export type SignalPopoverPanelVariant =
   | 'payments'
   | 'payouts'
+  | 'transfers'
   | 'financialAccounts'
   | 'financing'
   | 'cardIssuing'
@@ -80,6 +84,8 @@ export function capabilityGroupForSignalPopover(
       return 'payments'
     case 'payouts':
       return 'payouts'
+    case 'transfers':
+      return 'transfers'
     case 'financialAccounts':
       return 'treasury'
     case 'financing':
@@ -131,7 +137,7 @@ export type SignalGroupConfig = {
 }
 
 export const COMPLIANCE_ROLES: AccountRoleId[] = [
-  'merchant', 'recipient', 'storer', 'issuer', 'card_holder', 'borrower'
+  'merchant', 'recipient', 'gp_recipient', 'storer', 'issuer', 'card_holder', 'borrower'
 ]
 
 export const RELATIONSHIP_ROLES: AccountRoleId[] = ['customer']
@@ -142,6 +148,7 @@ export const ROLE_METADATA: Record<AccountRoleId, {
 }> = {
   merchant:    { direction: 'distributes', hasCompliance: true },
   recipient:   { direction: 'distributes', hasCompliance: true },
+  gp_recipient: { direction: 'distributes', hasCompliance: true },
   storer:      { direction: 'distributes', hasCompliance: true },
   issuer:      { direction: 'distributes', hasCompliance: true },
   card_holder: { direction: 'consumes',    hasCompliance: true },
@@ -150,9 +157,11 @@ export const ROLE_METADATA: Record<AccountRoleId, {
 }
 
 export const ROLE_TO_CAPABILITY_GROUPS: Record<AccountRoleId, CapabilityGroupId[]> = {
-  merchant:    ['payments'],
+  merchant:    ['payments', 'payouts'],
   customer:    ['payments'],
   recipient:   ['transfers', 'payouts'],
+  /** Global Payouts recipient: payouts surface only. */
+  gp_recipient: ['payouts'],
   storer:      ['treasury'],
   borrower:    ['capital'],
   /** Card Issuing is driven only by Card issuer in the prototype UI (Issuer role is not selectable). */
@@ -161,9 +170,10 @@ export const ROLE_TO_CAPABILITY_GROUPS: Record<AccountRoleId, CapabilityGroupId[
 }
 
 export const SIGNAL_GROUP_DEFAULTS: Record<AccountRoleId, Partial<SignalGroupConfig>> = {
-  merchant:    { hasPaymentMethodOnFile: true },
+  merchant:    { hasPaymentMethodOnFile: true, hasPayoutSchedule: true },
   customer:    { hasPaymentMethodOnFile: true },
   recipient:   { hasPayoutSchedule: true },
+  gp_recipient: {},
   storer:      { hasFinancialAccounts: true },
   borrower:    { hasBusinessFinancing: true },
   issuer:      {},
@@ -217,11 +227,16 @@ export const BILLING_FLAVOR_LABELS: Record<BillingFlavor, string> = {
  * Financial accounts signal-group popover — capability chips only (Figma 113:49956).
  * Border tokens: align with `border-neutral-100` / Border default (#d8dee4).
  */
-/** Treasury / financial-accounts popover — comma list (first row); +N is separate (see overflow). */
-export const FINANCIAL_ACCOUNTS_POPOVER_CHIPS = [
+/** Transfers header-chip popover — same three lead labels as FA comma list, without Treasury extras. */
+export const TRANSFERS_GROUP_POPOVER_CHIPS = [
   'Transfers',
   'Inbound transfers',
   'Outbound transfers',
+] as const
+
+/** Treasury / financial-accounts popover — comma list (first row); +N is separate (see overflow). */
+export const FINANCIAL_ACCOUNTS_POPOVER_CHIPS = [
+  ...TRANSFERS_GROUP_POPOVER_CHIPS,
   'Bank accounts',
   'Financial addresses',
   'Holds multi-currencies',
@@ -264,8 +279,8 @@ export const CAPABILITY_GROUP_DISPLAY_LABELS: Record<CapabilityGroupId, string> 
   payouts: 'Payouts',
   transfers: 'Transfers',
   billing: 'Billing',
-  treasury: 'Financial accounts',
-  capital: 'Financing',
+  treasury: 'Treasury',
+  capital: 'Capital',
   issuing: 'Card issuing',
 }
 
@@ -295,8 +310,8 @@ export const HEADER_EXTRA_ACTIVE_CAPABILITY_ORDER: CapabilityGroupId[] = [
 /** Ghost button aria-label / tooltip when status is active (header row). */
 export const HEADER_CAPABILITY_ACTIVE_TOOLTIP: Partial<Record<CapabilityGroupId, string>> = {
   transfers: 'Transfers are active for this account.',
-  treasury: 'Financial accounts are active for this account.',
-  capital: 'Financing is active for this account.',
+  treasury: 'Treasury is active for this account.',
+  capital: 'Capital is active for this account.',
   issuing: 'Card issuing is active for this account.',
 }
 

@@ -10,8 +10,8 @@ const TAX_SIGNAL = statusSignals.find((s) => s.id === 'tax_reporting')!
 
 const TRANSFERS_FOLD = foldRules.find((r) => r.signal === 'transfers')
 const FOLD_INTO_CAPTION = TRANSFERS_FOLD
-  ? `→ ${getStatusSignal(TRANSFERS_FOLD.foldInto)?.label ?? 'Financial accounts'}`
-  : '→ Financial accounts'
+  ? `→ ${getStatusSignal(TRANSFERS_FOLD.foldInto)?.label ?? 'Treasury'}`
+  : '→ Treasury'
 
 type SignalsColumnProps = {
   activeSignals: ReadonlySet<StatusSignalId>
