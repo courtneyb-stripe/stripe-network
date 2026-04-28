@@ -60,10 +60,10 @@ import {
 import { signalGroupsForConfigureModal } from '../data/uadVisibility'
 import { parseGutterBleed } from '../utils/gutterBleed'
 
-function signalPopoverHeading(popoverId: string): string {
+function signalPopoverHeading(popoverId: string, billingAsSubscriptions?: boolean): string {
   if (popoverId === 'payments') return 'Payments'
   if (popoverId === 'payouts') return 'Payouts'
-  if (popoverId === 'billing') return 'Billing'
+  if (popoverId === 'billing') return billingAsSubscriptions ? 'Subscriptions' : 'Billing'
   if (popoverId.startsWith('extra:')) {
     const gid = popoverId.slice('extra:'.length) as CapabilityGroupId
     return CAPABILITY_GROUP_DISPLAY_LABELS[gid]
@@ -310,6 +310,17 @@ export function AccountDetailHeaderStatusButtons({
   const billingCapability = prototype?.capabilityStatuses.billing
   const billingNeedsComplianceClick = signalClickOpensActionsModal(billingCapability)
 
+  const paymentsCustomerOnly =
+    prototype?.activeRoles != null &&
+    prototype.activeRoles.size === 1 &&
+    prototype.activeRoles.has('customer')
+  const recipientOnly =
+    prototype?.activeRoles != null &&
+    prototype.activeRoles.size === 1 &&
+    prototype.activeRoles.has('recipient')
+  /** Customer-only or recipient-only: billing chip reads “Subscriptions”; popover uses grey-well-only chrome. */
+  const billingMinimalPopover = paymentsCustomerOnly || recipientOnly
+
   const renderSignalPopoverBody = useCallback(
     (id: string) => {
       switch (id) {
@@ -317,6 +328,7 @@ export function AccountDetailHeaderStatusButtons({
           return (
             <PaymentsPopoverPanel
               status={prototype?.capabilityStatuses.payments ?? 'active'}
+              paymentsCustomerOnly={paymentsCustomerOnly}
               hasPaymentMethodOnFile={prototype?.hasPaymentMethodOnFile ?? false}
               defaultPaymentMethodExpired={prototype?.relationship?.expiredPaymentMethod ?? false}
               paymentMethodsPlatformLabel="Shopify"
@@ -418,6 +430,7 @@ export function AccountDetailHeaderStatusButtons({
               billingFlavors={billingUsesFlavors}
               showBillingSubscriptionsWell={showBillingSubscriptionsWell}
               billingOmitCapabilitySection={billingOmitCapabilitySection}
+              billingCustomerOnly={billingMinimalPopover}
               billingSubscriptionsPlatformLabel="Shopify"
             />
           )
@@ -437,6 +450,8 @@ export function AccountDetailHeaderStatusButtons({
       }
     },
     [
+      paymentsCustomerOnly,
+      billingMinimalPopover,
       prototype?.capabilityStatuses,
       prototype?.financingProducts,
       prototype?.hasPaymentMethodOnFile,
@@ -561,7 +576,7 @@ export function AccountDetailHeaderStatusButtons({
             />
           }
         >
-          Billing
+          {billingMinimalPopover ? 'Subscriptions' : 'Billing'}
         </HeaderSignalGroupButton>
       )}
       {extraActiveCapabilityChips.map((groupId) => {
@@ -609,7 +624,14 @@ export function AccountDetailHeaderStatusButtons({
         }}
         onPointerEnter={clearPopoverHoverCloseTimer}
         onPointerLeave={schedulePopoverClose}
-        title={openPopoverId != null ? signalPopoverHeading(openPopoverId) : ''}
+        title={
+          openPopoverId != null
+            ? signalPopoverHeading(
+                openPopoverId,
+                billingMinimalPopover && openPopoverId === 'billing'
+              )
+            : ''
+        }
         activeContentId={openPopoverId}
         renderBody={renderSignalPopoverBody}
         sharedPlacement={
@@ -761,10 +783,16 @@ export default function AccountDetailActionBar({
 }: AccountDetailActionBarProps) {
   const prototype = usePrototypeOptional()
   const v = useVisibility(visibility)
+  const billingChipUsesExplicitBillingOnly =
+    prototype != null &&
+    prototype.activeRoles.size === 1 &&
+    (prototype.activeRoles.has('customer') || prototype.activeRoles.has('recipient'))
   const showBillingButton = Boolean(
     prototype &&
       v.showSubscriptions &&
-      (prototype.hasBilling || prototype.relationship.hasActiveSubscriptions)
+      (billingChipUsesExplicitBillingOnly
+        ? prototype.hasBilling
+        : prototype.hasBilling || prototype.relationship.hasActiveSubscriptions)
   )
 
   const activeRolesKey = prototype ? [...prototype.activeRoles].sort().join(',') : ''

@@ -1,6 +1,7 @@
 /**
  * Signal group capability popovers — Figma Cursor SRC 128:58207 (shell: border-neutral-50).
- * Payments + PM-on-file, payouts + schedule well, treasury + financial accounts well (142:61198; FA row mark 142:61212),
+ * Payments + PM-on-file, payouts + schedule / external well, transfers + payments-balance well when same GP path as payouts,
+ * treasury + financial accounts well (142:61198; FA row mark 142:61212),
  * financing + products well (143:61336), card issuing + cards issued well, billing + subscriptions well (141:61045).
  * Section spacing (gap-3 / gap-1), status headings, comma-separated or muted capability lines.
  * Paused / pausing_soon: Payments keeps paused+active / pausing_soon+active mixes (method pills). Other
@@ -20,6 +21,7 @@ import {
   DEFAULT_FINANCING_POPOVER,
   FINANCIAL_ACCOUNTS_POPOVER_CHIPS,
   FINANCIAL_ACCOUNTS_POPOVER_OVERFLOW_EXTRA,
+  TRANSFERS_GROUP_POPOVER_CHIPS,
   FINANCING_LOAN_MASKED_ACCOUNT_LINE,
   financingPopoverChipLabels,
   signalPopoverSingleCapabilityRow,
@@ -32,6 +34,7 @@ import CapabilityStatusIcon from '../icons/CapabilityStatusIcon'
 import { FinancingCashAdvanceMark } from '../icons/FinancingCashAdvanceMark'
 import { FinancingLoanMark } from '../icons/FinancingLoanMark'
 import { FinancialAccountWellCardMark } from '../icons/FinancialAccountWellCardMark'
+import FlagImg, { type FlagCode } from '../icons/FlagImg'
 import { Icon } from '../icons/SailIcons'
 import { IconButton } from './IconButton'
 import LabelTooltip from './LabelTooltip'
@@ -82,6 +85,8 @@ const INSTANT_PAYOUTS_PAUSED_LABEL = 'Instant payouts'
 
 const FINANCIAL_ACCOUNTS_PAUSED_GRANULAR_LABEL = 'Cross-border transfers'
 
+const TRANSFERS_PAUSED_GRANULAR_LABEL = 'Inbound transfers'
+
 const CARD_ISSUING_PAUSED_GRANULAR_LABEL = 'Physical cards'
 
 const PAYOUTS_CAPABILITY_CHIPS = ['Payouts'] as const
@@ -101,6 +106,10 @@ const CARD_ISSUING_CAPABILITY_CHIPS = [CAPABILITY_GROUP_DISPLAY_LABELS.issuing] 
  */
 export const SIGNAL_GROUP_POPOVER_SHELL_CLASS =
   'relative w-[360px] max-w-[calc(100vw-24px)] rounded-[16px] border border-neutral-50 bg-surface p-1 pb-1 pt-0 shadow-[0px_15px_35px_0px_rgba(48,49,61,0.08),0px_5px_15px_0px_rgba(0,0,0,0.12)]'
+
+/** Popover shell when only a grey well is shown (customer Payments PM-only; Billing subs-only without Uses billing caps line). 4px inset on all sides. */
+const SIGNAL_GROUP_POPOVER_SHELL_GREY_WELL_ONLY_CLASS =
+  'relative w-[360px] max-w-[calc(100vw-24px)] rounded-[16px] border border-neutral-50 bg-surface p-1 shadow-[0px_15px_35px_0px_rgba(48,49,61,0.08),0px_5px_15px_0px_rgba(0,0,0,0.12)]'
 
 /** Capabilities column only (12px horizontal; room for settings). PM block is a sibling, not inside this. */
 export const SIGNAL_GROUP_POPOVER_INNER_CLASS = 'px-3 pt-4 pr-12 pb-3'
@@ -172,8 +181,14 @@ type PaymentsPopoverPanelProps = {
   defaultPaymentMethodExpired?: boolean
   /** Replaces “[Platform name]” in the payment methods heading (e.g. Shopify). */
   paymentMethodsPlatformLabel?: string
-  /** Payouts only: when true (Configure → “Has payout schedule”), show Figma 129:59300 well below capabilities. */
+  /** Payouts only: legacy default for lower well when `payoutsLowerWell` is omitted — schedule well if true, else off. */
   hasPayoutSchedule?: boolean
+  /**
+   * Payouts only: bottom grey well. `payoutInformation` = schedule + destinations (Figma 129:59300).
+   * `external` = GP-only or no schedule — external bank list, no schedule. `off` = no lower well.
+   * When omitted, uses legacy: `hasPayoutSchedule ? 'payoutInformation' : 'off'`.
+   */
+  payoutsLowerWell?: 'payoutInformation' | 'external' | 'off'
   /** Financial accounts only: when true (Configure → “Has financial accounts”), show Figma 142:61198 well below capabilities. */
   hasFinancialAccounts?: boolean
   /** Financial accounts well: “Financial accounts with …” platform name (e.g. Shopify). */
@@ -187,13 +202,27 @@ type PaymentsPopoverPanelProps = {
   showBillingSubscriptionsWell?: boolean
   /**
    * Billing only: hide status + product capability line (e.g. Uses billing off while subscriptions well still shows).
-   * When omitted, inferred false.
+   * When omitted, inferred false. When true, popover uses the grey-well-only shell + 4px inset (subscriptions well only).
    */
   billingOmitCapabilitySection?: boolean
+  /**
+   * Billing variant only: single-role customer or recipient — same layout as customer Payments popover (grey well + 4px inset; no status / product chips).
+   */
+  billingCustomerOnly?: boolean
   /** Billing well: “Subscriptions with …” platform name (e.g. Shopify). */
   billingSubscriptionsPlatformLabel?: string
   /** Card issuing well: “Cards issued by …” platform name (e.g. Shopify). */
   cardIssuingPlatformLabel?: string
+  /**
+   * Transfers only: show the payments-balance grey well below the capability list.
+   * Same visibility rule as the Payouts “external” path (GP / no schedule). No “External accounts” subheading.
+   */
+  transfersShowPaymentsBalanceWell?: boolean
+  /**
+   * Payments variant only: customer-role-only accounts have no merchant capability group — only PM on file.
+   * When true, omit comma-separated capability lists (limited/paused mixes, active methods).
+   */
+  paymentsCustomerOnly?: boolean
 }
 
 function VisaBrandMark() {
@@ -234,7 +263,7 @@ function PaymentMethodOnFileRow({
   showDefaultBadge,
   showExpiredBadge,
 }: PaymentMethodOnFileRowProps) {
-  const flag = country === 'US' ? '🇺🇸' : '🇬🇧'
+  const flagCode: FlagCode = country === 'US' ? 'US' : 'GB'
   return (
     <div className={WELL_CARD_FLEX_ROW_CLASS}>
       {brand === 'visa' ? <VisaBrandMark /> : <MastercardBrandMark />}
@@ -263,9 +292,7 @@ function PaymentMethodOnFileRow({
       ) : null}
       <div className="min-h-10 w-px shrink-0 self-stretch bg-neutral-50" aria-hidden />
       <div className="flex shrink-0 items-center justify-end gap-1.5">
-        <span className="text-[14px] leading-none" aria-hidden>
-          {flag}
-        </span>
+        <FlagImg code={flagCode} />
         <span className="whitespace-nowrap font-label-small leading-4 text-default">{country}</span>
       </div>
     </div>
@@ -336,13 +363,13 @@ function PayoutInfoFieldRow({ label, value }: { label: string; value: string }) 
 function PayoutDestinationCard({
   bankLine,
   currencyCode,
-  flagEmoji,
+  flagCode,
   brandClass,
   initials,
 }: {
   bankLine: string
   currencyCode: string
-  flagEmoji: string
+  flagCode: FlagCode
   brandClass: string
   initials: string
 }) {
@@ -359,9 +386,7 @@ function PayoutDestinationCard({
       </p>
       <div className="min-h-10 w-px shrink-0 self-stretch bg-neutral-50" aria-hidden />
       <div className="flex shrink-0 items-center justify-end gap-1.5">
-        <span className="text-[14px] leading-none" aria-hidden>
-          {flagEmoji}
-        </span>
+        <FlagImg code={flagCode} />
         <span className="whitespace-nowrap font-label-small leading-4 text-default">{currencyCode}</span>
       </div>
     </div>
@@ -386,7 +411,7 @@ function FinancingWithPlatformWell({
     >
       <div className={`min-w-0 w-full ${SIGNAL_GROUP_WELL_HEADER_INSET_CLASS}`}>
         <p className="m-0 min-w-0 font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default">
-          Financing with {platformLabel}
+          Capital with {platformLabel}
         </p>
       </div>
       <div className={`${WELL_CARD_STACK_CLASS} ${SIGNAL_GROUP_WELL_CARDS_INSET_CLASS}`}>
@@ -449,7 +474,7 @@ function FinancialAccountsWithPlatformWell({ platformLabel }: { platformLabel: s
     >
       <div className={`min-w-0 w-full ${SIGNAL_GROUP_WELL_HEADER_INSET_CLASS}`}>
         <p className="m-0 min-w-0 font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default">
-          Financial accounts with {platformLabel}
+          Treasury with {platformLabel}
         </p>
       </div>
       <div className={`${WELL_CARD_STACK_CLASS} ${SIGNAL_GROUP_WELL_CARDS_INSET_CLASS}`}>
@@ -460,7 +485,72 @@ function FinancialAccountsWithPlatformWell({ platformLabel }: { platformLabel: s
   )
 }
 
-/** Figma 129:59300 — payout information well (schedule + destination bank rows). */
+const PAYMENTS_BALANCE_LOGO_SRC = '/sections/payment-balance.svg'
+
+/** Transfers popover — one account row, `payment-balance` icon, label “Payments balance” (Figma `Sections/payment-balance.svg`). */
+function TransfersPaymentsBalanceWell() {
+  return (
+    <div
+      className="flex w-full flex-col rounded-[12px] bg-offset pb-1 pt-3"
+      data-name="transfers-payments-balance"
+    >
+      <div className={`${WELL_CARD_STACK_CLASS} ${SIGNAL_GROUP_WELL_CARDS_INSET_CLASS}`}>
+        <div className={WELL_CARD_FLEX_ROW_CLASS}>
+          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-[4px]" aria-hidden>
+            <img
+              src={PAYMENTS_BALANCE_LOGO_SRC}
+              alt=""
+              width={40}
+              height={40}
+              className="h-10 w-10"
+            />
+          </div>
+          <p className="min-w-0 flex-1 truncate font-label-medium text-[12px] leading-5 tracking-[-0.15px] text-default">
+            Payments balance
+          </p>
+          <div className="min-h-10 w-px shrink-0 self-stretch bg-neutral-50" aria-hidden />
+          <div className="flex shrink-0 items-center justify-end gap-1.5">
+            <FlagImg code="US" />
+            <span className="whitespace-nowrap font-label-small leading-4 text-default">USD</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** GP-only or no payout schedule — same destination cards as payout schedule well, no schedule block. */
+function ExternalPayoutAccountsWell({ dataName = 'external-payout-accounts' }: { dataName?: string }) {
+  return (
+    <div
+      className="flex w-full flex-col rounded-[12px] bg-offset pb-1 pt-3"
+      data-name={dataName}
+    >
+      <div className={`w-full ${SIGNAL_GROUP_WELL_HEADER_INSET_CLASS}`}>
+        <p className="m-0 min-w-0 font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-subdued">
+          External accounts
+        </p>
+      </div>
+      <div className={`mt-2 ${WELL_CARD_STACK_CLASS} ${SIGNAL_GROUP_WELL_CARDS_INSET_CLASS}`}>
+        <PayoutDestinationCard
+          bankLine="Volksbank •••• 3390"
+          currencyCode="EUR"
+          flagCode="EU"
+          brandClass="bg-[#00508d]"
+          initials="V"
+        />
+        <PayoutDestinationCard
+          bankLine="TD Ameritrade •••• 4280"
+          currencyCode="USD"
+          flagCode="US"
+          brandClass="bg-[#00b624]"
+          initials="TD"
+        />
+      </div>
+    </div>
+  )
+}
+
 function PayoutInformationWell() {
   return (
     <div
@@ -484,14 +574,14 @@ function PayoutInformationWell() {
         <PayoutDestinationCard
           bankLine="Volksbank •••• 3390"
           currencyCode="EUR"
-          flagEmoji="🇪🇺"
+          flagCode="EU"
           brandClass="bg-[#00508d]"
           initials="V"
         />
         <PayoutDestinationCard
           bankLine="TD Ameritrade •••• 4280"
           currencyCode="USD"
-          flagEmoji="🇺🇸"
+          flagCode="US"
           brandClass="bg-[#00b624]"
           initials="TD"
         />
@@ -689,12 +779,14 @@ function pausedGranularLabel(
   isPayouts: boolean,
   isFinancialAccounts: boolean,
   isFinancing: boolean,
-  isCardIssuing: boolean
+  isCardIssuing: boolean,
+  isTransfers: boolean
 ): string {
   if (isPayouts) return INSTANT_PAYOUTS_PAUSED_LABEL
   if (isFinancialAccounts) return FINANCIAL_ACCOUNTS_PAUSED_GRANULAR_LABEL
   if (isFinancing) return FINANCING_LOAN_MASKED_ACCOUNT_LINE
   if (isCardIssuing) return CARD_ISSUING_PAUSED_GRANULAR_LABEL
+  if (isTransfers) return TRANSFERS_PAUSED_GRANULAR_LABEL
   return ZIP_PAYMENTS_PAUSED_LABEL
 }
 
@@ -709,22 +801,39 @@ export default function PaymentsPopoverPanel({
   defaultPaymentMethodExpired = false,
   paymentMethodsPlatformLabel = 'Shopify',
   hasPayoutSchedule = false,
+  payoutsLowerWell: payoutsLowerWellProp,
   hasFinancialAccounts = false,
   financialAccountsPlatformLabel = 'Shopify',
   billingFlavors: billingFlavorsProp,
   showBillingSubscriptionsWell,
   billingOmitCapabilitySection = false,
+  billingCustomerOnly = false,
   billingSubscriptionsPlatformLabel = 'Shopify',
   cardIssuingPlatformLabel = 'Shopify',
+  transfersShowPaymentsBalanceWell = false,
+  paymentsCustomerOnly = false,
 }: PaymentsPopoverPanelProps) {
   const statusLabel = CAPABILITY_STATUS_DISPLAY_LABELS[status]
   const isPayouts = variant === 'payouts'
+  const isTransfers = variant === 'transfers'
   const isFinancialAccounts = variant === 'financialAccounts'
   const isFinancing = variant === 'financing'
   const isCardIssuing = variant === 'cardIssuing'
   const isBilling = variant === 'billing'
   const isPayments =
-    !isPayouts && !isFinancialAccounts && !isFinancing && !isCardIssuing && !isBilling
+    !isPayouts &&
+    !isTransfers &&
+    !isFinancialAccounts &&
+    !isFinancing &&
+    !isCardIssuing &&
+    !isBilling
+  const payoutsLowerResolved: 'payoutInformation' | 'external' | 'off' = isPayouts
+    ? payoutsLowerWellProp != null
+      ? payoutsLowerWellProp
+      : hasPayoutSchedule
+        ? 'payoutInformation'
+        : 'off'
+    : 'off'
   /** Mirrors `CAPABILITY_GROUP_SINGLE_SIGNAL` in configMatrix (payouts + issuing). */
   const singleCapabilityVariant = signalPopoverSingleCapabilityRow(variant)
   const effectiveLimited = status === 'limited' && !singleCapabilityVariant
@@ -738,6 +847,20 @@ export default function PaymentsPopoverPanel({
     const showSubsWell =
       showBillingSubscriptionsWell ?? billingFlavors.has('subscriptions')
     const showCapabilitySection = !billingOmitCapabilitySection
+
+    if (billingCustomerOnly || billingOmitCapabilitySection) {
+      return (
+        <div
+          className={SIGNAL_GROUP_POPOVER_SHELL_GREY_WELL_ONLY_CLASS}
+          data-name="billing"
+          data-node-id="141:61045"
+        >
+          {showSubsWell ? (
+            <BillingSubscriptionsWell platformLabel={billingSubscriptionsPlatformLabel} />
+          ) : null}
+        </div>
+      )
+    }
 
     return (
       <div
@@ -767,13 +890,7 @@ export default function PaymentsPopoverPanel({
         ) : null}
 
         {showSubsWell ? (
-          <div
-            className={
-              showCapabilitySection
-                ? 'mt-3 w-full shrink-0 px-0'
-                : 'w-full shrink-0 px-3 pt-4 pb-1'
-            }
-          >
+          <div className="mt-3 w-full shrink-0 px-0">
             <BillingSubscriptionsWell platformLabel={billingSubscriptionsPlatformLabel} />
           </div>
         ) : null}
@@ -781,49 +898,74 @@ export default function PaymentsPopoverPanel({
     )
   }
 
+  if (isPayments && paymentsCustomerOnly) {
+    return (
+      <div
+        className={SIGNAL_GROUP_POPOVER_SHELL_GREY_WELL_ONLY_CLASS}
+        data-name="payments"
+        data-node-id="128:58207"
+      >
+        {hasPaymentMethodOnFile ? (
+          <PaymentMethodsOnFileSection
+            platformName={paymentMethodsPlatformLabel}
+            defaultPaymentMethodExpired={defaultPaymentMethodExpired}
+          />
+        ) : null}
+      </div>
+    )
+  }
+
   const dataName = isPayouts
     ? 'payouts'
-    : isFinancialAccounts
-      ? 'financial-accounts'
-      : isFinancing
-        ? 'financing'
-        : isCardIssuing
-          ? 'card-issuing'
-          : 'payments'
+    : isTransfers
+      ? 'transfers'
+      : isFinancialAccounts
+        ? 'financial-accounts'
+        : isFinancing
+          ? 'financing'
+          : isCardIssuing
+            ? 'card-issuing'
+            : 'payments'
   const editTooltipId = isPayouts
     ? 'payouts-popover-capabilities-edit-tooltip'
-    : isFinancialAccounts
-      ? 'financial-accounts-popover-capabilities-edit-tooltip'
-      : isFinancing
-        ? 'financing-popover-capabilities-edit-tooltip'
-        : isCardIssuing
-          ? 'card-issuing-popover-capabilities-edit-tooltip'
-          : 'payments-popover-capabilities-edit-tooltip'
+    : isTransfers
+      ? 'transfers-popover-capabilities-edit-tooltip'
+      : isFinancialAccounts
+        ? 'financial-accounts-popover-capabilities-edit-tooltip'
+        : isFinancing
+          ? 'financing-popover-capabilities-edit-tooltip'
+          : isCardIssuing
+            ? 'card-issuing-popover-capabilities-edit-tooltip'
+            : 'payments-popover-capabilities-edit-tooltip'
   const viewAllTooltipId = isPayouts
     ? 'payouts-popover-view-all-capabilities-tooltip'
-    : isFinancialAccounts
-      ? 'financial-accounts-popover-view-all-capabilities-tooltip'
-      : isFinancing
-        ? 'financing-popover-view-all-capabilities-tooltip'
-        : isCardIssuing
-          ? 'card-issuing-popover-view-all-capabilities-tooltip'
-          : 'payments-popover-view-all-capabilities-tooltip'
+    : isTransfers
+      ? 'transfers-popover-view-all-capabilities-tooltip'
+      : isFinancialAccounts
+        ? 'financial-accounts-popover-view-all-capabilities-tooltip'
+        : isFinancing
+          ? 'financing-popover-view-all-capabilities-tooltip'
+          : isCardIssuing
+            ? 'card-issuing-popover-view-all-capabilities-tooltip'
+            : 'payments-popover-view-all-capabilities-tooltip'
 
   const activeMethodLabels = isPayouts
     ? PAYOUTS_CAPABILITY_CHIPS
-    : isFinancialAccounts
-      ? FINANCIAL_ACCOUNTS_POPOVER_CHIPS
-      : isFinancing
-        ? financingPopoverChipLabels(financingProductsResolved)
-        : isCardIssuing
-          ? CARD_ISSUING_CAPABILITY_CHIPS
-          : PAYMENT_METHOD_CHIPS
+    : isTransfers
+      ? TRANSFERS_GROUP_POPOVER_CHIPS
+      : isFinancialAccounts
+        ? FINANCIAL_ACCOUNTS_POPOVER_CHIPS
+        : isFinancing
+          ? financingPopoverChipLabels(financingProductsResolved)
+          : isCardIssuing
+            ? CARD_ISSUING_CAPABILITY_CHIPS
+            : PAYMENT_METHOD_CHIPS
   const showCapabilityOverflow =
-    !isPayouts && !isFinancialAccounts && !isFinancing && !isCardIssuing
+    !isPayouts && !isTransfers && !isFinancialAccounts && !isFinancing && !isCardIssuing
   /** Treasury lists six capabilities plus a static +3 (not the payments +13). */
   const showFinancialAccountsOverflow = isFinancialAccounts
   const secondaryVariantViewAll =
-    isPayouts || isFinancialAccounts || isFinancing || isCardIssuing
+    isPayouts || isTransfers || isFinancialAccounts || isFinancing || isCardIssuing
       ? undefined
       : onViewAllCapabilities
 
@@ -995,7 +1137,16 @@ export default function PaymentsPopoverPanel({
       )}
 
       <div
-        className={`px-3 pt-4 pr-12 ${(isPayments && hasPaymentMethodOnFile) || (isPayouts && hasPayoutSchedule) || (isFinancialAccounts && hasFinancialAccounts) || showFinancingProductsWell || isCardIssuing ? 'pb-0' : 'pb-3'}`}
+        className={`px-3 pt-4 pr-12 ${
+          (isPayments && hasPaymentMethodOnFile) ||
+          (isPayouts && payoutsLowerResolved !== 'off') ||
+          (isTransfers && transfersShowPaymentsBalanceWell) ||
+          (isFinancialAccounts && hasFinancialAccounts) ||
+          showFinancingProductsWell ||
+          isCardIssuing
+            ? 'pb-0'
+            : 'pb-3'
+        }`}
       >
         <div className={`flex flex-col ${mixedStatusVerticalGap ? 'gap-3' : ''}`}>
           {effectiveLimited ? (
@@ -1040,8 +1191,16 @@ export default function PaymentsPopoverPanel({
                       ? 'financing-paused-granular'
                       : isCardIssuing
                         ? 'card-issuing-paused-granular'
-                        : undefined,
-                pausedGranularLabel(isPayouts, isFinancialAccounts, isFinancing, isCardIssuing)
+                        : isTransfers
+                          ? 'transfers-paused-granular'
+                          : undefined,
+                pausedGranularLabel(
+                  isPayouts,
+                  isFinancialAccounts,
+                  isFinancing,
+                  isCardIssuing,
+                  isTransfers
+                )
               )
             )
           ) : status === 'paused' ? (
@@ -1055,8 +1214,16 @@ export default function PaymentsPopoverPanel({
                   ? 'financial-accounts-paused-granular'
                   : isFinancing
                     ? 'financing-paused-granular'
-                    : undefined,
-                pausedGranularLabel(isPayouts, isFinancialAccounts, isFinancing, isCardIssuing)
+                    : isTransfers
+                      ? 'transfers-paused-granular'
+                      : undefined,
+                pausedGranularLabel(
+                  isPayouts,
+                  isFinancialAccounts,
+                  isFinancing,
+                  isCardIssuing,
+                  isTransfers
+                )
               )
             )
           ) : status === 'pausing_soon' ? (
@@ -1070,8 +1237,16 @@ export default function PaymentsPopoverPanel({
                   ? 'financial-accounts-pausing-soon-granular'
                   : isFinancing
                     ? 'financing-pausing-soon-granular'
-                    : undefined,
-                pausedGranularLabel(isPayouts, isFinancialAccounts, isFinancing, isCardIssuing)
+                    : isTransfers
+                      ? 'transfers-pausing-soon-granular'
+                      : undefined,
+                pausedGranularLabel(
+                  isPayouts,
+                  isFinancialAccounts,
+                  isFinancing,
+                  isCardIssuing,
+                  isTransfers
+                )
               )
             )
           ) : (
@@ -1088,9 +1263,19 @@ export default function PaymentsPopoverPanel({
           />
         </div>
       ) : null}
-      {isPayouts && hasPayoutSchedule ? (
+      {isPayouts && payoutsLowerResolved === 'payoutInformation' ? (
         <div className="mt-3 w-full shrink-0 px-0">
           <PayoutInformationWell />
+        </div>
+      ) : null}
+      {isPayouts && payoutsLowerResolved === 'external' ? (
+        <div className="mt-3 w-full shrink-0 px-0">
+          <ExternalPayoutAccountsWell />
+        </div>
+      ) : null}
+      {isTransfers && transfersShowPaymentsBalanceWell ? (
+        <div className="mt-3 w-full shrink-0 px-0">
+          <TransfersPaymentsBalanceWell />
         </div>
       ) : null}
       {isFinancialAccounts && hasFinancialAccounts ? (

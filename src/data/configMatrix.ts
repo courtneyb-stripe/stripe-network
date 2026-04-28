@@ -217,11 +217,16 @@ export const BILLING_FLAVOR_LABELS: Record<BillingFlavor, string> = {
  * Financial accounts signal-group popover — capability chips only (Figma 113:49956).
  * Border tokens: align with `border-neutral-100` / Border default (#d8dee4).
  */
-/** Treasury / financial-accounts popover — comma list (first row); +N is separate (see overflow). */
-export const FINANCIAL_ACCOUNTS_POPOVER_CHIPS = [
+/** Transfers header-chip popover — same three lead labels as FA comma list, without Treasury extras. */
+export const TRANSFERS_GROUP_POPOVER_CHIPS = [
   'Transfers',
   'Inbound transfers',
   'Outbound transfers',
+] as const
+
+/** Treasury / financial-accounts popover — comma list (first row); +N is separate (see overflow). */
+export const FINANCIAL_ACCOUNTS_POPOVER_CHIPS = [
+  ...TRANSFERS_GROUP_POPOVER_CHIPS,
   'Bank accounts',
   'Financial addresses',
   'Holds multi-currencies',
