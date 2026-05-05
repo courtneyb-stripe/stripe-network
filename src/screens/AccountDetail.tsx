@@ -225,7 +225,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
         )}
       </div>
       {/* Content: 24px below tab bar; gutter matches header (px-6 on page root). */}
-      <div className="min-h-0 flex-1 overflow-auto pb-6 pt-6">
+      <div className="min-h-0 flex-1 pb-6 pt-6">
         {effectiveSectionId === 'overview' && (
           <div className="flex w-full items-stretch gap-10">
             <div className="flex min-w-0 flex-1 flex-col gap-6">
