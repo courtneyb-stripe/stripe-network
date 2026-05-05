@@ -2,12 +2,13 @@
 
 ## Intent
 
-A two-tab prototype that explains Stripe's capability system and lets the team play with how configurations drive UAD status signals.
+A three-tab prototype that explains Stripe's capability system and lets the team play with how configurations drive UAD status signals.
 
-- **Tab 1 — Products ↔ capabilities.** A reference view. Shows how user-facing products map to the doc-level capability groups, and how those groups contain granular capabilities. Click-through drill-down, no live state.
-- **Tab 2 — UAD–status signals.** An interactive playground. Toggle configurations (compliance roles) and see which status signals light up, which capability groups they draw from, and which products participate. Fold rules, auto-selects, and billing/tax toggles apply live.
+- **Tab 1 — UAD status groups.** An interactive playground. Toggle configurations (compliance roles) and see which status signals light up, which capability groups they draw from, and which products participate. Fold rules, auto-selects, and billing/tax toggles apply live.
+- **Tab 2 — Capability ↔ Status groups.** A read-only mapping with hybrid selection: all cap-group → signal edges visible at low opacity by default; click a group or signal to raise its connections. Inline notes capture design rationale (Billing, Atlas, Tax reporting, Crypto, Core, Storer).
+- **Tab 3 — Capabilities map.** A reference view with an inner **Products | Configs** control. **Products** mode shows how user-facing products map to doc-level capability groups and granular caps (solid = backs, dashed = requires). **Configs** mode shows platform-network configurations (plus a non-clickable Customer row) with solid vs dotted edges to groups (full vs partial mapping) and filtered granular caps per group.
 
-The prototype answers two different questions: Tab 1 answers *what is this capability system*, and Tab 2 answers *how does UAD reflect an account's configuration*. Both are useful; they serve different audiences.
+The prototype answers three questions: Tab 3 answers *what the taxonomy is*, Tab 2 answers *how groups connect to UAD signals*, and Tab 1 answers *how UAD reflects an account's configuration*. Tab order follows that narrative.
 
 ## Source of truth
 
@@ -18,7 +19,15 @@ The TS file is authoritative. If the HTML and TS disagree, TS wins; the HTML is 
 
 ## Route
 
-Both tabs live at **`/network/capability-explorer`** with tab-switcher state in the URL (e.g., `/network/capability-explorer?tab=products` and `?tab=signals`).
+All tabs live at **`/network/capability-explorer`** (and **`/capability-explorer`**) with tab-switcher state in the URL:
+
+| Tab | URL param | Default |
+|-----|-----------|---------|
+| UAD status groups | `?tab=uad` | **yes** (first load) |
+| Capability ↔ Status groups | `?tab=mapping` | |
+| Capabilities map | `?tab=map` | |
+
+Legacy: `?tab=signals` resolves to `uad`; `?tab=products` resolves to `map`.
 
 ## State integration
 
@@ -30,36 +39,50 @@ If we later want the playground to drive UAD state, add an explicit "Apply to cu
 
 ```
 CapabilityExplorer                — top-level, manages tab state and URL
-├── TabSwitcher                   — two tabs: Products ↔ capabilities, UAD–status signals
-├── ProductsTab                   — Tab 1
-│   ├── ProductsColumn            — 10 user-facing products as pills
-│   ├── CapabilityGroupsColumn    — 10 doc families, rows with count badges
-│   ├── GranularCapsColumn        — drills into the focused group
-│   └── Edges                     — SVG overlay (products → groups)
-└── SignalsTab                    — Tab 2
-    ├── PlaygroundControls        — billing toggle, tax toggle, relationship indicator
-    ├── ConfigurationsColumn
-    │   ├── PlatformNetwork       — 6 selectable pills (Merchant, Customer, Recipient, Storer, Borrower, Card issuer)
-    │   └── NotPlatformNetwork    — 2 derived indicators (Card holder, Merchant's customer)
-    ├── SignalsColumn
-    │   ├── InHeader              — 7 signal pills
-    │   └── ActionsRequired       — Tax reporting (dotted outline)
-    ├── RightColumn               — capability groups + products (dynamic, shows only active items when anything is active)
-    ├── Edges                     — SVG overlay (configs → signals, signals → caps/products)
-    └── InfoBox                   — active configs, lit signals, fold notice
+├── TabSwitcher                   — three tabs (UAD status groups, Capability ↔ Status groups, Capabilities map)
+├── SignalsTab                    — Tab 1 (UAD playground; unchanged behavior vs prior spec)
+│   ├── PlaygroundControls        — billing toggle, tax toggle, relationship indicator
+│   ├── ConfigurationsColumn
+│   │   ├── PlatformNetwork       — selectable pills
+│   │   └── NotPlatformNetwork    — derived indicators
+│   ├── SignalsColumn
+│   │   ├── InHeader              — 7 signal pills
+│   │   └── ActionsRequired       — Tax reporting (dotted outline)
+│   ├── RightColumn               — capability groups + products (dynamic)
+│   ├── Edges                     — SVG overlay (configs → signals, signals → caps/products)
+│   └── InfoBox                   — active configs, lit signals, fold notice
+├── MappingTab                    — Tab 2 (groups ↔ signals, selection raises edges)
+│   └── MappingMeshEdges
+└── ProductsTab                   — Tab 3 (Capabilities map)
+    ├── BabySegmentedControl      — Products | Configs
+    ├── ProductsColumn            — Products mode: product pills
+    ├── ConfigsColumn             — Configs mode: config pills + Customer note row
+    ├── CapabilityGroupsColumn    — doc families, rows with count badges
+    ├── GranularCapsColumn        — drills into selection (configs: filtered caps per group)
+    └── ProductsMeshEdges         — products → groups OR configs → groups
 ```
 
-## Tab 1 — Products ↔ capabilities
+## Tab 3 — Capabilities map
 
-### Behavior
+### Modes
+
+**Products (default).** Same behavior as the former single “Products ↔ capabilities” tab:
+
 - Start empty: products lit, groups dimmed, granular caps column empty.
 - Click a product → its capability groups light up. Edges: solid for "backs", dashed for "requires".
-- Click a group → granular caps appear in the third column. Groups with more caps than listed show "+N more (approximate)" at the bottom.
+- Click a group → granular caps appear in the third column.
 - Clicking a selected product or group deselects it.
-- Switching products resets the focused group (otherwise stale granular caps show next to a product that doesn't touch that group).
 
-### Products to show
-Ten user-facing products:
+**Configs.**
+
+- Left column lists Merchant, Recipient, GP Recipient, Storer, Borrower, Card issuer as pills, then **Customer** as a plain non-clickable row: “no backing capabilities — relationship only.” Derived configs (Card holder, Merchant's customer) are omitted.
+- Click a config → edges to its capability groups; **dotted** = partial mapping (subset of caps in that group), **solid** = full mapping. Granular caps list only caps relevant to that config in each group (`getRelevantCapsForConfigInGroup`).
+- Single-select; click again to deselect.
+- Switching **Products | Configs** clears the current selection.
+
+### Products to show (Products mode)
+
+Ten user-facing products (unchanged):
 
 | Product | Touches | Relationship |
 |---|---|---|
@@ -75,66 +98,70 @@ Ten user-facing products:
 | Terminal | payment_methods | requires |
 
 ### Visual notes
-- Product pills: same pill treatment as configuration pills on Tab 2 (filled when active, outlined when not). No per-product colors needed.
-- Capability group rows: label + right-aligned count badge (e.g., "Payment methods · 90+"). Plain row, no pill.
-- Granular caps: monospaced, compact (10-11px). These are developer-level identifiers.
 
-## Tab 2 — UAD–status signals
+- Product / config pills: same pill treatment as configuration pills on Tab 1 when applicable.
+- Capability group rows: label + right-aligned count badge. Plain row, no pill.
+- Granular caps: monospaced, compact (10-11px).
+
+## Tab 1 — UAD status groups (playground)
 
 ### Behavior
 
 **Configurations.**
+
 - 6 platform-network configs are selectable pills. Clicking toggles.
-- Toggling Storer auto-selects Recipient (via `ROLE_AUTO_SELECT`). Auto-selected pills render with "auto-selected" sub-label to distinguish from user-selected.
-- Derived configs (Card holder, Merchant's customer) are **not selectable**. They appear as plain indicators (not pills) when their parent is active. In the empty state, they show dimmed as a structural preview.
+- Derived configs (Card holder, Merchant's customer) are **not selectable**. They appear as plain indicators when their parent is active.
 - `merchant_customer` is derived from `merchant`. `card_holder` is derived from `card_issuer`. Derived configs contribute no signals — they're outcomes, not drivers.
 
 **Status signals.**
+
 - 7 header signals + 1 actions-required signal (Tax reporting) in two sectioned subcolumns.
-- Tax reporting pill gets a **dotted outline** on top of the sectioning, to further signal it's not a header chip.
+- Tax reporting pill gets a **dotted outline** on top of the sectioning.
 - A signal lights up when any active (expanded) configuration's signals include it.
 - Billing signal activates when Merchant is active AND the billing toggle is on.
 - Tax reporting signal activates when Merchant is active AND the tax toggle is on.
-- **Fold rule**: when Storer and Recipient are both active, Transfers is removed and Financial accounts stays. The folded pill disappears. A note appears in the info box.
+- **Fold rule**: when Storer and Recipient are both active, Transfers is removed and Financial accounts stays (see `foldRules` in the model).
 
 **Right column (capability groups + products).**
+
 - When no configs are active (and no toggles): show all items dimmed as structural preview.
 - When anything is active: show only items whose signals intersect with active signals. Others hide.
-- Items rebuild on each state change (dynamic layout).
 
 **Controls.**
+
 - Billing toggle: disabled when Merchant is not active.
 - Tax reporting toggle: disabled when Merchant is not active.
-- Preset buttons: "Default" (Merchant + Customer), "Show fold rule" (Storer + Recipient), "Full platform" (all 6 platform-network configs + billing + tax), "Clear."
+- Preset buttons: "Default", "Show fold rule", "Full platform", "Clear."
 
 **Indicators.**
-- "Relationship-only" indicator shown when all active configs have no compliance (only happens with Customer alone in practice).
-- Fold notice lives in the info box, not in the top controls row.
+
+- "Relationship-only" indicator when all active configs have no compliance.
+- Fold notice lives in the info box.
 
 ### Visual notes
 
-**Configuration pill colors (dot color, consistent across active/inactive):**
+**Configuration pill colors** — unchanged from prior spec (see locked decisions / PlatformNetwork).
 
-| Config | Color | Hex |
-|---|---|---|
-| Merchant | blue | #3B82F6 |
-| Customer | orange | #F97316 |
-| Recipient | cyan | #06B6D4 |
-| Storer | red | #EF4444 |
-| Borrower | purple | #A855F7 |
-| Card issuer | green | #10B981 |
-| Card holder | amber | #EAB308 |
-| Merchant's customer | amber | #EAB308 |
+**Edge treatment (Tab 1).**
 
-Pill treatment:
-- **Selectable pills** (platform network): filled (dark bg) when active, outlined otherwise. Dot keeps its color.
-- **Derived indicators** (not platform network): no pill outline. Small dot + italic label + "derived from X" sub-label. Muted when parent inactive (and shown dimmed in empty state). When parent active, dot takes parent's color.
-- **Signal pills**: outlined only. Inactive = gray outline. Active = green outline + green dot. Tax reporting keeps dotted outline even when active.
-
-**Edge treatment.**
 - Config → signal edges: colored by source config. 0.5 opacity.
 - Billing edge (Merchant → Billing signal): dashed, Merchant's color.
-- Signal → cap group / signal → product edges: neutral `--edge` color (no per-source coloring). 0.5 opacity.
+- Signal → cap group / signal → product edges: neutral `--edge` color. 0.5 opacity.
+
+## Tab 2 — Capability ↔ Status groups
+
+### Behavior
+
+- All group → signal edges from `getSignalsByCapabilityGroup` are drawn at low opacity by default (~0.28).
+- Click a capability group → outbound edges to its signals raise; connected signals emphasize; other rows dim slightly.
+- Click a status signal → inbound edges from backing groups raise; connected groups emphasize.
+- Selection is mutually exclusive (group vs signal); click the same item again to clear selection.
+- Inline italic notes always visible for Billing, Tax reporting, Atlas, Crypto, Core, Storer (see UI copy in `MappingTab.tsx`).
+
+### Visual notes
+
+- Neutral gray strokes; same cubic geometry as other explorer meshes.
+- Tax reporting row uses dotted outline (Tab 1 parity).
 
 ## Locked decisions (don't regress these)
 
@@ -168,18 +195,9 @@ These represent a lot of back-and-forth alignment; if Cursor pushes toward chang
 
 **Styling.** Match the rest of the stripe-network prototype. Fidelity: low. The reference HTML's color palette is close to Stripe's but was picked quickly — use your existing design tokens as the source of truth.
 
-**Component order to build.**
-1. Tab scaffolding + URL state.
-2. Tab 2 ConfigurationsColumn (selectable pills only — skip derived).
-3. Tab 2 SignalsColumn with the resolver wired up.
-4. Tab 2 RightColumn (dynamic show/hide logic).
-5. Tab 2 Edges.
-6. Tab 2 derived configs (visual treatment + conditional visibility).
-7. Tab 2 PlaygroundControls (billing, tax, relationship indicator, presets).
-8. Tab 1 three columns (static data, no resolver involvement).
-9. Tab 1 drill-down interaction.
+**Component order to build (historical).**
 
-Tab 2 is the complex one; build it first and get it right, then Tab 1 is mostly a simpler reshape of the same patterns.
+Tab 1 (playground) is the most complex; Tab 3 Products mode is a simpler reshape; Tab 3 Configs and Tab 2 add mapping helpers from the model.
 
 ## Open questions
 

@@ -168,7 +168,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
   return (
     <div className="flex h-full w-full min-w-0 flex-col px-6" data-name="AccountDetail">
       {/* Header + action bar — flush under shell global bar; horizontal gutter px-6. Identity card keeps internal top padding. */}
-      <div className="flex w-full min-w-0 shrink-0 flex-col">
+      <div className="relative z-30 flex w-full min-w-0 shrink-0 flex-col">
         <AccountDetailHeader
           accountName={accountName}
           breadcrumbs={breadcrumbs}
@@ -185,7 +185,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
             />
           }
         />
-        <div className="w-full">
+        <div className="relative z-0 w-full">
           <AccountDetailActionBar
               status={status}
               visibility={actionBarVisibility}

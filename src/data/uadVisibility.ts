@@ -3,7 +3,8 @@
  * - `resolveCapabilityGroups` feeds account badge, Actions required, and (with prototype) which header
  *   chips show: `AccountDetailActionBar` intersects config `getActionBarVisibility` with groups from here.
  * - `signalGroupsForConfigureModal` mirrors the same ordering for Configure account.
- * - Customer + `gp_recipient` without `merchant`: skip Customer’s Payments (relationship-only GP rail).
+ * - Customer + `gp_recipient` without `merchant`: skip Customer’s Payments (see loop in `resolveCapabilityGroups`
+ *   and `paymentsFromCustomer` in `signalGroupsForConfigureModal`).
  */
 
 import {
@@ -25,7 +26,7 @@ export function resolveCapabilityGroups(
 
   const groups = new Set<CapabilityGroupId>()
   for (const role of activeRoles) {
-    /** Customer + GP recipient (no merchant): do not surface Payments from `customer`. */
+    /** Customer + GP (no merchant): relationship-only — do not surface Payments from `customer`. */
     if (
       role === 'customer' &&
       activeRoles.has('gp_recipient') &&
@@ -67,11 +68,6 @@ export function signalGroupsForConfigureModal(roles: ReadonlySet<AccountRoleId>)
 /** Exactly one role and it is Connect `recipient`. */
 export function isRecipientOnlyRoles(roles: ReadonlySet<AccountRoleId>): boolean {
   return roles.size === 1 && roles.has('recipient')
-}
-
-/** Exactly one role — Global Payments `gp_recipient`. */
-export function isGpRecipientOnlyRoles(roles: ReadonlySet<AccountRoleId>): boolean {
-  return roles.size === 1 && roles.has('gp_recipient')
 }
 
 /**

@@ -23,6 +23,7 @@ import {
   type RiskLevel,
 } from '../data/configMatrix'
 import {
+  canConfigurePayoutSchedule,
   capabilityGroupsWithStatus,
   canConfigurePayoutSchedule,
   deriveAccountStatus,
@@ -553,9 +554,7 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
               </div>
 
               {signalGroupKeys.length > 0 && (
-                <>
-                  <p className={`${SECTION_HEADING_CLASS} pb-2`}>Signal group chips</p>
-                  <div className="flex flex-col">
+                <div className="flex flex-col">
                     {signalGroupKeys.map((groupId) => (
                       <div
                         key={groupId}
@@ -715,7 +714,7 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
                                   htmlFor="configure-treasury-fa"
                                   className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
                                 >
-                                  Has Treasury accounts
+                                  Has Financial accounts
                                 </label>
                               </span>
                             </>
@@ -787,8 +786,7 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
                         </div>
                       </div>
                     ))}
-                  </div>
-                </>
+                </div>
               )}
 
               {!customerOnly && showComplianceSections && accountStatusBadge != null && (

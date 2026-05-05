@@ -1,21 +1,22 @@
 /*
 SIGNAL GROUPS — header rendering rules
 
-COMPLIANCE ROLES → signal group chips + account status badge
-  merchant     → Payments (+ Billing if billingEnabled); Payouts are Recipient-only
-  recipient    → Transfers, Payouts (Transfers folds into Financial accounts if Storer also active)
-  gp_recipient → Global Payments recipient — Payouts only (no Connect Transfers from this role)
-  storer       → Financial accounts
+ * COMPLIANCE ROLES → signal group chips + account status badge (see `ROLE_TO_CAPABILITY_GROUPS`)
+  merchant     → Payments, Payouts (+ Billing if billingEnabled)
+  recipient    → Transfers, Payouts (Transfers fold into Treasury / FA when Storer also active)
+  gp_recipient → Payouts only (Global Payouts recipient)
+  storer       → Treasury (chip label “Treasury”)
   card_holder  → Card issuing (configure modal + resolver; “Issuer” pill is not selectable — use Card issuer)
-  borrower     → Financing
+  borrower     → Capital (chip label “Capital”)
 
-RELATIONSHIP ROLE → metadata only, no pills, no account status badge
-  customer     → Payments (consume side, no compliance)
+RELATIONSHIP ROLE
+  customer     → contributes Payments in the matrix, but see `uadVisibility.resolveCapabilityGroups`:
+                 if GP recipient is on and Merchant is off, Customer does not add Payments (GP-only payout account).
 
 TRANSFERS FOLD RULE
   Recipient alone     → Transfers pill shows
-  Recipient + Storer  → Transfers folds into Financial accounts (one pill)
-  Storer alone        → Financial accounts only, no Transfers
+  Recipient + Storer  → Transfers folds into Treasury (one pill)
+  Storer alone        → Treasury only, no Transfers
 
 BILLING
   → appears as a signal group chip when Merchant selected
@@ -38,14 +39,14 @@ NON-COMPLIANCE ALERT
   → account status badge unchanged
 
 ROLE DIRECTION + COMPLIANCE
-  merchant     → distributes, hasCompliance: true
-  recipient    → distributes, hasCompliance: true
-  gp_recipient → distributes, hasCompliance: true
-  storer       → distributes, hasCompliance: true
-  issuer       → distributes, hasCompliance: true
-  card_holder  → consumes,    hasCompliance: true
-  borrower     → consumes,    hasCompliance: true
-  customer     → consumes,    hasCompliance: false
+  merchant      → distributes, hasCompliance: true
+  recipient     → distributes, hasCompliance: true
+  gp_recipient  → distributes, hasCompliance: true
+  storer        → distributes, hasCompliance: true
+  issuer        → distributes, hasCompliance: true
+  card_holder   → consumes,    hasCompliance: true
+  borrower      → consumes,    hasCompliance: true
+  customer      → consumes,    hasCompliance: false
 
 STORER AUTO-SELECT
   Selecting Storer automatically adds Recipient if not already active (nudge, not hard block)
@@ -69,6 +70,7 @@ export const CAPABILITY_GROUP_SINGLE_SIGNAL = new Set<CapabilityGroupId>(['payou
 export type SignalPopoverPanelVariant =
   | 'payments'
   | 'payouts'
+  | 'transfers'
   | 'financialAccounts'
   | 'financing'
   | 'cardIssuing'
@@ -82,6 +84,8 @@ export function capabilityGroupForSignalPopover(
       return 'payments'
     case 'payouts':
       return 'payouts'
+    case 'transfers':
+      return 'transfers'
     case 'financialAccounts':
       return 'treasury'
     case 'financing':
@@ -133,13 +137,7 @@ export type SignalGroupConfig = {
 }
 
 export const COMPLIANCE_ROLES: AccountRoleId[] = [
-  'merchant',
-  'recipient',
-  'gp_recipient',
-  'storer',
-  'issuer',
-  'card_holder',
-  'borrower',
+  'merchant', 'recipient', 'gp_recipient', 'storer', 'issuer', 'card_holder', 'borrower'
 ]
 
 export const RELATIONSHIP_ROLES: AccountRoleId[] = ['customer']
@@ -162,7 +160,7 @@ export const ROLE_TO_CAPABILITY_GROUPS: Record<AccountRoleId, CapabilityGroupId[
   merchant:    ['payments', 'payouts'],
   customer:    ['payments'],
   recipient:   ['transfers', 'payouts'],
-  /** GP recipient — payouts signal only (no Connect Transfers pill from this role). */
+  /** Global Payouts recipient: payouts surface only. */
   gp_recipient: ['payouts'],
   storer:      ['treasury'],
   borrower:    ['capital'],

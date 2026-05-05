@@ -1,6 +1,6 @@
 /**
  * Prototype directory data for the hub landing page.
- * Categories: Working (e2e prototypes), Resources (component library, TXN list, etc.), Archived.
+ * Categories: Working (e2e prototypes), Resources (e.g. TXN list when enabled), Archived.
  * Only entries in this list appear in the directory; branches other than main are not published
  * here unless added to PROTOTYPES (no automatic branch discovery).
  *
@@ -70,6 +70,17 @@ const PROTOTYPES_ALL: PrototypeRow[] = [
     url: 'https://stripe-network-git-network-detail-comp-model.vercelapp.stripe.dev/network',
   },
   {
+    id: 'component-library',
+    category: 'archived',
+    name: 'Component library',
+    description: 'Shared components and patterns — reference only',
+    branch: 'main',
+    owner: '@courtneyb',
+    status: 'Archived',
+    lastUpdated: 'May 5, 2026',
+    url: '/components',
+  },
+  {
     id: 'account-detail-header',
     category: 'working',
     name: 'Account detail header',
@@ -84,24 +95,12 @@ const PROTOTYPES_ALL: PrototypeRow[] = [
     id: 'capability-explorer',
     category: 'working',
     name: 'Capability explorer',
-    description:
-      'Products ↔ capabilities mesh plus UAD status-signal playground (config → signal → groups)',
-    branch: 'capability-explorer-v0',
+    description: 'Mesh diagram of product-shaped capability groupings',
+    branch: 'account-detail-header',
     owner: '@courtneyb',
     status: 'In progress',
-    lastUpdated: 'Apr 22, 2026',
-    url: 'https://stripe-network-git-capability-explorer-v0.vercelapp.stripe.dev/capability-explorer',
-  },
-  {
-    id: 'component-library',
-    category: 'resources',
-    name: 'Component library',
-    description: 'Shared components and patterns.',
-    branch: 'main',
-    owner: '@courtneyb',
-    status: 'In progress',
-    lastUpdated: 'Feb 24, 2025, 2:30 PM',
-    url: '/components',
+    lastUpdated: 'May 5, 2026',
+    url: 'https://stripe-network-git-account-detail-header.vercelapp.stripe.dev/capability-explorer',
   },
   // Transactions list hidden for now to avoid confusion; add back when ready.
 ]

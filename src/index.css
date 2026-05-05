@@ -175,3 +175,70 @@ body {
   animation: hub-gradient-pulse 5s ease-in-out infinite;
 }
 
+/* Prototype hub — network art: soft node “accounts” + propagation ripple */
+@keyframes hub-node-pulse {
+  0%,
+  100% {
+    opacity: 0.28;
+    transform: scale(0.88);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.05);
+  }
+}
+
+.hub-node-dot {
+  animation: hub-node-pulse 3.2s ease-in-out infinite;
+}
+
+@keyframes hub-network-ripple {
+  0% {
+    transform: translateY(8%) scale(0.2);
+    opacity: 0;
+  }
+  6% {
+    opacity: 0.35;
+  }
+  70% {
+    opacity: 0.08;
+  }
+  100% {
+    transform: translateY(-18%) scale(1.15);
+    opacity: 0;
+  }
+}
+
+.hub-network-ripple-ring {
+  animation: hub-network-ripple 16s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-node-dot,
+  .hub-network-ripple-ring {
+    animation: none !important;
+  }
+  .hub-network-art-layer {
+    transition: none !important;
+  }
+}
+
+/* Capability explorer — signal stroke + mesh tokens (stripe-capability-mesh.html) */
+.capability-explorer-mesh {
+  --explorer-edge-dot: #1d9e75;
+  --explorer-signal-border-muted: #d3d1c7;
+  /* Transfers when folded into Financial accounts (Storer) — not “active” green */
+  --explorer-signal-storer-fold: #9a978f;
+  /* Signal → capability group / product (neutral cascade) */
+  --explorer-mesh-downstream-stroke: var(--color-neutral-300);
+}
+
+@media (prefers-color-scheme: dark) {
+  .capability-explorer-mesh {
+    --explorer-edge-dot: #9fe1cb;
+    --explorer-signal-border-muted: #3d3d3a;
+    --explorer-signal-storer-fold: #7d7a74;
+    --explorer-mesh-downstream-stroke: #6c7688;
+  }
+}
+

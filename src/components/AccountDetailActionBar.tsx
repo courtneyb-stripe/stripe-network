@@ -327,6 +327,16 @@ export function AccountDetailHeaderStatusButtons({
 
   const renderSignalPopoverBody = useCallback(
     (id: string) => {
+      const r = prototype?.activeRoles
+      const payoutsWellFromRoles = r != null ? payoutsPopoverLowerWellForRoles(r) : undefined
+      const resolvedPayoutsLower: 'payoutInformation' | 'external' =
+        payoutsWellFromRoles === 'external'
+          ? 'external'
+          : (prototype?.hasPayoutSchedule ?? false)
+            ? 'payoutInformation'
+            : 'external'
+      const transfersShowPaymentsBalanceWell = resolvedPayoutsLower === 'external'
+
       switch (id) {
         case 'payments':
           return (
@@ -378,23 +388,6 @@ export function AccountDetailHeaderStatusButtons({
               }
             />
           )
-        case 'extra:transfers':
-          return (
-            <PaymentsPopoverPanel
-              variant="transfers"
-              status={prototype?.capabilityStatuses.transfers ?? 'active'}
-              transfersShowPaymentsBalanceWell
-              onEditCapabilities={
-                onOpenSettingsSection
-                  ? () => {
-                      clearPopoverHoverCloseTimer()
-                      setOpenPopoverId(null)
-                      onOpenSettingsSection('capabilities')
-                    }
-                  : undefined
-              }
-            />
-          )
         case 'extra:treasury':
           return (
             <PaymentsPopoverPanel
@@ -420,6 +413,23 @@ export function AccountDetailHeaderStatusButtons({
               financingProducts={prototype?.financingProducts ?? DEFAULT_FINANCING_POPOVER}
               financingPlatformLabel="Shopify"
               status={prototype?.capabilityStatuses.capital ?? 'active'}
+              onEditCapabilities={
+                onOpenSettingsSection
+                  ? () => {
+                      clearPopoverHoverCloseTimer()
+                      setOpenPopoverId(null)
+                      onOpenSettingsSection('capabilities')
+                    }
+                  : undefined
+              }
+            />
+          )
+        case 'extra:transfers':
+          return (
+            <PaymentsPopoverPanel
+              variant="transfers"
+              status={prototype?.capabilityStatuses.transfers ?? 'active'}
+              transfersShowPaymentsBalanceWell={transfersShowPaymentsBalanceWell}
               onEditCapabilities={
                 onOpenSettingsSection
                   ? () => {
@@ -484,6 +494,7 @@ export function AccountDetailHeaderStatusButtons({
       prototype?.financingProducts,
       prototype?.hasPaymentMethodOnFile,
       prototype?.hasPayoutSchedule,
+      prototype?.activeRoles,
       prototype?.hasFinancialAccounts,
       prototype?.billingFlavors,
       prototype?.relationship?.hasActiveSubscriptions,
@@ -710,8 +721,15 @@ export function AccountDetailMainActions({
         setMoveMoneyOpen(false)
       }
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    // Defer so the same gesture that opened the menu (mousedown → click) does not see this listener
+    // and the opening click is not treated as an outside close.
+    const t = window.setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside)
+    }, 0)
+    return () => {
+      clearTimeout(t)
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
   }, [moveMoneyOpen])
 
   return (
@@ -721,13 +739,19 @@ export function AccountDetailMainActions({
       data-node-id="145:61890"
     >
       {v.showMoveMoney && (
-        <div className="relative" ref={moveMoneyRef}>
+        <div
+          className={moveMoneyOpen ? 'relative z-[200]' : 'relative'}
+          ref={moveMoneyRef}
+        >
           <ActionButton
             label="Move money"
             tooltipId="actionbar-move-money-tooltip"
             variant="standard"
             className="h-8 gap-1 border-0 !bg-[#f4f7fa] !px-2 !py-0 !text-[#273951] shadow-none hover:!bg-neutral-50"
-            onClick={() => setMoveMoneyOpen((o) => !o)}
+            onClick={(e) => {
+              e.stopPropagation()
+              setMoveMoneyOpen((o) => !o)
+            }}
             aria-haspopup="menu"
             aria-expanded={moveMoneyOpen}
           >
@@ -736,7 +760,7 @@ export function AccountDetailMainActions({
           </ActionButton>
           {moveMoneyOpen && (
             <ul
-              className="absolute left-0 top-full z-20 mt-1 min-w-[180px] rounded-[length:var(--radius-small)] border border-neutral-100 bg-surface py-1 shadow-[0_2px_5px_rgba(64,68,82,0.08),0_3px_9px_rgba(64,68,82,0.08)]"
+              className="absolute left-0 top-full z-[200] mt-1 min-w-[180px] rounded-[length:var(--radius-small)] border border-neutral-100 bg-surface py-1 shadow-[0_2px_5px_rgba(64,68,82,0.08),0_3px_9px_rgba(64,68,82,0.08)]"
               role="menu"
             >
               {MOVE_MONEY_OPTIONS.map((option) => (
@@ -826,7 +850,7 @@ export default function AccountDetailActionBar({
   )
 
   const activeRolesKey = prototype ? [...prototype.activeRoles].sort().join(',') : ''
-  /** Intersect visibility flags with `resolveCapabilityGroups` so customer-only never shows Payouts, etc. */
+  /** Prototype roles: Payments / Payouts chips intersect `resolveCapabilityGroups` (GP + Customer without Merchant → no Payments). */
   const signalChipsFromRoles = useMemo(() => {
     if (!prototype) {
       return { payments: v.showPayments, payouts: v.showPayouts }
@@ -839,7 +863,6 @@ export default function AccountDetailActionBar({
       payouts: v.showPayouts && groups.has('payouts'),
     }
   }, [prototype, activeRolesKey, v.showPayments, v.showPayouts])
-
   const extraActiveCapabilityChips = useMemo(() => {
     if (!prototype) return []
     /** Same groups as Configure modal — Transfers omitted when Storer (treasury) is active. */

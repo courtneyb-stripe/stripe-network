@@ -109,7 +109,8 @@ export default function AccountDetailHeader({
    * Figma 145:61871 — padding 24 top / 40 bottom; 16px stack gap (breadcrumbs → title block).
    * Bottom hairline matches AccountDetailActionBar signal wrapper (`border-b border-neutral-50`); signal row uses `py-4` below.
    */
-  const identityCardClassName = `flex w-full min-w-0 flex-col gap-[length:var(--spacing-medium)] overflow-hidden border-x-0 border-b border-t border-neutral-50 pb-10 pt-[length:var(--spacing-large)] ${identityBleed?.paddingClass ?? 'px-0'}`
+  /** `overflow-visible` so Move money (and other header) dropdowns are not clipped; border still defines the card edge. */
+  const identityCardClassName = `flex w-full min-w-0 flex-col gap-[length:var(--spacing-medium)] overflow-visible border-x-0 border-b border-t border-neutral-50 pb-10 pt-[length:var(--spacing-large)] ${identityBleed?.paddingClass ?? 'px-0'}`
 
   const identityCard = (
     <div
@@ -184,7 +185,11 @@ export default function AccountDetailHeader({
   )
 
   return (
-    <header className="w-full min-w-0" data-name="baby/PageHeader" data-node-id="145:61868">
+    <header
+      className="relative z-20 w-full min-w-0"
+      data-name="baby/PageHeader"
+      data-node-id="145:61868"
+    >
       {identityBleed ? (
         <div className={identityBleed.marginClass}>{identityCard}</div>
       ) : (

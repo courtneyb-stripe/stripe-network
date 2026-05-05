@@ -12,6 +12,7 @@ import FinancialAccountsList from './screens/FinancialAccountsList'
 import FinancialAccountDetail from './screens/FinancialAccountDetail'
 import TransactionsList from './screens/TransactionsList'
 import Components from './screens/Components'
+import CapabilityExplorerPage from './screens/CapabilityExplorerPage'
 
 function App() {
   const { pathname } = useLocation()
@@ -24,6 +25,9 @@ function App() {
           <Route path="/" element={<PrototypeHub />} />
           <Route path="/overview" element={<Shell><Overview /></Shell>} />
           <Route path="/network" element={<Shell><NetworkList /></Shell>} />
+          {/* Also at root so this never competes with /network/:id (static segment must win, but this is easier to reason about). */}
+          <Route path="/capability-explorer" element={<Shell><CapabilityExplorerPage /></Shell>} />
+          <Route path="/network/capability-explorer" element={<Shell><CapabilityExplorerPage /></Shell>} />
           <Route path="/network/:id" element={<Shell><AccountDetail /></Shell>} />
           <Route path="/network/:id/settings" element={<Shell><SettingsPage /></Shell>} />
           <Route path="/network/:id/risk-analysis" element={<Shell><RiskAnalysis /></Shell>} />

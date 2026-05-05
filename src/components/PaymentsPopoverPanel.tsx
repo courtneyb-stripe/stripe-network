@@ -181,11 +181,12 @@ type PaymentsPopoverPanelProps = {
   defaultPaymentMethodExpired?: boolean
   /** Replaces “[Platform name]” in the payment methods heading (e.g. Shopify). */
   paymentMethodsPlatformLabel?: string
+  /** Payouts only: when `payoutsLowerWell` is omitted, infer from `hasPayoutSchedule` (see `payoutsLowerResolved` below). */
+  hasPayoutSchedule?: boolean
   /**
-   * Payouts only: lower grey well when `payoutsLowerWell` is omitted:
-   * — `hasPayoutSchedule` → **Payout information** (schedule + destinations).
-   * — otherwise → **External accounts** (GP / instant payouts style — destinations only; same cards, no schedule block).
-   * Pass **`off`** explicitly to hide any lower well.
+   * Payouts only: bottom grey well. `payoutInformation` = schedule + destinations (Figma 129:59300).
+   * `external` = GP-only or no schedule — external bank list, no schedule. `off` = no lower well.
+   * When `payoutsLowerWell` is omitted, defaults from `hasPayoutSchedule`: truthy → payout information, else external.
    */
   payoutsLowerWell?: 'payoutInformation' | 'external' | 'off'
   /** Financial accounts only: when true (Configure → “Has financial accounts”), show Figma 142:61198 well below capabilities. */
@@ -486,11 +487,11 @@ function FinancialAccountsWithPlatformWell({ platformLabel }: { platformLabel: s
 
 const PAYMENTS_BALANCE_LOGO_SRC = '/sections/payment-balance.svg'
 
-/** Transfers popover — one account row; asset `public/sections/payment-balance.svg` (Figma Sections/payment-balance). */
+/** Transfers popover — one account row, `payment-balance` icon, label “Payments balance” (Figma `Sections/payment-balance.svg`). */
 function TransfersPaymentsBalanceWell() {
   return (
     <div
-      className="flex w-full flex-col rounded-[12px] bg-offset pb-1 pt-1"
+      className="flex w-full flex-col rounded-[12px] bg-offset pb-1 pt-3"
       data-name="transfers-payments-balance"
     >
       <div className={`${WELL_CARD_STACK_CLASS} ${SIGNAL_GROUP_WELL_CARDS_INSET_CLASS}`}>
