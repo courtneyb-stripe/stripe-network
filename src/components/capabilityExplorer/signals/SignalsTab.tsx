@@ -19,7 +19,6 @@ const PLATFORM_ID_SET = new Set<ConfigurationId>(PLATFORM_NETWORK_CONFIG_IDS)
 export default function SignalsTab() {
   const meshRef = useRef<HTMLDivElement>(null)
   const [userSelected, setUserSelected] = useState<Set<ConfigurationId>>(() => new Set())
-  const [billingEnabled, setBillingEnabled] = useState(false)
   const [taxEnabled, setTaxEnabled] = useState(false)
 
   const expandedConfigs = useMemo(
@@ -29,7 +28,6 @@ export default function SignalsTab() {
 
   useEffect(() => {
     if (!expandedConfigs.has('merchant')) {
-      setBillingEnabled(false)
       setTaxEnabled(false)
     }
   }, [expandedConfigs])
@@ -45,13 +43,13 @@ export default function SignalsTab() {
   }, [])
 
   const activeSignals = useMemo(
-    () => resolveSignalsForConfigurations(userSelected, billingEnabled, taxEnabled),
-    [userSelected, billingEnabled, taxEnabled]
+    () => resolveSignalsForConfigurations(userSelected, false, taxEnabled),
+    [userSelected, taxEnabled]
   )
 
   const preFoldSignals = useMemo(
-    () => resolveSignalsBeforeFold(userSelected, billingEnabled, taxEnabled),
-    [userSelected, billingEnabled, taxEnabled]
+    () => resolveSignalsBeforeFold(userSelected, false, taxEnabled),
+    [userSelected, taxEnabled]
   )
 
   const merchantActive = expandedConfigs.has('merchant')
@@ -60,12 +58,10 @@ export default function SignalsTab() {
 
   const onClearAll = useCallback(() => {
     setUserSelected(new Set())
-    setBillingEnabled(false)
     setTaxEnabled(false)
   }, [])
 
-  const showClearAll =
-    userSelected.size > 0 || billingEnabled || taxEnabled
+  const showClearAll = userSelected.size > 0 || taxEnabled
 
   return (
     <div
@@ -73,14 +69,11 @@ export default function SignalsTab() {
       data-name="SignalsTab"
     >
       <p className="m-0 max-w-2xl text-subdued font-label-small leading-relaxed">
-        Toggle configurations to see which status signals light up (solid = required capabilities and
-        dotted = does not require capabilities).
+        Toggle configurations to see which status signals will appear in the account detail header.
       </p>
       <PlaygroundControls
         merchantActive={merchantActive}
-        billingEnabled={billingEnabled}
         taxEnabled={taxEnabled}
-        onBillingChange={setBillingEnabled}
         onTaxChange={setTaxEnabled}
         showClearAll={showClearAll}
         onClearAll={onClearAll}
@@ -92,7 +85,7 @@ export default function SignalsTab() {
         <ConfigSignalEdges
           meshRef={meshRef}
           expandedConfigs={expandedConfigs}
-          billingEnabled={billingEnabled}
+          billingEnabled={false}
           taxEnabled={taxEnabled}
           activeSignals={activeSignals}
           relationshipOnly={relationshipOnly}
@@ -102,7 +95,7 @@ export default function SignalsTab() {
             userSelected={userSelected}
             onToggleConfig={onToggleConfig}
             expandedConfigs={expandedConfigs}
-            billingEnabled={billingEnabled}
+            billingEnabled={false}
             taxEnabled={taxEnabled}
           />
           <SignalsColumn activeSignals={activeSignals} preFoldSignals={preFoldSignals} />

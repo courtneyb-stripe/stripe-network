@@ -92,8 +92,7 @@ export default function MappingTab() {
   return (
     <div className="flex w-full min-w-0 flex-col gap-4" data-name="MappingTab">
       <p className="m-0 max-w-2xl text-subdued font-label-small leading-relaxed">
-        How capability groups map to UAD signal groups. All edges shown by default; click a cap group
-        to raise its outbound mappings, or a signal to see which groups back it.
+        How current capability groupings map to Account detail header signals.
       </p>
       <div
         ref={meshRef}
@@ -157,7 +156,7 @@ export default function MappingTab() {
           </div>
 
           <div className="flex min-w-0 w-full max-w-sm flex-1 flex-col gap-4">
-            <h3 className="m-0 font-label-small-emphasized text-subdued">UAD signal groups</h3>
+            <h3 className="m-0 font-label-small-emphasized text-subdued">Account header signals</h3>
             <div>
               <p className="m-0 mb-2 font-label-small text-subdued">In header</p>
               <div className="flex flex-col gap-1" role="list">

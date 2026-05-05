@@ -1250,7 +1250,8 @@ function collectSignalsUnfolded(
   const baseSignals = new Set<StatusSignalId>()
   for (const configId of expandedConfigs) {
     const config = getConfiguration(configId)
-    if (config) {
+    /** Relationship-only configs (e.g. Customer) do not light up header signals in the explorer. */
+    if (config?.hasCompliance) {
       for (const sig of config.signals) baseSignals.add(sig)
     }
   }

@@ -1,8 +1,6 @@
 type PlaygroundControlsProps = {
   merchantActive: boolean
-  billingEnabled: boolean
   taxEnabled: boolean
-  onBillingChange: (value: boolean) => void
   onTaxChange: (value: boolean) => void
   showClearAll: boolean
   onClearAll: () => void
@@ -10,9 +8,7 @@ type PlaygroundControlsProps = {
 
 export default function PlaygroundControls({
   merchantActive,
-  billingEnabled,
   taxEnabled,
-  onBillingChange,
   onTaxChange,
   showClearAll,
   onClearAll,
@@ -24,18 +20,6 @@ export default function PlaygroundControls({
     >
       <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-2">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-label-small text-default">
-          <label
-            className={`inline-flex cursor-pointer items-center gap-2 ${!merchantActive ? 'cursor-not-allowed opacity-50' : ''}`}
-          >
-            <input
-              type="checkbox"
-              className="h-3.5 w-3.5 shrink-0 rounded border-neutral-300 accent-neutral-700"
-              checked={billingEnabled}
-              disabled={!merchantActive}
-              onChange={(e) => onBillingChange(e.target.checked)}
-            />
-            <span>Uses Billing</span>
-          </label>
           <label
             className={`inline-flex cursor-pointer items-center gap-2 ${!merchantActive ? 'cursor-not-allowed opacity-50' : ''}`}
           >
