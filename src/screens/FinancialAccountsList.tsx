@@ -80,7 +80,10 @@ export default function FinancialAccountsList() {
               actionsModalOpen={actionsModalOpen}
               actionsModalInitialFilter={actionsModalFilter}
               actionsModalInitialSegment="actions"
-              onOpenActionsModal={(f) => { setActionsModalOpen(true); setActionsModalFilter(f ?? 'all') }}
+              onOpenActionsModal={(f) => {
+                setActionsModalOpen(true)
+                setActionsModalFilter(f === 'both' || f === 'other' ? 'all' : (f ?? 'all'))
+              }}
               onCloseActionsModal={() => setActionsModalOpen(false)}
               onOpenSettingsSection={(sectionId) => id && navigate(`/network/${id}/settings`, { state: { sectionId } })}
             />

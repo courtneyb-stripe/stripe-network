@@ -25,7 +25,6 @@ import {
 import {
   canConfigurePayoutSchedule,
   capabilityGroupsWithStatus,
-  canConfigurePayoutSchedule,
   deriveAccountStatus,
   resolveCapabilityGroups,
   signalGroupsForConfigureModal,

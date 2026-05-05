@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import { PrototypeProvider } from './context/PrototypeContext'
 import Shell from './components/Shell'
 import PrototypeHub from './screens/PrototypeHub'
@@ -15,9 +15,6 @@ import Components from './screens/Components'
 import CapabilityExplorerPage from './screens/CapabilityExplorerPage'
 
 function App() {
-  const { pathname } = useLocation()
-  const isPrototypeHub = pathname === '/'
-
   return (
     <div className="relative h-screen w-full bg-surface">
       <PrototypeProvider>

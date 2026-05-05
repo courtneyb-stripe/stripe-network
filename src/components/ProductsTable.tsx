@@ -33,10 +33,10 @@ function TableHeader() {
         {COLUMNS.map((col) => (
           <div
             key={col.key}
-            className={`flex min-w-0 shrink-0 items-center overflow-hidden ${col.width} ${col.align === 'right' ? 'justify-end' : ''}`}
+            className={`flex min-w-0 shrink-0 items-center overflow-hidden ${col.width}`}
           >
             <span
-              className={`truncate font-label-small-emphasized text-subdued ${col.align === 'right' ? 'text-right' : ''}`}
+              className="truncate font-label-small-emphasized text-subdued"
             >
               {col.label}
             </span>

@@ -837,10 +837,9 @@ export default function AccountDetailActionBar({
   const v = useVisibility(visibility)
   const billingChipUsesExplicitBillingOnly =
     prototype != null &&
-    prototype.activeRoles.size === 1 &&
-    prototype.activeRoles.has('customer') ||
-    prototype.activeRoles.has('recipient') ||
-    prototype.activeRoles.has('gp_recipient')
+    ((prototype.activeRoles.size === 1 && prototype.activeRoles.has('customer')) ||
+      prototype.activeRoles.has('recipient') ||
+      prototype.activeRoles.has('gp_recipient'))
   const showBillingButton = Boolean(
     prototype &&
       v.showSubscriptions &&

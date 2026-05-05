@@ -171,7 +171,7 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
         ) : (
           <div className="shrink-0 pt-1">
             <BabySegmentedControl
-              options={SEGMENT_OPTIONS}
+              options={[...SEGMENT_OPTIONS]}
               selectedId={segment}
               onChange={setSegment}
               aria-label="Filter needs attention"
@@ -208,7 +208,9 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
               aria-label="Needs Attention"
               className="shrink-0"
               variant="noDividers"
-              onAction={(id) => onOpenActionsModal(id, blockingOnlyMode ? undefined : segment)}
+              onAction={(id) =>
+                onOpenActionsModal(typeof id === 'string' ? id : String(id), blockingOnlyMode ? undefined : segment)
+              }
             >
             {sidebarActions.map((action) => {
               const daysPastDue = getDaysPastDue(action.dueDate)

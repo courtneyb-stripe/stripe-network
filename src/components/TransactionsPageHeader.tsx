@@ -55,7 +55,7 @@ export default function TransactionsPageHeader({
         <TabBar
           tabs={TABS}
           activeId={activeTab}
-          onChange={onTabChange}
+          onChange={(id) => onTabChange(id as TransactionsTabId)}
           variant="primary"
           gap={16}
         />

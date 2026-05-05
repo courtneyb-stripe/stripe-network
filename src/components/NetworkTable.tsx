@@ -240,7 +240,7 @@ function TableHeader({
                 </button>
               ) : (
                 <span
-                  className={`truncate font-label-small-emphasized text-subdued ${col.align === 'right' ? 'text-right' : ''}`}
+                  className="truncate font-label-small-emphasized text-subdued"
                 >
                   {col.label}
                 </span>

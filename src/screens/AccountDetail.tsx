@@ -239,7 +239,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                     accountName={accountName}
                     onPaymentRowClick={() => setPaymentDrawerOpen(true)}
                     onOpenMoneyMovement={() => setActiveSectionId('moneyMovement')}
-                    onOpenActionsModal={(actionId, segment) => {
+                    onOpenActionsModal={(actionId?: string, segment?: 'blocking' | 'actions') => {
                       setActionsModalOpen(true)
                       setActionsModalInitialFilter('all')
                       setActionsModalInitialSegment(

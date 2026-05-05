@@ -286,7 +286,7 @@ export default function ActionsRequiredModal({
           ) : (
             <div className="flex shrink-0 flex-col gap-3 p-4">
               <BabySegmentedControl
-                options={SEGMENT_OPTIONS}
+                options={[...SEGMENT_OPTIONS]}
                 selectedId={segment}
                 onChange={(id) => {
                   setSegment(id)
@@ -345,7 +345,7 @@ export default function ActionsRequiredModal({
               <List
                 aria-label="Needs Attention"
                 variant="noDividers"
-                onAction={(id) => setSelectedActionId(id)}
+                onAction={(id) => setSelectedActionId(typeof id === 'string' ? id : String(id))}
               >
                 {displayList.map((action) => (
                   <ListItem

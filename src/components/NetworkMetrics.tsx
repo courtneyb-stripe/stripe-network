@@ -154,10 +154,10 @@ export default function NetworkMetrics({
         metricValue={financial.value}
         metricOptions={FINANCIAL_OPTIONS}
         metricValueCurrent={financialMetric}
-        onMetricChange={setFinancialMetric}
+        onMetricChange={(v) => setFinancialMetric(v as FinancialMetric)}
         timeOptions={TIME_RANGE_OPTIONS}
         timeValue={financialTime}
-        onTimeChange={setFinancialTime}
+        onTimeChange={(v) => setFinancialTime(v as TimeRange)}
         change={financial.change}
         loading={financialLoading}
       />
@@ -166,10 +166,10 @@ export default function NetworkMetrics({
         metricValue={accounts.value}
         metricOptions={ACCOUNTS_OPTIONS}
         metricValueCurrent={accountsMetric}
-        onMetricChange={setAccountsMetric}
+        onMetricChange={(v) => setAccountsMetric(v as AccountsMetric)}
         timeOptions={TIME_RANGE_OPTIONS}
         timeValue={accountsTime}
-        onTimeChange={setAccountsTime}
+        onTimeChange={(v) => setAccountsTime(v as TimeRange)}
         change={accounts.change}
         loading={accountsLoading}
       />

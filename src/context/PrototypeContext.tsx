@@ -15,7 +15,6 @@ import {
 } from 'react'
 import { useLocation } from 'react-router-dom'
 import {
-  DEFAULT_FINANCING_POPOVER,
   type AccountRoleId,
   type BillingFlavor,
   type CapabilityGroupId,
@@ -61,15 +60,6 @@ const ALL_CAPABILITY_GROUPS: CapabilityGroupId[] = [
   'capital',
   'issuing',
 ]
-
-const ALL_ACTIVE_CAPABILITY_STATUSES: Record<CapabilityGroupId, CapabilityStatus> =
-  ALL_CAPABILITY_GROUPS.reduce(
-    (acc, id) => {
-      acc[id] = 'active'
-      return acc
-    },
-    {} as Record<CapabilityGroupId, CapabilityStatus>
-  )
 
 function mergeCapabilityStatusesForGroups(
   prev: Partial<Record<CapabilityGroupId, CapabilityStatus>>,
