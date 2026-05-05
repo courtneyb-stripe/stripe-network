@@ -8,7 +8,9 @@ import {
 } from '../../../data/capabilityModel'
 import MappingMeshEdges from './MappingMeshEdges'
 
-const HEADER_SIGNALS = statusSignals.filter((s) => s.surfacesAs === 'header')
+const HEADER_SIGNALS = statusSignals.filter(
+  (s) => s.surfacesAs === 'header' && s.id !== 'billing'
+)
 const TAX_SIGNAL = statusSignals.find((s) => s.id === 'tax_reporting')!
 
 const LABEL_DIM = 'text-[#a6a49b] font-normal'

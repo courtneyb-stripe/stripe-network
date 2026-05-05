@@ -3,9 +3,9 @@ import TabBar from '../TabBar'
 export type ExplorerTabId = 'uad' | 'mapping' | 'map'
 
 const TABS: readonly { id: string; label: string }[] = [
-  { id: 'uad', label: 'UAD status groups' },
-  { id: 'mapping', label: 'Capability groups ↔ Status groups' },
-  { id: 'map', label: 'Capabilities map' },
+  { id: 'uad', label: 'Account detail header' },
+  { id: 'mapping', label: 'Capability groups → Header signals' },
+  { id: 'map', label: 'Capabilities mapping' },
 ]
 
 type TabSwitcherProps = {

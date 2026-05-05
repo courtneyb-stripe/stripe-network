@@ -894,11 +894,11 @@ export default function AccountDetailActionBar({
 
   const signalRowWithDivider = (
     <SignalGroup ref={signalPillRowRef}>
+      {/* Billing header chip hidden for now; restore showBilling={showBillingButton} when ready. */}
       <AccountDetailHeaderStatusButtons
         showPayouts={signalChipsFromRoles.payouts}
         showPayments={signalChipsFromRoles.payments}
-        showBilling={showBillingButton}
-        extraActiveCapabilityChips={extraActiveCapabilityChips}
+        showBilling={false}
         status={status}
         onOpenSettingsSection={onOpenSettingsSection}
         onOpenActionsModal={openActionsModal}

@@ -5,7 +5,9 @@ import {
   type StatusSignalId,
 } from '../../../data/capabilityModel'
 
-const HEADER_SIGNALS = statusSignals.filter((s) => s.surfacesAs === 'header')
+const HEADER_SIGNALS = statusSignals.filter(
+  (s) => s.surfacesAs === 'header' && s.id !== 'billing'
+)
 const TAX_SIGNAL = statusSignals.find((s) => s.id === 'tax_reporting')!
 
 const TRANSFERS_FOLD = foldRules.find((r) => r.signal === 'transfers')
