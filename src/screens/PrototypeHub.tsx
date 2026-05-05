@@ -4,7 +4,7 @@
  * Background: Figma node 45:11049 (Stripe Network Cursor SRC).
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import PrototypeHubNetworkArtwork from '../components/PrototypeHubNetworkArtwork'
 import { ROW_HEIGHT } from '../constants/table'
 import { ViewChip } from '../components/NetworkFilterGroup'
@@ -185,7 +185,7 @@ function FilterChipsRow({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4">
-      {FILTER_CHIPS.map((chip) => (
+      {FILTER_CHIPS.filter((chip) => chip.id === 'all' || counts[chip.id] > 0).map((chip) => (
         <ViewChip
           key={chip.id}
           label={chip.label}
@@ -219,6 +219,17 @@ export default function PrototypeHub() {
           ? resources
           : archived
 
+  useEffect(() => {
+    if (activeFilter === 'all') return
+    const isEmpty =
+      (activeFilter === 'working' && working.length === 0) ||
+      (activeFilter === 'resources' && resources.length === 0) ||
+      (activeFilter === 'archived' && archived.length === 0)
+    if (isEmpty) {
+      setActiveFilter(working.length > 0 ? 'working' : 'all')
+    }
+  }, [activeFilter, working.length, resources.length, archived.length])
+
   const showSectionDividers = activeFilter === 'all'
 
   return (
@@ -245,6 +256,44 @@ export default function PrototypeHub() {
             Stripe Network prototypes
           </h1>
           <ul className="font-label-medium text-subdued list-none space-y-1">
+            <li>
+              Contributors →{' '}
+              <a
+                href="https://home.corp.stripe.com/people/courtneyb"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-action-primary hover:underline"
+              >
+                @courtneyb
+              </a>
+              {' '}
+              <a
+                href="https://home.corp.stripe.com/people/angelal"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-action-primary hover:underline"
+              >
+                @angelal
+              </a>
+              {' '}
+              <a
+                href="https://home.corp.stripe.com/people/robinfan"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-action-primary hover:underline"
+              >
+                @robinfan
+              </a>
+              {' '}
+              <a
+                href="https://home.corp.stripe.com/people/grabelnikov"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-action-primary hover:underline"
+              >
+                @grabelnikov
+              </a>
+            </li>
             <li>
               Questions? →{' '}
               <a
