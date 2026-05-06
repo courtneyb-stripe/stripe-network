@@ -1,24 +1,30 @@
 /**
  * Overview section — Config-driven. Renders blocks from config.overviewBlocks
- * (balances, recentTransactions, recentActivity). Used when Overview tab is active.
+ * (balances, recentTransactions block = Money movement UI, recentActivity). Used when Overview tab is active.
  */
 
 import { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
 import BalancesAndMetricsSection from '../BalancesAndMetricsSection'
 import FinancialSnapshot from '../FinancialSnapshot'
 import SectionHeader from '../SectionHeader'
 import { TIME_RANGE_OPTIONS, type TimeRange } from '../metrics/constants'
 import TabBar from '../TabBar'
 import ItemsCountLink from '../ItemsCountLink'
+import InlineListPagination from '../InlineListPagination'
 import PayoutsTable, { generatePayoutRows } from '../PayoutsTable'
 import TableSkeleton from '../TableSkeleton'
 import TransactionsTable, { generateTransactionRows } from '../TransactionsTable'
 import { ViewChip } from '../NetworkFilterGroup'
 import { usePrototypeOptional } from '../../context/PrototypeContext'
 import type { AccountConfig } from '../../data/accountConfigs'
+import { shouldSurfaceExpiredPaymentMethodBlocking } from '../../data/actionsRequired'
 import { hasAnyNonActiveComplianceStatus, resolveCapabilityGroups } from '../../data/uadVisibility'
 import ActionsRequiredSidebarSection from '../ActionsRequiredSidebarSection'
+import { INLINE_LIST_TOTALS } from '../../constants/inlineListMocks'
+import {
+  buildTransactionsListPath,
+  transactionsListLinkState,
+} from '../../utils/transactionsDeepLinks'
 
 const ALL_TRANSACTION_TABS = [
   { id: 'payments' as const, label: 'Payments' },
@@ -46,6 +52,7 @@ type RecentActivityTabId = (typeof RECENT_ACTIVITY_TABS)[number]['id']
 const RECENT_TRANSACTIONS_LIMIT = 10
 const EMBEDDED_PAYMENTS_TOTAL = 80
 const EMBEDDED_PAYOUTS_TOTAL = 48
+const RECENT_ACTIVITY_ROWS = 7
 
 export type OverviewSectionProps = {
   config: AccountConfig
@@ -66,7 +73,6 @@ export default function Overview({
   onOpenMoneyMovement,
   onOpenActionsModal,
 }: OverviewSectionProps) {
-  const navigate = useNavigate()
   const prototype = usePrototypeOptional()
   const activityFilter = prototype?.activityFilter ?? 'viewChip'
   const iaVersion = prototype?.iaVersion ?? 'v2-money-movement'
@@ -109,7 +115,17 @@ export default function Overview({
       resolveCapabilityGroups(prototype.activeRoles, prototype.hasBilling),
       prototype.taxCapabilityStatus
     ) ||
-      prototype.relationship.expiredPaymentMethod === true)
+      shouldSurfaceExpiredPaymentMethodBlocking(prototype))
+
+  const activityFullPath = buildTransactionsListPath('payments', {
+    accountId: accountId ?? '',
+    accountName,
+  })
+  const activityFullState = transactionsListLinkState({
+    tab: 'payments',
+    accountId,
+    accountName,
+  })
 
   return (
     <div className="flex min-w-0 max-w-[1120px] flex-1 flex-col">
@@ -137,21 +153,9 @@ export default function Overview({
       )}
 
       {showRecentTransactions && (
-        <div className={`flex flex-col gap-0 ${showBalances ? 'pt-10' : ''}`}>
-          <SectionHeader
-            title="Recent transactions"
-            size="small"
-            onAction={() => {
-              navigate('/transactions?tab=payments&savedList=toybox', {
-                state: {
-                  tab: 'payments',
-                  savedListId: 'toybox',
-                  accountId: 'toybox-labs',
-                  accountName: 'Toybox Labs',
-                },
-              })
-            }}
-          />
+        <div className={`flex flex-col gap-4 ${showBalances ? 'pt-10' : ''}`}>
+          <SectionHeader title="Money movement" size="small" />
+          <div className="flex flex-col gap-2">
           <div
             className="flex w-full"
             data-name="baby/tab-group"
@@ -170,10 +174,10 @@ export default function Overview({
               {SAVED_LIST_CHIPS.map((chip) => (
                 <ViewChip
                   key={chip.id}
+                  visualVariant="list"
                   label={chip.label}
                   active={savedListId === chip.id}
                   onClick={() => setSavedListId(chip.id)}
-                  size="compact"
                 />
               ))}
             </div>
@@ -205,22 +209,32 @@ export default function Overview({
               <div className="font-label-medium text-subdued py-8">Platform fees — placeholder</div>
             )}
           </div>
+          </div>
         </div>
       )}
 
       {showRecentActivity && (
-        <div className="pt-[40px] flex flex-col gap-0">
-          <SectionHeader title="Recent Activity" size="small" onAction={() => {}} actionLabel="View all" />
-          <div className="flex w-full">
-            <TabBar
-              tabs={RECENT_ACTIVITY_TABS.map((t) => ({ id: t.id, label: t.label }))}
-              activeId={activeActivityTab}
-              onChange={(id) => setActiveActivityTab(id as RecentActivityTabId)}
-              variant="secondary"
-              gap={6}
+        <div className="pt-[40px] flex flex-col gap-4">
+          <SectionHeader title="Recent Activity" size="small" />
+          <div className="flex flex-col gap-4">
+            <div className="flex w-full">
+              <TabBar
+                tabs={RECENT_ACTIVITY_TABS.map((t) => ({ id: t.id, label: t.label }))}
+                activeId={activeActivityTab}
+                onChange={(id) => setActiveActivityTab(id as RecentActivityTabId)}
+                variant="secondary"
+                gap={6}
+              />
+            </div>
+            <TableSkeleton rowCount={RECENT_ACTIVITY_ROWS} showCheckboxColumn={false} />
+            <InlineListPagination
+              pageStart={1}
+              pageEnd={RECENT_ACTIVITY_ROWS}
+              totalResults={INLINE_LIST_TOTALS.recentActivity}
+              to={activityFullPath}
+              linkState={activityFullState}
             />
           </div>
-          <TableSkeleton rowCount={7} showCheckboxColumn={false} />
         </div>
       )}
 

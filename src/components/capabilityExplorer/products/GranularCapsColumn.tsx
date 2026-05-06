@@ -78,7 +78,7 @@ function SectionHeader({
   approximate?: boolean
 }) {
   return (
-    <div className="mb-1.5 flex items-start justify-between gap-2">
+    <div className="mb-4 flex items-start justify-between gap-2">
       <p className="m-0 min-w-0 flex-1 font-label-small-emphasized uppercase tracking-wide text-subdued">
         {label}
       </p>

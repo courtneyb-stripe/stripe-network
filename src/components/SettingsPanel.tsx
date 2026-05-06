@@ -15,8 +15,8 @@ function CloseIcon({ size = 12 }: { size?: number }) {
 }
 
 export const SETTINGS_NAV: { section: string; id: string; label: string }[] = [
-  { section: 'Account', id: 'contact-information', label: 'Contact information' },
-  { section: 'Account', id: 'business-details', label: 'Business details' },
+  { section: 'Account', id: 'contact-information', label: 'Account profile' },
+  { section: 'Account', id: 'business-details', label: 'Business representatives' },
   { section: 'Account', id: 'capabilities', label: 'Capabilities' },
   { section: 'Account', id: 'configurations', label: 'Configurations' },
   { section: 'Account', id: 'verifications', label: 'Verifications' },

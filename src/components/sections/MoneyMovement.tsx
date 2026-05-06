@@ -5,7 +5,7 @@
 
 import { useState } from 'react'
 import { TIME_RANGE_OPTIONS, type TimeRange } from '../metrics/constants'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import BalancesCard from '../BalancesCard'
 import FinancialAccountsSidebar from '../FinancialAccountsSidebar'
 import type { FinancialAccountCard } from '../FinancialAccountsSidebar'
@@ -18,7 +18,6 @@ const FINANCIAL_ACCOUNT_CARDS: FinancialAccountCard[] = [
 
 export default function MoneyMovement() {
   const { id: accountId } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const [financialTimeRange, setFinancialTimeRange] = useState<TimeRange>('Last 30 days')
 
   return (
@@ -73,15 +72,7 @@ export default function MoneyMovement() {
           </div>
           {/* Sidebar: Financial accounts only */}
           <div className="flex min-w-[320px] w-[30%] shrink-0 flex-col gap-6">
-            <FinancialAccountsSidebar
-              accountCards={FINANCIAL_ACCOUNT_CARDS}
-              accountId={accountId}
-              onHeaderAction={
-                accountId
-                  ? () => navigate(`/network/${accountId}/financial-accounts`)
-                  : undefined
-              }
-            />
+            <FinancialAccountsSidebar accountCards={FINANCIAL_ACCOUNT_CARDS} accountId={accountId} />
           </div>
         </div>
       </div>

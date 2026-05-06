@@ -93,19 +93,18 @@ const CAPABILITY_GROUP_ORDER = CAPABILITY_GROUP_DISPLAY_ORDER
 const SELECT_FIELD =
   'w-full rounded-[8px] border border-neutral-100 bg-surface py-2 pl-[12px] pr-[32px] text-[14px] leading-5 text-default shadow-none appearance-none focus:border-action-primary focus:outline-none focus:ring-1 focus:ring-action-primary [color-scheme:light]'
 
-const BILLING_FLAVOR_LABELS: Record<BillingFlavor, string> = {
-  invoicing: 'Invoicing',
-  subscriptions: 'Subscriptions',
-  metered_billing: 'Metered billing',
-}
-
-const BILLING_FLAVOR_OPTIONS: { id: BillingFlavor; label: string }[] = [
-  { id: 'invoicing', label: BILLING_FLAVOR_LABELS.invoicing },
-  { id: 'subscriptions', label: BILLING_FLAVOR_LABELS.subscriptions },
-  { id: 'metered_billing', label: BILLING_FLAVOR_LABELS.metered_billing },
-]
-
 const GROUP_SUBHEAD_CLASS = 'text-[13px] font-medium leading-5 text-subdued'
+
+/**
+ * When false, Configure hides most product-detail prototype toggles (payout schedule, billing/subs,
+ * financial accounts, capital, card program). Payment method on file + expired stay visible for
+ * Merchant (Payments) and Customer (relationship Payments row). Capability group status dropdowns stay.
+ */
+const SHOW_CONFIGURE_PRODUCT_DETAIL_TOGGLES = false
+
+/** Muted body copy (configure empty-state hints). */
+const PLACEHOLDER_BODY_CLASS =
+  'm-0 max-w-[400px] text-[13px] font-normal leading-5 text-[color:var(--color-text-subdued,#687385)]'
 
 const SECTION_HEADING_CLASS =
   'm-0 px-4 pt-4 font-label-medium-emphasized text-[14px] leading-5 tracking-[-0.15px] text-default'
@@ -310,7 +309,14 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
   )
 
   const showComplianceSections = hasComplianceRole(pendingRoles)
-  const signalGroupKeys = useMemo(() => signalGroupsForConfigureModal(pendingRoles), [pendingRoles])
+  /** Inserts a Payments row (PM toggles, optional status) when Customer is on without Merchant. */
+  const configureGroupKeys = useMemo((): CapabilityGroupId[] => {
+    const base = signalGroupsForConfigureModal(pendingRoles)
+    if (pendingRoles.has('customer') && !pendingRoles.has('merchant') && !base.includes('payments')) {
+      return ['payments', ...base]
+    }
+    return base
+  }, [pendingRolesKey])
   const customerOnly = useMemo(() => isCustomerOnly(pendingRoles), [pendingRoles])
 
   const updateDisabled =
@@ -552,9 +558,9 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
                 })}
               </div>
 
-              {signalGroupKeys.length > 0 && (
+              {configureGroupKeys.length > 0 && (
                 <div className="flex flex-col">
-                    {signalGroupKeys.map((groupId) => (
+                    {configureGroupKeys.map((groupId) => (
                       <div
                         key={groupId}
                         className="border-b border-neutral-100 px-4 py-4 last:border-b-0"
@@ -563,7 +569,12 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
                         <div className="mt-4 flex max-w-[240px] flex-col gap-3">
                           {groupId === 'payments' && (
                             <>
-                              {renderCapabilityStatus('payments')}
+                              {customerOnly ? (
+                                <p className={PLACEHOLDER_BODY_CLASS}>
+                                  Customer configuration doesn&apos;t have any backing capabilities.
+                                </p>
+                              ) : null}
+                              {pendingRoles.has('merchant') ? renderCapabilityStatus('payments') : null}
                               <span className="flex items-start gap-2">
                                 <CharcoalSwitch
                                   id="configure-payments-pm"
@@ -608,7 +619,8 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
                           {groupId === 'payouts' && (
                             <>
                               {renderCapabilityStatus('payouts')}
-                              {canConfigurePayoutSchedule(pendingRoles) ? (
+                              {SHOW_CONFIGURE_PRODUCT_DETAIL_TOGGLES &&
+                              canConfigurePayoutSchedule(pendingRoles) ? (
                                 <span className="flex items-start gap-2">
                                   <CharcoalSwitch
                                     id="configure-payouts-schedule"
@@ -626,160 +638,96 @@ export default function PrototypeFloatie({ open, onClose }: PrototypeFloatieProp
                               ) : null}
                             </>
                           )}
-                          {groupId === 'billing' && (
-                            <>
-                              <span className="flex items-start gap-2">
-                                <CharcoalSwitch
-                                  id="configure-uses-billing"
-                                  checked={pendingBilling}
-                                  onChange={(on) => {
-                                    setPendingBilling(on)
-                                    if (!on) setPendingBillingFlavors(new Set())
-                                    else
-                                      setPendingBillingFlavors((prev) =>
-                                        prev.size === 0
-                                          ? new Set([BILLING_FLAVOR_OPTIONS[0].id])
-                                          : prev
-                                      )
-                                  }}
-                                  className="mt-px"
-                                />
-                                <label
-                                  htmlFor="configure-uses-billing"
-                                  className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
-                                >
-                                  Uses billing
-                                </label>
-                              </span>
-                              {pendingBilling && (
-                                <div
-                                  className="ml-4 flex flex-col gap-3 border-l border-neutral-100 pl-4"
-                                  role="group"
-                                  aria-label="Billing flavors"
-                                >
-                                  {BILLING_FLAVOR_OPTIONS.map(({ id: flavorId, label }) => (
-                                    <label
-                                      key={flavorId}
-                                      className="flex cursor-pointer items-start gap-2 font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={pendingBillingFlavors.has(flavorId)}
-                                        onChange={() => {
-                                          setPendingBillingFlavors((prev) => {
-                                            const next = new Set(prev)
-                                            if (next.has(flavorId)) next.delete(flavorId)
-                                            else next.add(flavorId)
-                                            return next
-                                          })
-                                        }}
-                                        className="mt-[3px] h-3.5 w-3.5 shrink-0 rounded-[4px] border border-neutral-100 text-action-primary focus:ring-action-primary"
-                                      />
-                                      {label}
-                                    </label>
-                                  ))}
-                                </div>
-                              )}
-                              <span className="flex items-start gap-2">
-                                <CharcoalSwitch
-                                  id="configure-rel-subs"
-                                  checked={draftRelationship.hasActiveSubscriptions}
-                                  onChange={(v) =>
-                                    setDraftRelationship((r) => ({ ...r, hasActiveSubscriptions: v }))
-                                  }
-                                  className="mt-px"
-                                />
-                                <label
-                                  htmlFor="configure-rel-subs"
-                                  className="w-fit whitespace-nowrap cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
-                                >
-                                  Has active subscriptions with Platform
-                                </label>
-                              </span>
-                            </>
-                          )}
                           {groupId === 'transfers' && renderCapabilityStatus('transfers')}
                           {groupId === 'treasury' && (
                             <>
                               {renderCapabilityStatus('treasury')}
-                              <span className="flex items-start gap-2">
-                                <CharcoalSwitch
-                                  id="configure-treasury-fa"
-                                  checked={draftFinancialAccounts}
-                                  onChange={setDraftFinancialAccounts}
-                                  className="mt-px"
-                                />
-                                <label
-                                  htmlFor="configure-treasury-fa"
-                                  className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
-                                >
-                                  Has Financial accounts
-                                </label>
-                              </span>
+                              {SHOW_CONFIGURE_PRODUCT_DETAIL_TOGGLES ? (
+                                <span className="flex items-start gap-2">
+                                  <CharcoalSwitch
+                                    id="configure-treasury-fa"
+                                    checked={draftFinancialAccounts}
+                                    onChange={setDraftFinancialAccounts}
+                                    className="mt-px"
+                                  />
+                                  <label
+                                    htmlFor="configure-treasury-fa"
+                                    className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
+                                  >
+                                    Has Financial accounts
+                                  </label>
+                                </span>
+                              ) : null}
                             </>
                           )}
                           {groupId === 'capital' && (
                             <>
                               {renderCapabilityStatus('capital')}
-                              <span className="flex items-start gap-2">
-                                <CharcoalSwitch
-                                  id="configure-capital-fin"
-                                  checked={draftBusinessFinancing}
-                                  onChange={setDraftBusinessFinancing}
-                                  className="mt-px"
-                                />
-                                <label
-                                  htmlFor="configure-capital-fin"
-                                  className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
-                                >
-                                  Has Capital
-                                </label>
-                              </span>
-                              {draftBusinessFinancing && (
-                                <div
-                                  className="ml-4 flex flex-col gap-3 border-l border-neutral-100 pl-4"
-                                  role="group"
-                                  aria-label="Capital product types"
-                                >
-                                  <label className="flex cursor-pointer items-start gap-2 font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default">
-                                    <input
-                                      type="checkbox"
-                                      checked={draftFinancingLoan}
-                                      onChange={() => setDraftFinancingLoan((v) => !v)}
-                                      className="mt-[3px] h-3.5 w-3.5 shrink-0 rounded-[4px] border border-neutral-100 text-action-primary focus:ring-action-primary"
+                              {SHOW_CONFIGURE_PRODUCT_DETAIL_TOGGLES ? (
+                                <>
+                                  <span className="flex items-start gap-2">
+                                    <CharcoalSwitch
+                                      id="configure-capital-fin"
+                                      checked={draftBusinessFinancing}
+                                      onChange={setDraftBusinessFinancing}
+                                      className="mt-px"
                                     />
-                                    Loan
-                                  </label>
-                                  <label className="flex cursor-pointer items-start gap-2 font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default">
-                                    <input
-                                      type="checkbox"
-                                      checked={draftFinancingCashAdvance}
-                                      onChange={() => setDraftFinancingCashAdvance((v) => !v)}
-                                      className="mt-[3px] h-3.5 w-3.5 shrink-0 rounded-[4px] border border-neutral-100 text-action-primary focus:ring-action-primary"
-                                    />
-                                    Cash advance
-                                  </label>
-                                </div>
-                              )}
+                                    <label
+                                      htmlFor="configure-capital-fin"
+                                      className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
+                                    >
+                                      Has Capital
+                                    </label>
+                                  </span>
+                                  {draftBusinessFinancing && (
+                                    <div
+                                      className="ml-4 flex flex-col gap-3 border-l border-neutral-100 pl-4"
+                                      role="group"
+                                      aria-label="Capital product types"
+                                    >
+                                      <label className="flex cursor-pointer items-start gap-2 font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default">
+                                        <input
+                                          type="checkbox"
+                                          checked={draftFinancingLoan}
+                                          onChange={() => setDraftFinancingLoan((v) => !v)}
+                                          className="mt-[3px] h-3.5 w-3.5 shrink-0 rounded-[4px] border border-neutral-100 text-action-primary focus:ring-action-primary"
+                                        />
+                                        Loan
+                                      </label>
+                                      <label className="flex cursor-pointer items-start gap-2 font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default">
+                                        <input
+                                          type="checkbox"
+                                          checked={draftFinancingCashAdvance}
+                                          onChange={() => setDraftFinancingCashAdvance((v) => !v)}
+                                          className="mt-[3px] h-3.5 w-3.5 shrink-0 rounded-[4px] border border-neutral-100 text-action-primary focus:ring-action-primary"
+                                        />
+                                        Cash advance
+                                      </label>
+                                    </div>
+                                  )}
+                                </>
+                              ) : null}
                             </>
                           )}
                           {groupId === 'issuing' && (
                             <>
                               {renderCapabilityStatus('issuing')}
-                              <span className="flex items-start gap-2">
-                                <CharcoalSwitch
-                                  id="configure-issuing-card"
-                                  checked={draftParticipatesCardProgram}
-                                  onChange={setDraftParticipatesCardProgram}
-                                  className="mt-px"
-                                />
-                                <label
-                                  htmlFor="configure-issuing-card"
-                                  className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
-                                >
-                                  Participates in card program
-                                </label>
-                              </span>
+                              {SHOW_CONFIGURE_PRODUCT_DETAIL_TOGGLES ? (
+                                <span className="flex items-start gap-2">
+                                  <CharcoalSwitch
+                                    id="configure-issuing-card"
+                                    checked={draftParticipatesCardProgram}
+                                    onChange={setDraftParticipatesCardProgram}
+                                    className="mt-px"
+                                  />
+                                  <label
+                                    htmlFor="configure-issuing-card"
+                                    className="cursor-pointer font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default"
+                                  >
+                                    Participates in card program
+                                  </label>
+                                </span>
+                              ) : null}
                             </>
                           )}
                         </div>

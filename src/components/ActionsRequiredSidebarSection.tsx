@@ -1,11 +1,14 @@
 /**
  * Needs Attention sidebar section — Figma 18-7608.
- * Compliance (non-active capability / tax): segmented control (Actions required | Blocking issues) + list.
- * Blocking-only (e.g. expired default PM while all capabilities active): no segment control — single blocking row.
- * Styling aligned with Profile card and other sidebar sections.
+ * Heading reflects visibility:
+ * - **Needs attention** — both Actions required (compliance/tax remediation) and Blocking issues (expired PM) apply.
+ * - **Blocking issues** — blocking-only (e.g. expired default PM while capabilities active); no segment control;
+ *   list rows and pagination do not open the fullscreen Needs Attention modal (no Actions required to pair).
+ * - **Actions required** — compliance/tax remediation without surfaced blocking row; no segment control.
+ * Copy link + View details only when heading is **Needs attention** (dual mode).
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   ACTIONS_REQUIRED_LIST,
   BLOCKING_EXPIRED_DEFAULT_PAYMENT_METHOD,
@@ -13,6 +16,7 @@ import {
   getImpactsDisplayParts,
   getImpactsTooltipLabel,
   getImpactsMoreTooltipLabel,
+  shouldSurfaceExpiredPaymentMethodBlocking,
 } from '../data/actionsRequired'
 import BabySegmentedControl from './BabySegmentedControl'
 import { usePrototypeOptional } from '../context/PrototypeContext'
@@ -20,6 +24,7 @@ import { Icon } from '../icons/SailIcons'
 import { ArrowsOutwardIcon } from '../icons/ArrowsOutwardIcon'
 import { ActionRequiredDescriptionRow } from './ActionRequiredDescriptionRow'
 import { IconButton } from './IconButton'
+import InlineListPagination from './InlineListPagination'
 import { List, ListItem } from './List'
 import { RightArrowIcon } from './metrics/MetricCard'
 import { hasAnyNonActiveComplianceStatus, resolveCapabilityGroups } from '../data/uadVisibility'
@@ -62,6 +67,14 @@ const SEGMENT_OPTIONS = [
 ] as const
 type SegmentId = (typeof SEGMENT_OPTIONS)[number]['id']
 
+type AttentionHeadingKind = 'needsAttention' | 'blockingIssues' | 'actionsRequired'
+
+const ATTENTION_HEADING_LABEL: Record<AttentionHeadingKind, string> = {
+  needsAttention: 'Needs attention',
+  blockingIssues: 'Blocking issues',
+  actionsRequired: 'Actions required',
+}
+
 /** Red circle with white X — same as paused Payouts/Payments (Icon/Feedback Critical). */
 function RestrictedCircleIcon({ size = 16 }: { size?: number }) {
   return (
@@ -101,7 +114,7 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
   const prototype = usePrototypeOptional()
   const isLowFidelity = prototype?.fidelity === 'low'
   const [segment, setSegment] = useState<SegmentId>('actions')
-  const expiredDefaultPm = prototype?.relationship?.expiredPaymentMethod === true
+  const expiredPmBlocking = shouldSurfaceExpiredPaymentMethodBlocking(prototype)
   const hasComplianceRemediation = useMemo(() => {
     if (prototype == null) return false
     return hasAnyNonActiveComplianceStatus(
@@ -110,15 +123,53 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
       prototype.taxCapabilityStatus
     )
   }, [prototype])
-  /** Expired PM (or similar) with no capability/tax remediation — only blocking row, no “Actions required” segment. */
-  const blockingOnlyMode = !hasComplianceRemediation && expiredDefaultPm
+  /** Expired PM with no capability/tax remediation — blocking-only row, no Actions required segment. */
+  const blockingOnlyMode = !hasComplianceRemediation && expiredPmBlocking
+
+  /** Primary section title + chrome (segment + header icons). */
+  const attentionHeading: AttentionHeadingKind = blockingOnlyMode
+    ? 'blockingIssues'
+    : hasComplianceRemediation && expiredPmBlocking
+      ? 'needsAttention'
+      : hasComplianceRemediation
+        ? 'actionsRequired'
+        : 'needsAttention'
+
+  const showSegmentControl = attentionHeading === 'needsAttention'
+  /** Copy link + expand: only when both blocking and Actions required surfaces apply (dual tabs). */
+  const showHeaderChromeIcons = attentionHeading === 'needsAttention'
+
+  /** Reset segment when leaving dual mode so list/modal don’t use a stale Blocking selection. */
+  useEffect(() => {
+    if (!showSegmentControl) setSegment('actions')
+  }, [showSegmentControl])
+
+  const effectiveSegmentForList: SegmentId = showSegmentControl
+    ? segment
+    : attentionHeading === 'blockingIssues'
+      ? 'blocking'
+      : 'actions'
+
   const filteredForSidebar = filterActionsRequired('all')
-  /** Blocking-only: expired PM row. With compliance: blocking tab = first list row only; actions tab = preview. */
-  const sidebarActions = blockingOnlyMode
-    ? [BLOCKING_EXPIRED_DEFAULT_PAYMENT_METHOD]
-    : segment === 'blocking'
-      ? filteredForSidebar.slice(0, 1)
-      : filteredForSidebar.slice(0, SIDEBAR_ACTION_COUNT)
+  /** Blocking tab lists expired PM when surfaced; otherwise first preview row (dual mode only). */
+  const sidebarActions =
+    attentionHeading === 'blockingIssues'
+      ? [BLOCKING_EXPIRED_DEFAULT_PAYMENT_METHOD]
+      : effectiveSegmentForList === 'blocking'
+        ? expiredPmBlocking
+          ? [BLOCKING_EXPIRED_DEFAULT_PAYMENT_METHOD]
+          : filteredForSidebar.slice(0, 1)
+        : filteredForSidebar.slice(0, SIDEBAR_ACTION_COUNT)
+
+  const modalSegmentArg: SegmentId | undefined =
+    attentionHeading === 'blockingIssues'
+      ? undefined
+      : attentionHeading === 'actionsRequired'
+        ? 'actions'
+        : segment
+
+  /** Blocking-only: expired PM with no compliance/tax row — stay in sidebar; modal opens only when Actions required also applies (dual tab). */
+  const listRowOpensNeedsAttentionModal = !blockingOnlyMode
 
   const handleCopyLink = () => {
     const url = copyLinkUrl ?? (typeof window !== 'undefined' ? window.location.href : '')
@@ -129,46 +180,45 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
 
   return (
     <div
-      className="flex w-full min-w-0 max-w-full flex-col gap-1 shrink-0 overflow-hidden rounded-[12px] bg-surface pl-0 pr-0 pb-0 pt-0"
-      style={{ width: '100%' }}
+      className="flex h-fit w-full min-w-0 max-w-full shrink-0 flex-col gap-4 overflow-hidden rounded-none bg-surface px-0 py-0"
       data-name="Needs Attention section"
       data-node-id="18:7608"
+      data-attention-heading={attentionHeading}
     >
-      {/* Header: same structure as SectionHeader (min-h-8, 18px title) for consistency */}
-      <div className="flex min-h-8 w-full items-center justify-between gap-1.5 shrink-0" data-node-id="18:7609">
+      {/* Header: matches {@link SectionHeader} / Figma 6232:150998 (20 bold title, 28px outlined controls). */}
+      <div className="flex min-h-7 w-full shrink-0 items-center gap-4" data-node-id="18:7609">
         <div className="flex min-w-0 flex-1 items-center gap-1.5" data-node-id="18:7610">
-          <p className="min-w-0 w-fit text-[18px] leading-[26px] font-semibold tracking-0 text-default shrink-0">
-            Needs Attention
+          <p
+            className="min-w-0 w-fit shrink-0 whitespace-pre-wrap text-[20px] font-bold leading-[28px] tracking-0 text-page-header-ink"
+            style={{ fontFeatureSettings: "'lnum' 1, 'pnum' 1" }}
+          >
+            {ATTENTION_HEADING_LABEL[attentionHeading]}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-1" data-node-id="18:7613">
-          <IconButton
-            label="Request information"
-            tooltipId="actions-required-link-tooltip"
-            variant="ghost"
-            onClick={handleCopyLink}
-            data-cursor-element-id="cursor-el-1"
-          >
-            <Icon name="link" size={12} fill="var(--color-icon-subdued)" />
-          </IconButton>
-          <IconButton
-            label="View details"
-            tooltipId="actions-required-expand-tooltip"
-            variant="ghost"
-            onClick={() => onOpenActionsModal()}
-          >
-            <ArrowsOutwardIcon size={12} fill="var(--color-icon-subdued)" />
-          </IconButton>
-        </div>
+        {showHeaderChromeIcons && (
+          <div className="flex shrink-0 items-center gap-2" data-node-id="18:7613">
+            <IconButton
+              label="Request information"
+              tooltipId="actions-required-link-tooltip"
+              variant="sectionHeader"
+              onClick={handleCopyLink}
+              data-cursor-element-id="cursor-el-1"
+            >
+              <Icon name="link" size={12} fill="var(--color-icon-default)" />
+            </IconButton>
+            <IconButton
+              label="View details"
+              tooltipId="actions-required-expand-tooltip"
+              variant="sectionHeader"
+              onClick={() => onOpenActionsModal()}
+            >
+              <ArrowsOutwardIcon size={12} fill="var(--color-icon-default)" />
+            </IconButton>
+          </div>
+        )}
       </div>
       <div className="flex shrink-0 flex-col gap-2 pb-2">
-        {blockingOnlyMode ? (
-          <div className="shrink-0 pt-1">
-            <p className="m-0 font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-subdued">
-              Blocking issues
-            </p>
-          </div>
-        ) : (
+        {showSegmentControl && (
           <div className="shrink-0 pt-1">
             <BabySegmentedControl
               options={[...SEGMENT_OPTIONS]}
@@ -179,23 +229,30 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
           </div>
         )}
         {isLowFidelity ? (
-          <div className="flex flex-col shrink-0 px-2" aria-label="Needs Attention">
+          <div className="flex flex-col shrink-0 px-2" aria-label={ATTENTION_HEADING_LABEL[attentionHeading]}>
             {Array.from(
-              { length: blockingOnlyMode || segment === 'blocking' ? 1 : SIDEBAR_ACTION_COUNT },
+              {
+                length:
+                  attentionHeading === 'blockingIssues' ||
+                  (showSegmentControl && segment === 'blocking')
+                    ? 1
+                    : SIDEBAR_ACTION_COUNT,
+              },
               (_, i) => {
                 const action = ACTIONS_REQUIRED_LIST[i]
+                const skeletonActionId =
+                  attentionHeading === 'blockingIssues' ||
+                  (showSegmentControl && segment === 'blocking' && expiredPmBlocking)
+                    ? BLOCKING_EXPIRED_DEFAULT_PAYMENT_METHOD.id
+                    : action?.id
                 return (
                   <ActionsRequiredSkeletonRow
                     key={i}
-                    actionId={
-                      blockingOnlyMode ? BLOCKING_EXPIRED_DEFAULT_PAYMENT_METHOD.id : action?.id
-                    }
+                    actionId={skeletonActionId}
                     onClick={
-                      blockingOnlyMode
-                        ? (actionId) => onOpenActionsModal(actionId)
-                        : action != null
-                          ? (actionId) => onOpenActionsModal(actionId, segment)
-                          : undefined
+                      listRowOpensNeedsAttentionModal && skeletonActionId != null
+                        ? (actionId) => onOpenActionsModal(actionId, modalSegmentArg)
+                        : undefined
                     }
                   />
                 )
@@ -205,11 +262,14 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
         ) : (
           <>
             <List
-              aria-label="Needs Attention"
+              aria-label={ATTENTION_HEADING_LABEL[attentionHeading]}
               className="shrink-0"
               variant="noDividers"
-              onAction={(id) =>
-                onOpenActionsModal(typeof id === 'string' ? id : String(id), blockingOnlyMode ? undefined : segment)
+              onAction={
+                listRowOpensNeedsAttentionModal
+                  ? (id) =>
+                      onOpenActionsModal(typeof id === 'string' ? id : String(id), modalSegmentArg)
+                  : undefined
               }
             >
             {sidebarActions.map((action) => {
@@ -247,26 +307,16 @@ export default function ActionsRequiredSidebarSection({ onOpenActionsModal, acco
               )
             })}
             </List>
-            {blockingOnlyMode ? (
-              <button
-                type="button"
-                onClick={() => onOpenActionsModal()}
-                className="flex flex-col font-label-small text-[12px] leading-4 text-left text-subdued hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[4px] -mb-1"
-              >
-                <span className="text-action-primary leading-4">View blocking issue</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => onOpenActionsModal()}
-                className="flex flex-col font-label-small text-subdued text-[12px] leading-4 text-left hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[4px] -mb-1"
-              >
-                <span>
-                  <span className="leading-4">{sidebarActions.length} of </span>
-                  <span className="text-action-primary leading-4">{TOTAL_ACTIONS} need attention</span>
-                </span>
-              </button>
-            )}
+            <InlineListPagination
+              pageStart={1}
+              pageEnd={sidebarActions.length}
+              totalResults={effectiveSegmentForList === 'blocking' ? filteredForSidebar.length : TOTAL_ACTIONS}
+              onViewFullList={
+                listRowOpensNeedsAttentionModal
+                  ? () => onOpenActionsModal(undefined, modalSegmentArg)
+                  : undefined
+              }
+            />
           </>
         )}
       </div>

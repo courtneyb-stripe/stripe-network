@@ -3,7 +3,7 @@
  * When restricted: Actions required section (Figma 18-7608) first, then 40px gap, then Account card.
  * Account heading (SectionHeader with expand icon), optional badge, and property list.
  * Expand opens half-screen drawer (Figma 16:6868).
- * Risk level in the profile list follows PrototypeContext (synced from mock account riskLevel, default Low).
+ * Details card (249:141968): bordered inner card, skeleton rows, risk callout on row 3 when elevated/high.
  */
 
 import { ArrowsOutwardIcon } from '../icons/ArrowsOutwardIcon'
@@ -21,10 +21,12 @@ type AccountDetailsSidebarProps = {
   onCloseAccountDrawer?: () => void
   /** When restricted, opens the fullscreen Actions required modal (from action bar). Kept for API compatibility; Needs attention is shown in main when restricted. */
   onOpenActionsModal?: () => void
-  /** When provided, Profile header shows Edit (ghost) button left of expand; opens Settings (deep link). */
+  /** When provided, Profile header shows Settings control left of expand; opens Settings (deep link). */
   onOpenSettings?: () => void
   /** Account id for View risk analysis link. */
   accountId?: string
+  /** Display name in Details card header (Figma Display + Handle). */
+  accountName?: string
 }
 
 export default function AccountDetailsSidebar({
@@ -35,27 +37,28 @@ export default function AccountDetailsSidebar({
   onOpenActionsModal,
   onOpenSettings,
   accountId,
+  accountName,
 }: AccountDetailsSidebarProps) {
   return (
     <>
-      <div className="flex min-w-[320px] w-full shrink-0 flex-col">
+      <div className="flex w-full min-w-0 max-w-[285px] shrink-0 flex-col self-start">
         <div
-          className="flex w-full flex-col gap-2 overflow-hidden rounded-[12px] bg-surface px-4 pb-4 pt-0"
+          className="flex h-fit w-full flex-col gap-4 overflow-hidden rounded-none bg-surface pt-0"
           data-name="baby/card/prop-list_vertical"
           data-node-id="2:6692"
         >
-        <div className="flex flex-col w-full shrink-0" data-node-id="2:6693">
-          <SectionHeader
-            title="Profile"
-            size="small"
-            onEdit={onOpenSettings}
-            editLabel="Settings"
-            onAction={onOpenAccountDrawer}
-            actionIcon={<ArrowsOutwardIcon size={12} fill="var(--color-icon-subdued)" />}
-            actionLabel="View details"
-          />
-        </div>
-        <ProfileSectionContent accountId={accountId} />
+          <div className="flex w-full shrink-0 flex-col" data-node-id="249:141969">
+            <SectionHeader
+              title="Details"
+              size="medium"
+              onEdit={onOpenSettings}
+              editLabel="Settings"
+              onAction={onOpenAccountDrawer}
+              actionIcon={<ArrowsOutwardIcon size={12} fill="var(--color-icon-default)" />}
+              actionLabel="View details"
+            />
+          </div>
+          <ProfileSectionContent accountId={accountId} accountName={accountName} />
         </div>
 
         {/* 40px gap then placeholder sections */}

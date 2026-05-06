@@ -8,7 +8,6 @@ import { Link } from 'react-router-dom'
 import { Icon } from '../icons/SailIcons'
 import { GramIcon } from '../icons/GramIcon'
 import { IconButton } from './IconButton'
-import { RightArrowIcon } from './metrics/MetricCard'
 import SectionHeader from './SectionHeader'
 
 export type FinancialAccountRow = {
@@ -41,7 +40,6 @@ export type FinancialAccountsSidebarProps = {
   accountCards?: FinancialAccountCard[]
   /** When set with card.id, cards link to /network/:accountId/financial-accounts/:faId with hover state. */
   accountId?: string
-  onHeaderAction?: () => void
   className?: string
 }
 
@@ -111,23 +109,17 @@ export default function FinancialAccountsSidebar({
   sections,
   accountCards,
   accountId,
-  onHeaderAction,
   className = '',
 }: FinancialAccountsSidebarProps) {
   const isAccountsVariant = accountCards != null && accountCards.length > 0
 
   return (
     <div
-      className={`flex min-w-[320px] w-full shrink-0 flex-col gap-2 ${className}`.trim()}
+      className={`flex min-w-[320px] w-full shrink-0 flex-col gap-4 ${className}`.trim()}
       data-node-id={isAccountsVariant ? '29:15531' : '29:14328'}
     >
-      <div className="pb-2" data-node-id="29:14317">
-        <SectionHeader
-          title="Financial accounts"
-          size="small"
-          onAction={onHeaderAction}
-          actionLabel="View all"
-        />
+      <div className="shrink-0" data-node-id="29:14317">
+        <SectionHeader title="Financial accounts" size="small" />
       </div>
 
       {isAccountsVariant ? (

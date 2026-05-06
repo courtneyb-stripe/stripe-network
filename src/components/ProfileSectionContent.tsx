@@ -1,157 +1,238 @@
 /**
- * Profile section content — Figma node 48:13117 (Stripe Network Cursor SRC).
- * Replaces the section underneath the "Profile" section header in the account details sidebar.
+ * Profile / Details sidebar card — Figma Sections/Metadata (249:141968).
+ * Inner bordered card: account title, skeleton header lines, divider, icon + value rows.
+ * Icons are neutral-100 squares until assets are provided. Risk row (checkmark position): elevated/high copy + link; otherwise skeleton.
  */
 
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { PropertyList, PropertyListItem } from './PropertyList'
 import { DescriptionTooltipTrigger } from './DescriptionTooltipTrigger'
 import { usePrototypeOptional } from '../context/PrototypeContext'
 import type { RiskLevel } from '../data/configMatrix'
-const ACCOUNT_DETAILS = {
-  id: 'acct_Ly5pN5pGDWgtpa',
-  email: 'contact@example.com',
-  created: 'Jul 10, 2021',
-  configurations: 'Merchant, Customer',
-  country: 'United States',
+
+type ProfileSectionContentProps = {
+  accountId?: string
+  accountName?: string
 }
 
-function ProfilePropertySkeletonRow() {
+/** Match skeleton prop bars: 12px height, 3px radius, neutral-100 fill. */
+function SkeletonBar({ className = '' }: { className?: string }) {
   return (
     <div
-      className="flex max-w-[85%] flex-col justify-start gap-0.5 w-full shrink-0"
-      data-name="PropertyListItem"
-      style={{ height: 'fit-content' }}
+      className={`h-3 shrink-0 rounded-[3px] bg-neutral-100 ${className}`}
+      aria-hidden
+    />
+  )
+}
+
+/** Placeholder for row icons — same fill + radius as skeleton bars (user-provided icons later). */
+function MetadataIconPlaceholder() {
+  return (
+    <span
+      className="inline-block size-3 shrink-0 rounded-[3px] bg-neutral-100"
+      aria-hidden
+    />
+  )
+}
+
+function MetadataRow({
+  icon,
+  children,
+  align = 'center',
+}: {
+  icon: ReactNode
+  children: ReactNode
+  align?: 'center' | 'start'
+}) {
+  return (
+    <div
+      className={`flex min-w-0 w-full gap-5 ${align === 'center' ? 'items-center' : 'items-start'}`}
+      data-name="Label"
     >
-      <div className="h-3 w-16 rounded-[3px] bg-neutral-100" aria-hidden />
-      <div className="h-3 w-full max-w-[70%] rounded-[3px] bg-neutral-100" aria-hidden />
+      <div
+        className={`flex h-5 w-3 shrink-0 justify-center ${align === 'center' ? 'items-center' : 'items-start pt-0.5'}`}
+      >
+        {icon}
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">{children}</div>
     </div>
   )
 }
 
-function ConfigurationsValue() {
-  return (
-    <span className="inline-flex items-baseline flex-nowrap gap-0 whitespace-nowrap">
-      <DescriptionTooltipTrigger
-        tooltipLabel="Accounts that can receive payments and pay out to bank accounts."
-        tooltipId="profile-config-merchant-tooltip"
-      >
-        Merchant
-      </DescriptionTooltipTrigger>
-      ,{' '}
-      <DescriptionTooltipTrigger
-        tooltipLabel="Accounts that can make payments (e.g. pay for products)."
-        tooltipId="profile-config-customer-tooltip"
-      >
-        Customer
-      </DescriptionTooltipTrigger>
-    </span>
-  )
-}
-
-/** Skeleton rows before the Risk level row (second to last in low-fi list). */
-const SKELETON_ROWS_BEFORE_RISK = 4
-/** One skeleton row after Risk level so Risk level is second to last. */
-const SKELETON_ROWS_AFTER_RISK = 1
-
-function riskLevelLabel(level: RiskLevel): 'Low' | 'Elevated' | 'High' {
-  if (level === 'high') return 'High'
-  if (level === 'elevated') return 'Elevated'
-  return 'Low'
-}
-
-function RiskLevelValue({
+function RiskAccountCallout({
   riskLevel,
   accountId,
 }: {
   riskLevel: RiskLevel | undefined
   accountId: string | undefined
 }) {
-  const effective: RiskLevel = riskLevel ?? 'low'
-  const text = riskLevelLabel(effective)
-  const isHigh = effective === 'high'
-  const isElevated = effective === 'elevated'
+  const path = accountId != null ? `/network/${accountId}/risk-analysis` : null
+  const linkClass =
+    'w-fit font-label-medium leading-5 tracking-[-0.15px] underline underline-offset-2 decoration-solid hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[length:var(--radius-xsmall)]'
 
-  const valueStyle =
-    isHigh
-      ? { color: 'var(--color-feedback-critical-on)' }
-      : isElevated
-        ? { color: 'var(--color-feedback-attention-on)' }
-        : undefined
-
-  const riskNestedPath =
-    accountId != null ? `/network/${accountId}/risk-analysis` : null
-
-  const linkClassName =
-    'font-label-medium leading-5 tracking-[-0.15px] underline hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[length:var(--radius-xsmall)] w-fit'
-
-  if (riskNestedPath != null && (isHigh || isElevated)) {
+  if (riskLevel === 'elevated') {
+    const style = { color: 'var(--color-feedback-attention-on)' } as const
+    if (path != null) {
+      return (
+        <Link to={path} className={linkClass} style={style}>
+          Elevated risk account
+        </Link>
+      )
+    }
     return (
-      <Link to={riskNestedPath} className={linkClassName} style={valueStyle}>
-        {text}
-      </Link>
+      <span className={linkClass} style={style}>
+        Elevated risk account
+      </span>
     )
   }
 
-  return (
-    <span className="font-label-medium leading-5 tracking-[-0.15px]" style={valueStyle}>
-      {text}
-    </span>
-  )
+  if (riskLevel === 'high') {
+    const style = { color: 'var(--color-feedback-critical-on)' } as const
+    if (path != null) {
+      return (
+        <Link to={path} className={linkClass} style={style}>
+          High risk account
+        </Link>
+      )
+    }
+    return (
+      <span className={linkClass} style={style}>
+        High risk account
+      </span>
+    )
+  }
+
+  return <SkeletonBar className="w-full max-w-[min(100%,14rem)]" />
 }
 
-type ProfileSectionContentProps = {
-  accountId?: string
+const CONFIGURATION_LINK_ITEMS = [
+  {
+    label: 'Merchant',
+    tooltipLabel: 'Accounts that can receive payments and pay out to bank accounts.',
+    tooltipId: 'details-config-merchant-tooltip',
+  },
+  {
+    label: 'Customer',
+    tooltipLabel: 'Accounts that can make payments (e.g. pay for products).',
+    tooltipId: 'details-config-customer-tooltip',
+  },
+  {
+    label: 'Recipient',
+    tooltipLabel: 'Accounts that receive payouts from your platform.',
+    tooltipId: 'details-config-recipient-tooltip',
+  },
+  {
+    label: 'Storer',
+    tooltipLabel: 'Accounts that store funds or goods on behalf of others.',
+    tooltipId: 'details-config-storer-tooltip',
+  },
+  {
+    label: 'Borrower',
+    tooltipLabel: 'Accounts that have accessed financing products.',
+    tooltipId: 'details-config-borrower-tooltip',
+  },
+  {
+    label: 'Card issuer',
+    tooltipLabel: 'Accounts enabled for issuing cards.',
+    tooltipId: 'details-config-card-issuer-tooltip',
+  },
+] as const
+
+function ConfigurationsLinksRow() {
+  const commaClass =
+    'mx-[2px] font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default'
+
+  return (
+    <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-0 gap-y-0.5">
+      {CONFIGURATION_LINK_ITEMS.map((item, i) => (
+        <span key={item.tooltipId} className="inline-flex items-baseline whitespace-nowrap">
+          <DescriptionTooltipTrigger tooltipLabel={item.tooltipLabel} tooltipId={item.tooltipId}>
+            {item.label}
+          </DescriptionTooltipTrigger>
+          {i < CONFIGURATION_LINK_ITEMS.length - 1 ? <span className={commaClass}>,</span> : null}
+        </span>
+      ))}
+    </div>
+  )
 }
 
 export default function ProfileSectionContent({
   accountId,
+  accountName = '—',
 }: ProfileSectionContentProps) {
   const prototype = usePrototypeOptional()
-  const isLowFidelity = prototype?.fidelity === 'low'
-  const contextRiskLevel = prototype?.riskLevel
+  const riskLevel = prototype?.riskLevel
 
   return (
     <div
-      className="flex flex-col gap-4 w-full shrink-0"
-      data-name="Profile section content"
-      data-node-id="48:13117"
+      className="w-full shrink-0 rounded-[16px] border border-neutral-50 bg-surface p-6"
+      data-name="Sections/Metadata card"
+      data-node-id="249:141971"
     >
-      <PropertyList className="gap-3">
-        <PropertyListItem label="ID" value={ACCOUNT_DETAILS.id} />
-        {isLowFidelity ? (
-          <>
-            {Array.from({ length: SKELETON_ROWS_BEFORE_RISK }, (_, i) => (
-              <ProfilePropertySkeletonRow key={`before-${i}`} />
-            ))}
-            <PropertyListItem
-              label="Risk level"
-              value={
-                <RiskLevelValue riskLevel={contextRiskLevel} accountId={accountId} />
-              }
-            />
-            {Array.from({ length: SKELETON_ROWS_AFTER_RISK }, (_, i) => (
-              <ProfilePropertySkeletonRow key={`after-${i}`} />
-            ))}
-          </>
-        ) : (
-          <>
-            <PropertyListItem
-              label="Risk level"
-              value={
-                <RiskLevelValue riskLevel={contextRiskLevel} accountId={accountId} />
-              }
-            />
-            <PropertyListItem label="Email" value={ACCOUNT_DETAILS.email} />
-            <PropertyListItem label="Created" value={ACCOUNT_DETAILS.created} />
-            <PropertyListItem
-              label="Configurations"
-              value={<ConfigurationsValue />}
-            />
-            <PropertyListItem label="Country" value={ACCOUNT_DETAILS.country} />
-          </>
-        )}
-      </PropertyList>
+      <div className="flex w-full flex-col gap-4">
+        <div className="flex min-w-0 w-full flex-col gap-1">
+          <p
+            className="m-0 min-w-0 font-semibold text-[16px] leading-5 tracking-[-0.31px] text-default"
+            data-node-id="249:141977"
+          >
+            {accountName}
+          </p>
+          <div className="flex max-w-[233px] flex-col gap-0.5" data-name="baby/prop-list">
+            <div className="w-20 py-0.5">
+              <SkeletonBar className="w-full" />
+            </div>
+            <div className="flex w-full items-center py-0.5">
+              <SkeletonBar className="max-w-[227px] flex-1" />
+            </div>
+          </div>
+        </div>
+
+        <div className="h-px w-full shrink-0 bg-neutral-50" aria-hidden data-name="Divider" />
+
+        <div className="flex w-full flex-col gap-3" data-name="Business metadata">
+          <MetadataRow icon={<MetadataIconPlaceholder />} align="center">
+            <SkeletonBar className="w-full max-w-[min(100%,14rem)]" />
+          </MetadataRow>
+          <MetadataRow icon={<MetadataIconPlaceholder />} align="center">
+            <SkeletonBar className="w-full max-w-[min(100%,14rem)]" />
+          </MetadataRow>
+          <MetadataRow icon={<MetadataIconPlaceholder />} align="center">
+            <div className="py-0.5">
+              <RiskAccountCallout riskLevel={riskLevel} accountId={accountId} />
+            </div>
+          </MetadataRow>
+          <MetadataRow icon={<MetadataIconPlaceholder />} align="center">
+            <SkeletonBar className="w-full max-w-[min(100%,14rem)]" />
+          </MetadataRow>
+          <MetadataRow icon={<MetadataIconPlaceholder />} align="center">
+            <SkeletonBar className="w-full max-w-[min(100%,14rem)]" />
+          </MetadataRow>
+          <MetadataRow icon={<MetadataIconPlaceholder />} align="center">
+            <SkeletonBar className="w-full max-w-[min(100%,14rem)]" />
+          </MetadataRow>
+          <MetadataRow icon={<MetadataIconPlaceholder />} align="center">
+            <SkeletonBar className="w-full max-w-[min(100%,14rem)]" />
+          </MetadataRow>
+          <MetadataRow icon={<MetadataIconPlaceholder />} align="center">
+            <SkeletonBar className="w-full max-w-[min(100%,14rem)]" />
+          </MetadataRow>
+          <MetadataRow icon={<MetadataIconPlaceholder />} align="start">
+            <ConfigurationsLinksRow />
+          </MetadataRow>
+          <MetadataRow icon={<MetadataIconPlaceholder />} align="start">
+            <div className="flex flex-wrap gap-1">
+              <span
+                className="inline-flex h-5 w-[100px] shrink-0 rounded-[4px] bg-neutral-100"
+                aria-hidden
+              />
+              <span
+                className="inline-flex h-5 w-20 shrink-0 rounded-[4px] bg-neutral-100"
+                aria-hidden
+              />
+            </div>
+          </MetadataRow>
+        </div>
+      </div>
     </div>
   )
 }

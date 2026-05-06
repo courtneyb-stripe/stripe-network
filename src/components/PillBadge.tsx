@@ -49,13 +49,21 @@ type PillBadgeProps = {
   variant: PillBadgeVariant
   /** Optional icon (e.g. RestrictedIcon) rendered after label. */
   icon?: React.ReactNode
+  /**
+   * Figma ’26 account hub header (6269:112612) — 4px radius, 5×2 padding, regular 12/16.
+   */
+  dense?: boolean
 }
 
-export function PillBadge({ label, variant, icon }: PillBadgeProps) {
+export function PillBadge({ label, variant, icon, dense }: PillBadgeProps) {
   const style = VARIANT_STYLES[variant]
   return (
     <span
-      className="inline-flex items-center gap-1 shrink-0 font-label-small rounded-[6px] px-[6px] py-1 text-xs"
+      className={
+        dense
+          ? 'inline-flex shrink-0 items-center gap-1 rounded-[4px] px-[5px] py-[2px] text-[12px] font-normal leading-4'
+          : 'inline-flex shrink-0 items-center gap-1 rounded-[6px] px-[6px] py-1 font-label-small text-xs'
+      }
       style={style}
     >
       {label}

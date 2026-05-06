@@ -1,7 +1,7 @@
 /**
  * ProductsTable — Products tab table. Figma 214:28398.
  * Columns: Name, Pricing, Tax category, Created, Updated.
- * Same structure as InvoicesTable (52px rows, zebra striping).
+ * Same structure as InvoicesTable (52px rows).
  */
 
 import { ROW_HEIGHT } from '../constants/table'
@@ -49,11 +49,9 @@ function TableHeader() {
 
 function ProductTableRow({
   row,
-  isAlternate,
   onClick,
 }: {
   row: ProductRow
-  isAlternate: boolean
   onClick?: (row: ProductRow) => void
 }) {
   return (
@@ -71,9 +69,7 @@ function ProductTableRow({
             }
           : undefined
       }
-      className={`group flex w-full shrink-0 cursor-pointer items-center rounded-[length:var(--radius-action)] pr-2 transition-colors ${
-        isAlternate ? 'bg-[#fafbfb] hover:bg-offset' : 'bg-surface hover:bg-offset'
-      }`}
+      className="group flex w-full shrink-0 cursor-pointer items-center rounded-[length:var(--radius-action)] bg-surface pr-2 transition-colors hover:bg-offset"
       data-name="Product table row"
       style={{ height: ROW_HEIGHT, minHeight: ROW_HEIGHT }}
     >
@@ -201,7 +197,7 @@ export default function ProductsTable({ rows = DEFAULT_ROWS, onRowClick }: Produ
       <TableHeader />
       <div className="flex flex-col">
         {rows.map((row, i) => (
-          <ProductTableRow key={i} row={row} isAlternate={i % 2 === 0} onClick={onRowClick} />
+          <ProductTableRow key={i} row={row} onClick={onRowClick} />
         ))}
       </div>
     </div>

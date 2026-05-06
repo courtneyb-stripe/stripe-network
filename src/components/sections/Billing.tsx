@@ -11,6 +11,14 @@ import { usePrototypeOptional } from '../../context/PrototypeContext'
 import SectionHeader from '../SectionHeader'
 import SubscriptionCard from '../SubscriptionCard'
 import TableSkeleton from '../TableSkeleton'
+import InlineListPagination from '../InlineListPagination'
+import { INLINE_LIST_TOTALS } from '../../constants/inlineListMocks'
+import {
+  buildTransactionsListPath,
+  transactionsListLinkState,
+} from '../../utils/transactionsDeepLinks'
+
+const INVOICE_TABLE_ROWS = 10
 
 const BILLING_CHIPS = [
   { id: 'shopify', label: 'Billed by Shopify' },
@@ -42,6 +50,9 @@ export default function Billing() {
     setActiveChipId(chipId)
   }
 
+  const invoicesPath = buildTransactionsListPath('platform-fees')
+  const invoicesState = transactionsListLinkState({ tab: 'platform-fees' })
+
   return (
     <div ref={rootRef} className="flex min-w-0 flex-1 flex-col gap-6">
       <div className="flex min-w-0 flex-1 flex-col gap-6" data-node-id="20:9762">
@@ -51,24 +62,18 @@ export default function Billing() {
               {BILLING_CHIPS.map((chip) => (
                 <ViewChip
                   key={chip.id}
+                  visualVariant="list"
                   label={chip.label}
                   active={activeChipId === chip.id}
                   onClick={() => handleChipClick(chip.id)}
-                  size="compact"
                 />
               ))}
             </div>
           )}
 
           {/* Subscriptions */}
-          <div className="flex flex-col gap-3">
-            <SectionHeader
-              title="Subscriptions"
-              size="small"
-              onAction={() => {}}
-              onAdd={() => {}}
-              actionLabel="View all"
-            />
+          <div className="flex flex-col gap-4">
+            <SectionHeader title="Subscriptions" size="small" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-[8px] gap-y-[8px]">
               {isShopify ? (
                 <>
@@ -80,7 +85,7 @@ export default function Billing() {
                     ]}
                     invoiceFrequencyValue="Weekly on Tue"
                     nextInvoiceValue="Sep 12 for $12.00"
-                    onMoreClick={() => {}}
+                    servicePeriodValue="Sep 1–Sep 30"
                     onNextInvoiceClick={() => {}}
                   />
                   <SubscriptionCard
@@ -91,7 +96,6 @@ export default function Billing() {
                     ]}
                     invoiceFrequencyValue="Yearly on Jan 1"
                     nextInvoiceValue="Sep 8 for $120.00"
-                    onMoreClick={() => {}}
                     onNextInvoiceClick={() => {}}
                   />
                 </>
@@ -120,18 +124,19 @@ export default function Billing() {
           </div>
 
           {/* Invoices — 40px below Subscriptions; Figma 20:9812 */}
-          <div className="flex flex-col gap-3 pt-[40px]">
-            <SectionHeader
-              title="Invoices"
-              size="small"
-              onAction={() => {}}
-              onAdd={() => {}}
-              actionLabel="View all"
-            />
+          <div className="flex flex-col gap-4 pt-[40px]">
+            <SectionHeader title="Invoices" size="small" />
             <TableSkeleton
-              rowCount={10}
+              rowCount={INVOICE_TABLE_ROWS}
               showCheckboxColumn={false}
               onRowClick={() => setInvoiceDrawerOpen(true)}
+            />
+            <InlineListPagination
+              pageStart={1}
+              pageEnd={INVOICE_TABLE_ROWS}
+              totalResults={INLINE_LIST_TOTALS.invoices}
+              to={invoicesPath}
+              linkState={invoicesState}
             />
           </div>
 

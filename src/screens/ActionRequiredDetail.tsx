@@ -24,18 +24,18 @@ export default function ActionRequiredDetail() {
 
   const headerStatusBadge =
     status === 'restricted'
-      ? <PillBadge label="Restricted" variant="critical" />
+      ? <PillBadge label="Restricted" variant="critical" dense />
       : status === 'restricted_soon'
-        ? <PillBadge label="Restricted soon" variant="attention" />
+        ? <PillBadge label="Restricted soon" variant="attention" dense />
         : status === 'enabled'
-          ? <PillBadge label="Enabled" variant="success" />
+          ? <PillBadge label="Enabled" variant="success" dense />
           : undefined
   const headerBadge =
     headerStatusBadge != null || mockAccount?.isRadarRuleMatch ? (
       <div className="flex items-center gap-1">
         {headerStatusBadge}
         {mockAccount?.isRadarRuleMatch && (
-          <PillBadge label="High risk" variant="critical" />
+          <PillBadge label="High risk" variant="critical" dense />
         )}
       </div>
     ) : undefined
@@ -54,6 +54,7 @@ export default function ActionRequiredDetail() {
           <div>
             <AccountDetailHeader
               accountName={accountName}
+              accountLogoSrc={mockAccount?.headerLogoSrc}
               breadcrumbs={breadcrumbs}
               heading={actionTitle}
               badge={headerBadge}

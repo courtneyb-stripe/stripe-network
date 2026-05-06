@@ -1,7 +1,6 @@
 /**
  * TableSkeleton — Loading skeleton for data tables.
- * Renders N skeleton rows (no header row) with optional checkbox column and configurable column widths.
- * Matches NetworkTable / AccountDetail Recent Activity table structure (52px row height).
+ * N skeleton rows with optional checkbox column (52px row height).
  */
 
 import { ROW_HEIGHT } from '../constants/table'
@@ -29,7 +28,7 @@ export default function TableSkeleton({
 }: TableSkeletonProps) {
   const isClickable = onRowClick != null
   return (
-    <div className="pt-5 flex w-full flex-col overflow-hidden" data-name="Table 2.0">
+    <div className="flex w-full flex-col overflow-hidden" data-name="Table 2.0">
       {Array.from({ length: rowCount }, (_, i) => {
         const RowWrapper = isClickable ? 'button' : 'div'
         return (
@@ -47,7 +46,7 @@ export default function TableSkeleton({
                   }
                 : undefined
             }
-            className={`group flex w-full shrink-0 items-center rounded-[length:var(--radius-action)] pl-2 pr-2 transition-colors ${i % 2 === 0 ? 'bg-[#fafbfb]' : 'bg-surface'} ${isClickable ? 'cursor-pointer text-left hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary' : ''}`}
+            className={`group flex w-full shrink-0 items-center rounded-[length:var(--radius-action)] pl-2 pr-2 bg-surface transition-colors ${isClickable ? 'cursor-pointer text-left hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary' : ''}`}
             data-name="Table Row 2.0"
             aria-busy={!isClickable}
             style={{ height: ROW_HEIGHT }}

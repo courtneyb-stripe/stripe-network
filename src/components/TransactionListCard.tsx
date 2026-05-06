@@ -7,6 +7,7 @@
 import { Icon } from '../icons/SailIcons'
 import SectionHeader from './SectionHeader'
 import { List, ListItem } from './List'
+import InlineListPagination from './InlineListPagination'
 
 export type TransactionListVariant = 'latest' | 'upcoming'
 
@@ -41,11 +42,19 @@ type TransactionListCardProps = {
   title: string
   /** Subheading below title: "with [accountName]" to clarify platform–account only (not customer payments). */
   accountName?: string
-  onViewAll?: () => void
   onAdd?: () => void
   onRowAction?: (id: string) => void
   rows: TransactionListRow[]
   className?: string
+  /** When set, shows Figma-style “1–N of M results” footer linked to the parent list. */
+  listPagination?: {
+    pageStart: number
+    pageEnd: number
+    totalResults: number
+    to?: string
+    linkState?: object
+    onViewFullList?: () => void
+  }
 }
 
 const EMPTY_COPY: Record<TransactionListVariant, string> = {
@@ -74,15 +83,15 @@ export default function TransactionListCard({
   variant = 'latest',
   title,
   accountName,
-  onViewAll,
   onAdd,
   onRowAction,
   rows,
   className = '',
+  listPagination,
 }: TransactionListCardProps) {
   return (
     <div
-      className={`flex w-full flex-col gap-3 ${className}`.trim()}
+      className={`flex w-full flex-col gap-4 ${className}`.trim()}
       data-name="TransactionListCard"
       data-variant={variant}
     >
@@ -90,10 +99,7 @@ export default function TransactionListCard({
         title={title}
         description={accountName != null ? `with ${accountName}` : undefined}
         size="small"
-        onAction={onViewAll}
         onAdd={onAdd}
-        actionLabel="View all"
-        actionVariant="ghost"
       />
       <List
         onAction={onRowAction != null ? (id) => onRowAction(String(id)) : undefined}
@@ -138,6 +144,16 @@ export default function TransactionListCard({
           )
         })}
       </List>
+      {listPagination != null ? (
+        <InlineListPagination
+          pageStart={listPagination.pageStart}
+          pageEnd={listPagination.pageEnd}
+          totalResults={listPagination.totalResults}
+          to={listPagination.to}
+          linkState={listPagination.linkState}
+          onViewFullList={listPagination.onViewFullList}
+        />
+      ) : null}
     </div>
   )
 }

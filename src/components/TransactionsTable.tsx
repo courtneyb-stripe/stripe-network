@@ -1,6 +1,6 @@
 /**
- * TransactionsTable — Recent transactions table (Figma baby/table 2:6486).
- * Matches NetworkTable (2:10689): same row height (52px), header structure, zebra striping, no outer border.
+ * TransactionsTable — Money movement table (Figma baby/table 2:6486).
+ * Matches NetworkTable (2:10689): same row height (52px), header structure, no outer border.
  * Columns: Amount, Status (badge), Payment method (card icon + last4), Description, Date.
  */
 
@@ -38,11 +38,9 @@ export type TransactionRow = {
 
 function TableRow({
   row,
-  isAlternate,
   onClick,
 }: {
   row: TransactionRow
-  isAlternate: boolean
   onClick?: (row: TransactionRow) => void
 }) {
   const cardName = row.paymentMethodBrand ?? 'amex'
@@ -52,9 +50,7 @@ function TableRow({
       tabIndex={onClick ? 0 : undefined}
       onClick={onClick ? () => onClick(row) : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(row) } } : undefined}
-      className={`group flex w-full shrink-0 cursor-pointer items-center rounded-[length:var(--radius-action)] pr-2 transition-colors ${
-        isAlternate ? 'bg-[#fafbfb] hover:bg-offset' : 'bg-surface hover:bg-offset'
-      }`}
+      className="group flex w-full shrink-0 cursor-pointer items-center rounded-[length:var(--radius-action)] bg-surface pr-2 transition-colors hover:bg-offset"
       data-name="Table Row 2.0"
       style={{ height: ROW_HEIGHT, minHeight: ROW_HEIGHT }}
     >
@@ -139,7 +135,7 @@ export default function TransactionsTable({ rows = DEFAULT_ROWS, onRowClick }: T
     >
       <div className="flex flex-col">
         {rows.map((row, i) => (
-          <TableRow key={i} row={row} isAlternate={i % 2 === 0} onClick={onRowClick} />
+          <TableRow key={i} row={row} onClick={onRowClick} />
         ))}
       </div>
     </div>

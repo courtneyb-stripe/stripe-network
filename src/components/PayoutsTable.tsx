@@ -1,5 +1,5 @@
 /**
- * PayoutsTable — Payouts tab table. Same structure as TransactionsTable (52px rows, zebra striping).
+ * PayoutsTable — Payouts tab table. Same structure as TransactionsTable (52px rows).
  * Columns: Amount, Status, Destination (Sail bank/brand icon + bank name + •••• NNNN), Arrive by (date).
  */
 
@@ -42,11 +42,9 @@ export type PayoutRow = {
 
 function PayoutTableRow({
   row,
-  isAlternate,
   onClick,
 }: {
   row: PayoutRow
-  isAlternate: boolean
   onClick?: (row: PayoutRow) => void
 }) {
   const statusBadge =
@@ -62,9 +60,7 @@ function PayoutTableRow({
       tabIndex={onClick ? 0 : undefined}
       onClick={onClick ? () => onClick(row) : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(row) } } : undefined}
-      className={`group flex w-full shrink-0 cursor-pointer items-center rounded-[length:var(--radius-action)] pr-2 transition-colors ${
-        isAlternate ? 'bg-[#fafbfb] hover:bg-offset' : 'bg-surface hover:bg-offset'
-      }`}
+      className="group flex w-full shrink-0 cursor-pointer items-center rounded-[length:var(--radius-action)] bg-surface pr-2 transition-colors hover:bg-offset"
       data-name="Table Row 2.0"
       style={{ height: ROW_HEIGHT, minHeight: ROW_HEIGHT }}
     >
@@ -131,7 +127,7 @@ export default function PayoutsTable({ rows = DEFAULT_PAYOUT_ROWS, onRowClick }:
     >
       <div className="flex flex-col">
         {rows.map((row, i) => (
-          <PayoutTableRow key={i} row={row} isAlternate={i % 2 === 0} onClick={onRowClick} />
+          <PayoutTableRow key={i} row={row} onClick={onRowClick} />
         ))}
       </div>
     </div>

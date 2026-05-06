@@ -1,7 +1,7 @@
 /**
  * InvoicesTable — Billing tab invoices table. Figma 20:9812.
  * Columns: Amount, Status, Due date, Invoice number, Description, Frequency, Created.
- * Same structure as TransactionsTable/PayoutsTable (52px rows, zebra striping).
+ * Same structure as TransactionsTable/PayoutsTable (52px rows).
  */
 
 import { ROW_HEIGHT } from '../constants/table'
@@ -58,11 +58,9 @@ function TableHeader() {
 
 function InvoiceTableRow({
   row,
-  isAlternate,
   onClick,
 }: {
   row: InvoiceRow
-  isAlternate: boolean
   onClick?: (row: InvoiceRow) => void
 }) {
   const statusBadge =
@@ -76,9 +74,7 @@ function InvoiceTableRow({
       tabIndex={onClick ? 0 : undefined}
       onClick={onClick ? () => onClick(row) : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(row) } } : undefined}
-      className={`group flex w-full shrink-0 cursor-pointer items-center rounded-[length:var(--radius-action)] pr-2 transition-colors ${
-        isAlternate ? 'bg-[#fafbfb] hover:bg-offset' : 'bg-surface hover:bg-offset'
-      }`}
+      className="group flex w-full shrink-0 cursor-pointer items-center rounded-[length:var(--radius-action)] bg-surface pr-2 transition-colors hover:bg-offset"
       data-name="Table Row 2.0"
       style={{ height: ROW_HEIGHT, minHeight: ROW_HEIGHT }}
     >
@@ -176,7 +172,7 @@ export default function InvoicesTable({ rows = DEFAULT_ROWS, onRowClick }: Invoi
       <TableHeader />
       <div className="flex flex-col">
         {rows.map((row, i) => (
-          <InvoiceTableRow key={i} row={row} isAlternate={i % 2 === 0} onClick={onRowClick} />
+          <InvoiceTableRow key={i} row={row} onClick={onRowClick} />
         ))}
       </div>
     </div>

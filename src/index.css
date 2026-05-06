@@ -6,11 +6,15 @@
 @theme {
   /* Figma colors — semantic names for utilities (bg-*, text-*, etc.) */
   --color-surface: #ffffff;
+  /** Figma neutral/25 — account hub header background (6269:112612). */
+  --color-neutral-25: #f4f7fa;
   --color-offset: #f5f6f8;
   --color-neutral-0: #ffffff;
   --color-neutral-50: #ebeef1;
   --color-neutral-100: #d8dee4;
   --color-neutral-300: #99a5b8;
+  /** Figma neutral/600 — capability card subtitle (6269:112643). */
+  --color-neutral-600: #50617a;
   --color-neutral-700: #474e5a;
   --color-default: #353a44;
   /* baby/PageHeader primary labels + heading (Figma Stripe Network Cursor SRC 145:61868) */
@@ -23,13 +27,15 @@
   --color-icon-action: #675dff;
   --color-brand-25: #f7f5fd;
   --color-brand-50: #ede9fc;
+  /* Figma brand/100 — action list icon well (6244:79298) */
+  --color-brand-100: #e0d9fb;
   /* Badge / feedback — success & attention (Figma 4:11902) */
   --color-feedback-success-subdued: #eafcdd;
   --color-feedback-success-on: #217005;
   --color-feedback-attention-subdued: #fdf8c9;
   --color-feedback-attention-on: #b13600;
   /* Restricted badge (Figma 1967:27563 — background/feedback/critical/subdued, text/onFeedback/critical, icon/onFeedback/critical) */
-  --color-feedback-critical-subdued: #fef4f6;
+  --color-feedback-critical-subdued: #fde9ee;
   --color-feedback-critical-on: #c0123c;
   --color-icon-feedback-critical: #e61947;
 

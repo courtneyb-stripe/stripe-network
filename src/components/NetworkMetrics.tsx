@@ -133,7 +133,7 @@ export default function NetworkMetrics({
   if (!isShopify) {
     return (
       <div
-        className="grid w-full shrink-0 grid-cols-2 gap-2 px-[40px] py-2"
+        className="grid w-full shrink-0 grid-cols-2 gap-2 px-6 py-2"
         data-name="Metrics row"
         data-node-id="5:5052"
       >
@@ -145,7 +145,7 @@ export default function NetworkMetrics({
 
   return (
     <div
-      className="grid w-full shrink-0 grid-cols-2 gap-2 px-[40px] py-2"
+      className="grid w-full shrink-0 grid-cols-2 gap-2 px-6 py-2"
       data-name="Metrics row"
       data-node-id="5:5052"
     >

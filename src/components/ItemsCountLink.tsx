@@ -1,9 +1,8 @@
 /**
- * ItemsCountLink — "X of Y items" link with primary-styled total (e.g. "10 of 80 items").
- * Used below embedded transaction/payout tables to link to full list.
+ * ItemsCountLink — legacy alias for {@link InlineListPagination} (“1–N of M results”).
  */
 
-import { Link } from 'react-router-dom'
+import InlineListPagination from './InlineListPagination'
 
 type ItemsCountLinkProps = {
   displayedCount: number
@@ -21,14 +20,13 @@ export default function ItemsCountLink({
   className = '',
 }: ItemsCountLinkProps) {
   return (
-    <p className={`text-[14px] text-default ${className}`}>
-      <Link
-        to={to}
-        state={linkState}
-        className="focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary rounded-[length:var(--radius-xsmall)]"
-      >
-        {displayedCount} of <span className="text-action-primary">{totalCount}</span> items
-      </Link>
-    </p>
+    <InlineListPagination
+      pageStart={1}
+      pageEnd={displayedCount}
+      totalResults={totalCount}
+      to={to}
+      linkState={linkState}
+      className={className}
+    />
   )
 }

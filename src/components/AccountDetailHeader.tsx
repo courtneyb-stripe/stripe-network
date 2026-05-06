@@ -1,19 +1,25 @@
 /**
- * Account detail page header — Figma **baby/PageHeader** (node `145:61868`) + identity card (`145:61871`).
+ * Account detail page header — Figma Stripe Network ’26 **6269:112612** (account hub header).
  *
- * Dev: https://www.figma.com/design/le2cUdg8571ODSCAPVliJO/Stripe-Network--Cursor-SRC-?node-id=145-61868&m=dev
+ * **6269 layout:** Spacing is driven by `accountHubHeaderSpacing.ts` (`--account-hub-*` vars).
+ * Edit {@link ACCOUNT_HUB_HEADER_SPACE} or wrap with {@link AccountHubHeaderChrome} `spacing` prop.
  */
 
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { accountNameInitials } from '../utils/accountInitials'
 import { parseGutterBleed } from '../utils/gutterBleed'
+import {
+  ACCOUNT_BREADCRUMB_CURRENT_CLASS,
+  ACCOUNT_BREADCRUMB_LINK_CLASS,
+  ACCOUNT_BREADCRUMB_NAV_CLASS,
+  PAGE_HEADER_ACCOUNT_HEADING_CLASS,
+  PAGE_HEADER_ACCOUNT_HEADING_STYLE,
+  type AccountIdentityLayout,
+} from './pageHeader'
+import { accountHubHeaderGap } from './listView/accountHubHeaderSpacing'
 
-/** Figma 145:61871 — soft horizontal tint over white. */
-const HEADER_CARD_BACKGROUND =
-  'linear-gradient(90deg, rgb(244, 247, 250) 0%, rgba(244, 247, 250, 0) 100%), linear-gradient(90deg, rgb(255, 255, 255) 0%, rgb(255, 255, 255) 100%)'
-
-/** 8px breadcrumb separator per Figma (baby/breadcrumb). */
+/** 8px breadcrumb separator — matches M1 / nested chrome. */
 function BreadcrumbSeparator() {
   return (
     <span className="flex shrink-0 items-center justify-center text-subdued" aria-hidden>
@@ -30,7 +36,7 @@ function BreadcrumbSeparator() {
   )
 }
 
-/** Figma 145:61888 — 16px envelope beside email (Icon/Subdued). */
+/** Figma 145:61888 — 16px envelope beside email (optional; ’26 hub omits icon). */
 function EmailGlyph({ className }: { className?: string }) {
   return (
     <svg
@@ -58,17 +64,35 @@ function EmailGlyph({ className }: { className?: string }) {
   )
 }
 
+export type { AccountIdentityLayout } from './pageHeader'
+
 export type BreadcrumbItem = { label: string; href: string | null }
 
+/** Brand logo tile — 68×68, 8px radius; fill matches artwork matte (#2D6A6A). */
+function AccountHeaderLogoTile({ accountName, src }: { accountName: string; src: string }) {
+  return (
+    <div
+      role="img"
+      aria-label={`${accountName} logo`}
+      className="size-[68px] shrink-0 overflow-hidden rounded-lg bg-[#2D6A6A]"
+      data-name="Logo"
+      data-node-id="6269:112624"
+    >
+      <img src={src} alt="" className="size-full rounded-[8px] object-cover object-center" />
+    </div>
+  )
+}
+
+/** Fallback when `accountLogoSrc` is not set — same frame as logo tile. */
 function AccountInitialsMark({ accountName }: { accountName: string }) {
   const initials = accountNameInitials(accountName)
   return (
     <div
       role="img"
       aria-label={`${accountName} (${initials})`}
-      className="flex size-[54px] shrink-0 items-center justify-center rounded-xl bg-[#3d4d5c] font-label-medium text-[18px] font-semibold leading-none tracking-[-0.02em] text-white"
+      className="flex size-[68px] shrink-0 items-center justify-center rounded-lg bg-[#3d4d5c] text-[22px] font-semibold leading-none tracking-[-0.02em] text-white font-label-medium"
       data-name="Account initials"
-      data-node-id="145:61877"
+      data-node-id="6269:112624"
     >
       {initials}
     </div>
@@ -78,123 +102,131 @@ function AccountInitialsMark({ accountName }: { accountName: string }) {
 export default function AccountDetailHeader({
   accountName,
   breadcrumbs = [{ label: 'Network', href: '/network' }],
-  /** When set, used for the main heading (e.g. action required title). */
   heading,
-  /** Badge(s) shown next to the account name (e.g. Enabled, Restricted, High risk). */
   badge,
-  /** Contact line under title (Figma 145:61889). */
   accountEmail,
-  /** When false, the initials tile is hidden (default: show). */
+  /** When false, omit envelope glyph (Figma 6269 email row is text-only). */
+  showEmailIcon = false,
+  /** Figma logo art — 68×68 tile; initials when omitted. */
+  accountLogoSrc,
   showAccountAvatar = true,
-  /** Rendered upper right on the title row (e.g. Move money + icon actions). */
   trailing,
-  /**
-   * Widen the identity card so background + top border span the full main column (into parent horizontal padding).
-   * Match parent gutters, e.g. `-mx-6 px-6` when the page uses `px-6`, or `-mx-10 px-10` for `px-10`.
-   */
+  identityLayout = 'full',
   identityBleedClassName,
+  /**
+   * **surface** — bleed + neutral/25 fill + vertical padding (nested routes with their own gutters).
+   * **bare** — identity row only; parent supplies 6269 hub chrome (`bg-neutral-25`, `p-6`, `gap-6`).
+   */
+  chrome = 'surface',
 }: {
   accountName: string
   breadcrumbs?: BreadcrumbItem[]
   heading?: string
   badge?: ReactNode
   accountEmail?: string
+  showEmailIcon?: boolean
+  accountLogoSrc?: string
   showAccountAvatar?: boolean
   trailing?: ReactNode
+  identityLayout?: AccountIdentityLayout
   identityBleedClassName?: string
+  chrome?: 'surface' | 'bare'
 }) {
   const displayHeading = heading ?? accountName
   const identityBleed = parseGutterBleed(identityBleedClassName)
   /**
-   * Figma 145:61871 — padding 24 top / 40 bottom; 16px stack gap (breadcrumbs → title block).
-   * Bottom hairline matches AccountDetailActionBar signal wrapper (`border-b border-neutral-50`); signal row uses `py-4` below.
+   * `accountIdentityCardPaddingClass` retained for layout variant vertical rhythm;
+   * 6269 uses uniform padding — compact tightens vertical only.
    */
-  /** `overflow-visible` so Move money (and other header) dropdowns are not clipped; border still defines the card edge. */
-  const identityCardClassName = `flex w-full min-w-0 flex-col gap-[length:var(--spacing-medium)] overflow-visible border-x-0 border-b border-t border-neutral-50 pb-10 pt-[length:var(--spacing-large)] ${identityBleed?.paddingClass ?? 'px-0'}`
+  const verticalPad =
+    identityLayout === 'compact' ? 'py-4' : 'py-6'
+  const shellClassName = [
+    'bg-neutral-25',
+    verticalPad,
+    identityBleed?.paddingClass ?? 'px-6',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
-  const identityCard = (
-    <div
-      className={identityCardClassName}
-      style={{ backgroundImage: HEADER_CARD_BACKGROUND }}
-      data-node-id="145:61871"
-    >
-      <nav
-        className="flex flex-wrap items-center gap-[length:var(--spacing-small)]"
-        aria-label="Breadcrumb"
-        data-name="Breadcrumbs"
-        data-node-id="145:61873"
-      >
-        {breadcrumbs.map((item, i) => (
-          <span key={i} className="flex items-center gap-[length:var(--spacing-xsmall)]">
-            {item.href ? (
-              <Link
-                to={item.href}
-                className="rounded-[length:var(--radius-xsmall)] font-label-small-emphasized tracking-[-0.024px] text-page-header-ink transition-colors hover:text-default focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary"
-              >
-                {item.label}
-              </Link>
-            ) : (
-              <span className="font-label-small-emphasized tracking-[-0.024px] text-page-header-ink whitespace-nowrap">
-                {item.label}
-              </span>
-            )}
-            {i < breadcrumbs.length - 1 ? <BreadcrumbSeparator /> : null}
-          </span>
-        ))}
-      </nav>
-
-      <div
-        className="flex w-full min-w-0 items-start justify-between gap-4"
-        data-node-id="145:61876"
-      >
-        <div className="flex min-w-0 flex-1 items-start gap-[length:var(--spacing-small)]">
-          {showAccountAvatar ? <AccountInitialsMark accountName={accountName} /> : null}
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5" data-node-id="145:61878">
-            <div className="flex min-w-0 flex-wrap items-center gap-[length:var(--spacing-150)]" data-node-id="145:61879">
-              <h1
-                className="min-w-0 truncate font-heading-xlarge text-page-header-ink"
-                style={{ fontFeatureSettings: "'lnum' 1, 'pnum' 1" }}
-                data-name="heading"
-                data-node-id="145:61880"
-              >
-                {displayHeading}
-              </h1>
-              {badge != null ? <span className="shrink-0">{badge}</span> : null}
-            </div>
-            {accountEmail ? (
-              <div
-                className="flex items-start justify-start gap-[6px]"
-                data-name="Profile email"
-                data-node-id="145:61886"
-              >
-                  <EmailGlyph className="shrink-0 text-icon-subdued" />
-                <span className="truncate font-label-small leading-4 text-page-header-ink" data-node-id="145:61889">
-                  {accountEmail}
-                </span>
-              </div>
-            ) : null}
-          </div>
-        </div>
-        {trailing != null ? (
-          <div className="shrink-0" data-node-id="145:61890">
-            {trailing}
-          </div>
+  const identityRow = (
+    <div className="flex w-full min-w-0 items-start justify-between gap-4">
+      <div className={`flex min-w-0 flex-1 items-center ${accountHubHeaderGap.logoText}`} data-name="Details">
+        {showAccountAvatar ? (
+          accountLogoSrc ? (
+            <AccountHeaderLogoTile accountName={accountName} src={accountLogoSrc} />
+          ) : (
+            <AccountInitialsMark accountName={accountName} />
+          )
         ) : null}
+        <div
+          className={`flex min-h-0 min-w-0 flex-1 flex-col self-start ${accountHubHeaderGap.identityStack} h-fit`}
+        >
+          <nav
+            className={`${ACCOUNT_BREADCRUMB_NAV_CLASS} -mt-1 py-0.5`}
+            aria-label="Breadcrumb"
+            data-name="Breadcrumbs"
+          >
+            {breadcrumbs.map((item, i) => (
+              <span key={i} className="flex items-center gap-[length:var(--spacing-xsmall)]">
+                {item.href ? (
+                  <Link to={item.href} className={ACCOUNT_BREADCRUMB_LINK_CLASS}>
+                    {item.label}
+                  </Link>
+                ) : (
+                  <span className={ACCOUNT_BREADCRUMB_CURRENT_CLASS}>{item.label}</span>
+                )}
+                {i < breadcrumbs.length - 1 ? <BreadcrumbSeparator /> : null}
+              </span>
+            ))}
+          </nav>
+          <div className={`flex min-w-0 flex-nowrap items-center ${accountHubHeaderGap.titleBadge}`}>
+            <h1
+              className={`${PAGE_HEADER_ACCOUNT_HEADING_CLASS} m-0`}
+              style={PAGE_HEADER_ACCOUNT_HEADING_STYLE}
+              data-name="heading"
+            >
+              {displayHeading}
+            </h1>
+            {badge != null ? <span className="shrink-0">{badge}</span> : null}
+          </div>
+          {accountEmail ? (
+            <div
+              className={`flex items-center justify-start ${accountHubHeaderGap.metadataInner}`}
+              data-name="Email"
+            >
+              {showEmailIcon ? <EmailGlyph className="shrink-0 text-icon-subdued" /> : null}
+              <span className="truncate font-label-medium leading-5 tracking-[-0.15px] text-subdued">
+                {accountEmail}
+              </span>
+            </div>
+          ) : null}
+        </div>
       </div>
+      {trailing != null ? (
+        <div className="shrink-0 self-start pt-0.5" data-name="Buttons">
+          {trailing}
+        </div>
+      ) : null}
+    </div>
+  )
+
+  if (chrome === 'bare') {
+    return (
+      <header className="relative z-20 w-full min-w-0" data-name="Account hub page header">
+        {identityRow}
+      </header>
+    )
+  }
+
+  const inner = (
+    <div className={shellClassName} data-name="Header" data-node-id="6269:112612">
+      {identityRow}
     </div>
   )
 
   return (
-    <header
-      className="relative z-20 w-full min-w-0"
-      data-name="baby/PageHeader"
-      data-node-id="145:61868"
-    >
-      {identityBleed ? (
-        <div className={identityBleed.marginClass}>{identityCard}</div>
-      ) : (
-        identityCard
-      )}
+    <header className="relative z-20 w-full min-w-0" data-name="Account hub page header">
+      {identityBleed ? <div className={identityBleed.marginClass}>{inner}</div> : inner}
     </header>
   )
 }

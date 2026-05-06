@@ -7,6 +7,11 @@ import { useState } from 'react'
 import SectionHeader from '../SectionHeader'
 import TabBar from '../TabBar'
 import TableSkeleton from '../TableSkeleton'
+import InlineListPagination from '../InlineListPagination'
+import { INLINE_LIST_TOTALS } from '../../constants/inlineListMocks'
+
+const NETWORK_ROWS = 7
+const PRODUCT_ROWS = 5
 
 const NETWORK_TABS = [
   { id: 'all' as const, label: 'All' },
@@ -19,25 +24,41 @@ type NetworkTabId = (typeof NETWORK_TABS)[number]['id']
 export default function Commerce() {
   const [activeTab, setActiveTab] = useState<NetworkTabId>('all')
 
+  const networkPath = '/network'
+
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-6">
-      <div className="flex flex-col gap-0 pt-0">
-        <SectionHeader title="Network" size="small" onAction={() => {}} actionLabel="View all" />
-        <div className="flex w-full">
-          <TabBar
-            tabs={NETWORK_TABS.map((t) => ({ id: t.id, label: t.label }))}
-            activeId={activeTab}
-            onChange={(id) => setActiveTab(id as NetworkTabId)}
-            variant="secondary"
-            gap={6}
+      <div className="flex flex-col gap-4 pt-0">
+        <SectionHeader title="Network" size="small" />
+        <div className="flex flex-col gap-4">
+          <div className="flex w-full">
+            <TabBar
+              tabs={NETWORK_TABS.map((t) => ({ id: t.id, label: t.label }))}
+              activeId={activeTab}
+              onChange={(id) => setActiveTab(id as NetworkTabId)}
+              variant="secondary"
+              gap={6}
+            />
+          </div>
+          <TableSkeleton rowCount={NETWORK_ROWS} showCheckboxColumn={false} />
+          <InlineListPagination
+            pageStart={1}
+            pageEnd={NETWORK_ROWS}
+            totalResults={INLINE_LIST_TOTALS.commerceNetwork}
+            to={networkPath}
           />
         </div>
-        <TableSkeleton rowCount={7} showCheckboxColumn={false} />
       </div>
 
-      <div className="flex flex-col gap-0 pt-10">
-        <SectionHeader title="Product list" size="small" onAction={() => {}} actionLabel="View all" />
-        <TableSkeleton rowCount={5} showCheckboxColumn={false} />
+      <div className="flex flex-col gap-4 pt-10">
+        <SectionHeader title="Product list" size="small" />
+        <TableSkeleton rowCount={PRODUCT_ROWS} showCheckboxColumn={false} />
+        <InlineListPagination
+          pageStart={1}
+          pageEnd={PRODUCT_ROWS}
+          totalResults={INLINE_LIST_TOTALS.commerceProducts}
+          to={networkPath}
+        />
       </div>
     </div>
   )

@@ -1,21 +1,31 @@
 /**
- * TransactionsList — Full transactions view. Same template as Network list:
- * Page header (Transactions + tabs). Payments: status chips + payments table. Payouts: payouts table (like account detail).
+ * TransactionsList — Full transactions view: overflow primary tabs, saved-list chips (payments/payouts),
+ * search + account filter well, abstracted table body (skeleton).
  */
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import TransactionsPageHeader from '../components/TransactionsPageHeader'
+import TransactionsPageHeader, {
+  parseTransactionsTabFromUrl,
+  type TransactionsTabId,
+} from '../components/TransactionsPageHeader'
 import ReturnToAccountFloating from '../components/ReturnToAccountFloating'
-import type { TransactionsTabId } from '../components/TransactionsPageHeader'
-import { ViewChip } from '../components/NetworkFilterGroup'
+import TransactionsTablePanel from '../components/TransactionsTablePanel'
+import InlineListPagination from '../components/InlineListPagination'
 import SearchBar from '../components/SearchBar'
-import PayoutsTable, { generatePayoutRows, type PayoutRow, type PayoutStatus } from '../components/PayoutsTable'
-import TransactionsTable, {
-  generateTransactionRows,
-  type TransactionRow,
-  type TransactionStatus,
-} from '../components/TransactionsTable'
+import { ViewChip } from '../components/NetworkFilterGroup'
+import {
+  ListViewBody,
+  ListViewHeaderStack,
+  ListViewRoot,
+  M1FilterGroupFrame,
+} from '../components/listView/ListViewTemplates'
+import { Icon } from '../icons/SailIcons'
+import { moneyMovementChipIdForTransactionsTab } from '../utils/transactionsDeepLinks'
+import { totalResultsForMoneyMovementChip } from '../constants/inlineListMocks'
+import { MONEY_MOVEMENT_TABLE_SKELETON_ROW_COUNT } from '../data/moneyMovementTransactionTabs'
+import { generatePayoutRows, type PayoutStatus } from '../components/PayoutsTable'
+import { generateTransactionRows, type TransactionStatus } from '../components/TransactionsTable'
 
 const TRANSACTION_STATUS_CHIPS: { id: 'all' | TransactionStatus; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -35,14 +45,10 @@ const PAYOUT_STATUS_CHIPS: { id: 'all' | PayoutStatus; label: string }[] = [
   { id: 'canceled', label: 'Canceled' },
 ]
 
-const ALL_TRANSACTIONS: TransactionRow[] = generateTransactionRows(80)
+const ALL_TRANSACTIONS = generateTransactionRows(80)
+const ALL_PAYOUT_ROWS = generatePayoutRows(48)
 
-function filterByStatus(rows: TransactionRow[], status: 'all' | TransactionStatus): TransactionRow[] {
-  if (status === 'all') return rows
-  return rows.filter((row) => row.status === status)
-}
-
-function getStatusCounts(rows: TransactionRow[]): Record<'all' | TransactionStatus, number> {
+function getStatusCounts(rows: typeof ALL_TRANSACTIONS): Record<'all' | TransactionStatus, number> {
   const counts: Record<string, number> = { all: rows.length }
   for (const row of rows) {
     counts[row.status] = (counts[row.status] ?? 0) + 1
@@ -50,12 +56,7 @@ function getStatusCounts(rows: TransactionRow[]): Record<'all' | TransactionStat
   return counts as Record<'all' | TransactionStatus, number>
 }
 
-function filterByPayoutStatus(rows: PayoutRow[], status: 'all' | PayoutStatus): PayoutRow[] {
-  if (status === 'all') return rows
-  return rows.filter((row) => row.status === status)
-}
-
-function getPayoutStatusCounts(rows: PayoutRow[]): Record<'all' | PayoutStatus, number> {
+function getPayoutStatusCounts(rows: ReturnType<typeof generatePayoutRows>): Record<'all' | PayoutStatus, number> {
   const counts: Record<string, number> = { all: rows.length }
   for (const row of rows) {
     counts[row.status] = (counts[row.status] ?? 0) + 1
@@ -76,172 +77,126 @@ export default function TransactionsList() {
   const [searchParams] = useSearchParams()
   const state = (location.state ?? null) as TransactionsLocationState | null
 
-  const tabFromUrl = (searchParams.get('tab') ?? undefined) as TransactionsTabId | undefined
+  const tabFromUrl = searchParams.get('tab')
   const accountIdFromUrl = searchParams.get('accountId') ?? undefined
   const accountNameFromUrl = searchParams.get('accountName') ?? undefined
+  const savedListFromUrl = searchParams.get('savedList') ?? undefined
 
-  const stateTab = state?.tab ?? tabFromUrl
+  const resolvedTab = parseTransactionsTabFromUrl(state?.tab ?? tabFromUrl ?? null)
   const accountId = state?.accountId ?? accountIdFromUrl
   const accountName = state?.accountName ?? accountNameFromUrl
 
-  const clearAccountFilter = () => {
-    navigate(`/transactions?tab=${activeTab}`, { replace: true })
-  }
-
-  /** Default account when user clicks Add filter (switch to filtered state). */
-  const ADD_FILTER_DEFAULT_ACCOUNT = { id: 'toybox-labs', name: 'Toybox Labs' }
-  const applyAddFilter = () => {
-    navigate(
-      `/transactions?tab=${activeTab}&accountId=${encodeURIComponent(ADD_FILTER_DEFAULT_ACCOUNT.id)}&accountName=${encodeURIComponent(ADD_FILTER_DEFAULT_ACCOUNT.name)}`,
-      { replace: true }
-    )
-  }
-
-  const [activeTab, setActiveTab] = useState<TransactionsTabId>(stateTab ?? 'payments')
-  const [selectedStatus, setSelectedStatus] = useState<'all' | TransactionStatus>('all')
+  const [activeTab, setActiveTab] = useState<TransactionsTabId>(resolvedTab)
+  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<'all' | TransactionStatus>('all')
   const [selectedPayoutStatus, setSelectedPayoutStatus] = useState<'all' | PayoutStatus>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
-    if (stateTab) setActiveTab(stateTab)
-  }, [stateTab])
+    setActiveTab(parseTransactionsTabFromUrl(state?.tab ?? tabFromUrl ?? null))
+  }, [state?.tab, tabFromUrl])
+
+  const clearAccountFilter = () => {
+    const qs = new URLSearchParams()
+    qs.set('tab', activeTab)
+    if (savedListFromUrl != null && savedListFromUrl !== '') qs.set('savedList', savedListFromUrl)
+    navigate(`/transactions?${qs.toString()}`, { replace: true })
+  }
+
+  const ADD_FILTER_DEFAULT_ACCOUNT = { id: 'toybox-labs', name: 'Toybox Labs' }
+  const applyAddFilter = () => {
+    navigate(
+      `/transactions?tab=${activeTab}&accountId=${encodeURIComponent(ADD_FILTER_DEFAULT_ACCOUNT.id)}&accountName=${encodeURIComponent(ADD_FILTER_DEFAULT_ACCOUNT.name)}${savedListFromUrl != null && savedListFromUrl !== '' ? `&savedList=${encodeURIComponent(savedListFromUrl)}` : ''}`,
+      { replace: true }
+    )
+  }
+
+  const commitTabToUrl = (tabId: TransactionsTabId) => {
+    setActiveTab(tabId)
+    const qs = new URLSearchParams()
+    qs.set('tab', tabId)
+    if (savedListFromUrl != null && savedListFromUrl !== '') qs.set('savedList', savedListFromUrl)
+    if (accountId != null && accountId !== '') qs.set('accountId', accountId)
+    if (accountName != null && accountName !== '') qs.set('accountName', accountName)
+    navigate(`/transactions?${qs.toString()}`, { replace: true })
+  }
 
   const statusCounts = useMemo(() => getStatusCounts(ALL_TRANSACTIONS), [])
-  const rowsByStatus = useMemo(
-    () => filterByStatus(ALL_TRANSACTIONS, selectedStatus),
-    [selectedStatus]
+  const payoutStatusCounts = useMemo(() => getPayoutStatusCounts(ALL_PAYOUT_ROWS), [])
+  const tableFooterTotal = useMemo(
+    () => totalResultsForMoneyMovementChip(moneyMovementChipIdForTransactionsTab(activeTab)),
+    [activeTab]
   )
-  const filteredRows = useMemo(() => {
-    if (!accountName) return rowsByStatus
-    return rowsByStatus.filter((row) => row.accountName === accountName)
-  }, [rowsByStatus, accountName])
 
-  const allPayoutRows = useMemo(() => generatePayoutRows(48), [])
-  const payoutStatusCounts = useMemo(() => getPayoutStatusCounts(allPayoutRows), [allPayoutRows])
-  const payoutsByStatus = useMemo(
-    () => filterByPayoutStatus(allPayoutRows, selectedPayoutStatus),
-    [allPayoutRows, selectedPayoutStatus]
-  )
-  const filteredPayoutRows = useMemo(() => {
-    if (!accountName) return payoutsByStatus
-    return payoutsByStatus.filter((row) => row.accountName === accountName)
-  }, [payoutsByStatus, accountName])
+  const searchBarProps = {
+    value: searchQuery,
+    onSearchChange: setSearchQuery,
+    placeholder: 'Search by amount, description, or date',
+    searchAriaLabel: 'Search by amount, description, or date',
+    activeFilter:
+      accountId && accountName
+        ? {
+            label: 'Account',
+            value: accountName,
+            onClear: clearAccountFilter,
+            clearAriaLabel: `Remove account filter ${accountName}`,
+          }
+        : null,
+    onAddFilterClick: applyAddFilter,
+  }
 
   return (
-    <div className="flex h-full w-full flex-col gap-[8px]" data-name="TransactionsList">
-      <div className="flex shrink-0 flex-col gap-0">
-        <TransactionsPageHeader
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          initialMerchant={accountName ?? undefined}
-          onMerchantChange={clearAccountFilter}
+    <ListViewRoot dataName="TransactionsList">
+      <ListViewHeaderStack>
+        <TransactionsPageHeader activeTab={activeTab} onTabChange={commitTabToUrl} />
+        <M1FilterGroupFrame className="px-6">
+          {(activeTab === 'payments' || activeTab === 'payouts') && (
+            <div className="flex w-full min-w-0 shrink-0 flex-wrap items-center gap-2" data-name="Chip Row">
+              {activeTab === 'payments' &&
+                TRANSACTION_STATUS_CHIPS.map((chip) => (
+                  <ViewChip
+                    key={chip.id}
+                    visualVariant="list"
+                    label={chip.label}
+                    count={statusCounts[chip.id] ?? 0}
+                    active={selectedPaymentStatus === chip.id}
+                    onClick={() => setSelectedPaymentStatus(chip.id)}
+                  />
+                ))}
+              {activeTab === 'payouts' &&
+                PAYOUT_STATUS_CHIPS.map((chip) => (
+                  <ViewChip
+                    key={chip.id}
+                    visualVariant="list"
+                    label={chip.label}
+                    count={payoutStatusCounts[chip.id] ?? 0}
+                    active={selectedPayoutStatus === chip.id}
+                    onClick={() => setSelectedPayoutStatus(chip.id)}
+                  />
+                ))}
+              <button
+                type="button"
+                aria-label="More views"
+                className="flex size-9 shrink-0 items-center justify-center overflow-clip rounded-[8px] border border-neutral-50 bg-surface transition-colors hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-action-primary"
+                data-name="More Views"
+              >
+                <Icon name="more" size={16} fill="var(--color-icon-default)" />
+              </button>
+            </div>
+          )}
+          <SearchBar {...searchBarProps} layoutVariant="listToolbar" />
+        </M1FilterGroupFrame>
+      </ListViewHeaderStack>
+      <ListViewBody className="px-6 pb-6">
+        <TransactionsTablePanel activeTab={activeTab} />
+        <InlineListPagination
+          pageStart={1}
+          pageEnd={MONEY_MOVEMENT_TABLE_SKELETON_ROW_COUNT}
+          totalResults={tableFooterTotal}
         />
-        {activeTab === 'payments' && (
-          <div
-            className="flex w-full flex-col gap-[12px] px-[40px] py-[8px]"
-            data-name="Saved list"
-          >
-            <div className="flex w-full shrink-0 items-center gap-[8px]" data-name="Saved Views 2.0">
-              {TRANSACTION_STATUS_CHIPS.map((chip) => (
-                <ViewChip
-                  key={chip.id}
-                  label={chip.label}
-                  count={statusCounts[chip.id] ?? 0}
-                  active={selectedStatus === chip.id}
-                  onClick={() => setSelectedStatus(chip.id)}
-                />
-              ))}
-            </div>
-            <SearchBar
-              value={searchQuery}
-              onSearchChange={setSearchQuery}
-              placeholder="Search by amount, description, or date"
-              searchAriaLabel="Search by amount, description, or date"
-              activeFilter={
-                accountId && accountName
-                  ? {
-                      label: 'Account',
-                      value: accountName,
-                      onClear: clearAccountFilter,
-                      clearAriaLabel: `Remove account filter ${accountName}`,
-                    }
-                  : null
-              }
-              onAddFilterClick={applyAddFilter}
-            />
-          </div>
-        )}
-        {activeTab === 'payouts' && (
-          <div
-            className="flex w-full flex-col gap-[12px] px-[40px] py-[8px]"
-            data-name="Saved list"
-          >
-            <div className="flex w-full shrink-0 items-center gap-[8px]" data-name="Saved Views 2.0">
-              {PAYOUT_STATUS_CHIPS.map((chip) => (
-                <ViewChip
-                  key={chip.id}
-                  label={chip.label}
-                  count={payoutStatusCounts[chip.id] ?? 0}
-                  active={selectedPayoutStatus === chip.id}
-                  onClick={() => setSelectedPayoutStatus(chip.id)}
-                />
-              ))}
-            </div>
-            <SearchBar
-              value={searchQuery}
-              onSearchChange={setSearchQuery}
-              placeholder="Search by amount, description, or date"
-              searchAriaLabel="Search by amount, description, or date"
-              activeFilter={
-                accountId && accountName
-                  ? {
-                      label: 'Account',
-                      value: accountName,
-                      onClear: clearAccountFilter,
-                      clearAriaLabel: `Remove account filter ${accountName}`,
-                    }
-                  : null
-              }
-              onAddFilterClick={applyAddFilter}
-            />
-          </div>
-        )}
-        {activeTab !== 'payments' && activeTab !== 'payouts' && (
-          <div className="px-[40px] pt-5 pb-[8px]">
-            <SearchBar
-              value={searchQuery}
-              onSearchChange={setSearchQuery}
-              placeholder="Search by amount, description, or date"
-              searchAriaLabel="Search by amount, description, or date"
-              activeFilter={
-                accountId && accountName
-                  ? {
-                      label: 'Account',
-                      value: accountName,
-                      onClear: clearAccountFilter,
-                      clearAriaLabel: `Remove account filter ${accountName}`,
-                    }
-                  : null
-              }
-              onAddFilterClick={applyAddFilter}
-            />
-          </div>
-        )}
-      </div>
-      <div className="min-h-0 flex-1 overflow-auto px-[40px] pb-6">
-        {activeTab === 'payments' && <TransactionsTable rows={filteredRows} />}
-        {activeTab === 'payouts' && <PayoutsTable rows={filteredPayoutRows} />}
-        {activeTab !== 'payments' && activeTab !== 'payouts' && (
-          <div className="font-label-medium text-subdued py-8">
-            {activeTab === 'top-ups' && 'Top ups — placeholder'}
-            {activeTab === 'platform-fees' && 'Platform fees — placeholder'}
-            {activeTab === 'transfers' && 'Transfers to connected accounts — placeholder'}
-          </div>
-        )}
-      </div>
+      </ListViewBody>
       {accountId && accountName && (
         <ReturnToAccountFloating accountId={accountId} accountName={accountName} />
       )}
-    </div>
+    </ListViewRoot>
   )
 }

@@ -1,26 +1,38 @@
 /**
- * AccountDetailActionBar — Figma Home actions (node 2:6375).
- * Payouts, Payments, Move money (with dropdown), More, Expand, Settings.
+ * AccountDetailActionBar — Figma Home actions (node 2:6375) + header trailing buttons (250:142685).
+ * Payouts/Payments row; Move money, Settings, Profile, More in page header trailing.
  * Label tooltips (Payouts/Payments) use Figma 13:6299 (Plain Tooltip). Use previous design (11:5804) for instructional copy.
  */
 
-import { useState, useRef, useEffect, useMemo, useCallback, useLayoutEffect } from 'react'
-import type { RefObject } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  AccountHubIconWell12,
+  AccountHubMoreIcon,
+  AccountHubMoveMoneyIcon,
+  AccountHubProfileIcon,
+  AccountHubSettingsIcon,
+} from '../icons/accountHubHeader/AccountHubHeaderIcons'
 import { Icon } from '../icons/SailIcons'
-import { ConvertIcon } from '../icons/ConvertIcon'
 import ActionsRequiredModal from './ActionsRequiredModal'
 import type { ActionsRequiredFilter } from './ActionsRequiredModal'
 
-const MOVE_MONEY_OPTIONS = [
-  'Send funds',
-  'Add funds',
-  'Transfer funds',
-  'Create payment',
-  'Issue refund',
+/** Figma `.action-menu-create` (node 6244:79297) — order, labels, Sail icon keys. */
+const MOVE_MONEY_MENU_ITEMS = [
+  { label: 'Transfer', iconName: 'convert' },
+  { label: 'Send', iconName: 'send' },
+  { label: 'Request', iconName: 'invoice' },
+  { label: 'Deposit', iconName: 'topup' },
+  { label: 'Issue refund', iconName: 'refund' },
 ] as const
 
-const iconDefault = 'var(--color-icon-default)'
+const MOVE_MONEY_MENU_SHADOW =
+  'shadow-[0px_15px_35px_rgba(48,49,61,0.08),0px_5px_15px_rgba(0,0,0,0.12)]'
+
+/** Figma 250:142685 — header trailing pills (well fill, 32×h, 16px radius, 4px icon–label, 8px between controls). */
+const HEADER_MAIN_ACTION_PILL =
+  'h-8 min-h-8 max-h-8 border-0 !rounded-2xl !bg-[#e3eaf0] shadow-none hover:!bg-neutral-50 !gap-1 !px-0 !py-0 leading-5 tracking-[-0.15px] text-default'
+const HEADER_MAIN_ACTION_PILL_INSET = '!pl-2 !pr-3'
 
 /** Red circle with white X — paused state (Icon/Feedback Critical). */
 function PausedCircleIcon({ size = 12 }: { size?: number }) {
@@ -35,44 +47,43 @@ function PausedCircleIcon({ size = 12 }: { size?: number }) {
 }
 
 import { ActionButton } from './ActionButton'
-import HeaderSignalGroupButton from './HeaderSignalGroupButton'
 import SignalGroup from './SignalGroup'
-import SignalGroupPopover, { SIGNAL_GROUP_POPOVER_ANCHOR_GAP_PX } from './SignalGroupPopover'
-import PaymentsPopoverPanel, {
-  SIGNAL_GROUP_POPOVER_INNER_CLASS,
-  SIGNAL_GROUP_POPOVER_SHELL_CLASS,
-} from './PaymentsPopoverPanel'
 import type { ProfileDrawerTabId } from './AccountDrawer'
+import AccountHeaderMoreActionsMenu from './AccountHeaderMoreActionsMenu'
 import { IconButton } from './IconButton'
+import { ViewChip } from './listView/ViewChip'
 import type { AccountConfig } from '../data/accountConfigs'
 import CapabilityStatusIcon from '../icons/CapabilityStatusIcon'
 import { usePrototypeOptional } from '../context/PrototypeContext'
 import {
   CAPABILITY_GROUP_DISPLAY_LABELS,
-  DEFAULT_FINANCING_POPOVER,
   HEADER_CAPABILITY_ACTIVE_TOOLTIP,
   HEADER_EXTRA_ACTIVE_CAPABILITY_ORDER,
   formatBillingProductsTooltip,
+  type AccountRoleId,
   type BillingFlavor,
   type CapabilityGroupId,
   type CapabilityStatus,
 } from '../data/configMatrix'
-import {
-  payoutsPopoverLowerWellForRoles,
-  resolveCapabilityGroups,
-  signalGroupsForConfigureModal,
-} from '../data/uadVisibility'
+import { resolveCapabilityGroups, signalGroupsForConfigureModal } from '../data/uadVisibility'
+import { deriveAccountHeaderMainChrome } from '../data/accountHeaderActions'
 import { parseGutterBleed } from '../utils/gutterBleed'
 
-function signalPopoverHeading(popoverId: string, billingAsSubscriptions?: boolean): string {
-  if (popoverId === 'payments') return 'Payments'
-  if (popoverId === 'payouts') return 'Payouts'
-  if (popoverId === 'billing') return billingAsSubscriptions ? 'Subscriptions' : 'Billing'
-  if (popoverId.startsWith('extra:')) {
-    const gid = popoverId.slice('extra:'.length) as CapabilityGroupId
+/**
+ * Title for capability side panel — `panelId` matches chip keys (`payments`, `payouts`, `billing`, `extra:treasury`, …).
+ */
+export function getHeaderCapabilityPanelTitle(
+  panelId: string,
+  options?: { billingAsSubscriptions?: boolean }
+): string {
+  if (panelId === 'payments') return 'Payments'
+  if (panelId === 'payouts') return 'Payouts'
+  if (panelId === 'billing') return options?.billingAsSubscriptions ? 'Subscriptions' : 'Billing'
+  if (panelId.startsWith('extra:')) {
+    const gid = panelId.slice('extra:'.length) as CapabilityGroupId
     return CAPABILITY_GROUP_DISPLAY_LABELS[gid]
   }
-  return ''
+  return 'Capability'
 }
 
 const PAYOUTS_TOOLTIP_BY_CAPABILITY: Record<CapabilityStatus, string> = {
@@ -89,6 +100,18 @@ const PAYMENTS_TOOLTIP_BY_CAPABILITY: Record<CapabilityStatus, string> = {
   paused: 'Payments paused — view actions required.',
 }
 
+/** Figma 6269:112640–668 — subtitle row on hub capability cards. */
+function capabilityHeaderSubtitle(
+  capability: CapabilityStatus | undefined,
+  isRestricted: boolean
+): string {
+  if (capability === 'active') return 'All active'
+  if (capability === 'pausing_soon') return 'Some pause soon'
+  if (capability === 'limited' || capability === 'paused') return 'Some paused'
+  if (isRestricted) return 'Some paused'
+  return 'All active'
+}
+
 /** Visibility flags for action bar. When not passed, all actions are shown (backward compatible). Derive from config/status/products for customer vs merchant. */
 export type ActionBarVisibility = {
   /** Show Payouts button (and restricted dropdown when status is restricted). Driven by config.showPayouts. */
@@ -101,7 +124,7 @@ export type ActionBarVisibility = {
   showMore?: boolean
   /** Show Expand (account details drawer) icon. Default true. */
   showExpand?: boolean
-  /** Show Settings icon. Default true. */
+  /** Show Settings in hub header. Merchant / merchant-template accounts only unless overridden. */
   showSettings?: boolean
   /** When true, a third ghost slot may show “Billing” if prototype billing is enabled. Default true. */
   showSubscriptions?: boolean
@@ -127,8 +150,33 @@ export function getActionBarVisibility(
     showMoveMoney: hasMoneyMovement,
     showMore: true,
     showExpand: true,
-    showSettings: true,
+    showSettings: showPayoutsAndPayments,
     showSubscriptions: true,
+  }
+}
+
+/**
+ * When prototype (Configure) is present, allow Move money if account config already does
+ * **or** any role implies balance / payout / FA-style money movement (merchant, recipient,
+ * gp_recipient, storer). Customer-only roles keep header Move money off unless `config`
+ * already included `moneyMovement`.
+ */
+export function applyPrototypeActionBarVisibility(
+  visibility: ActionBarVisibility,
+  prototype: { activeRoles: ReadonlySet<AccountRoleId> } | null | undefined
+): ActionBarVisibility {
+  if (prototype == null) return visibility
+  const { activeRoles: roles } = prototype
+  const showMoveMoneyFromRoles =
+    roles.has('merchant') ||
+    roles.has('recipient') ||
+    roles.has('gp_recipient') ||
+    roles.has('storer')
+  return {
+    ...visibility,
+    showMoveMoney: Boolean(visibility.showMoveMoney) || showMoveMoneyFromRoles,
+    /** Configure drives hub chrome; Settings follows merchant role only. */
+    showSettings: roles.has('merchant'),
   }
 }
 
@@ -154,27 +202,29 @@ type AccountDetailActionBarProps = {
   onCloseActionsModal?: () => void
   /** When provided, Settings icon opens parent-controlled Settings modal (e.g. for deep link from profile Edit). */
   onOpenSettings?: () => void
-  /** Legacy prop; signal group chips no longer navigate to Settings (popover instead). */
+  /** Legacy prop; Settings deep link from header. */
   onOpenSettingsSection?: (sectionId: string) => void
+  /** Opens right-hand capability panel (skeleton); `panelId` is `payments` | `payouts` | `billing` | `extra:${CapabilityGroupId}`. */
+  onOpenCapabilityPanel?: (panelId: string) => void
   /**
    * When set, the 1px rule below the signal chip row spans the same horizontal bleed as the page header
    * (e.g. `-mx-6 px-6` with AccountDetail root `px-6`). Figma: hairline under `header/signal-group-row` (112:49522),
    * Home actions frame 2:6375 — same `neutral-50` as TabBar divider.
    */
   signalRowBorderBleedClassName?: string
+  /** When true, signal row sits inside Account hub chrome — no horizontal bleed, rule, or vertical padding (parent supplies border + gap). */
+  embedInHubHeader?: boolean
 }
 
-/** Payouts/Payments/Billing: always ghost, same placement. Billing is always shown as enabled (no compliance status). Payouts/Payments: enabled → popover; restricted → Actions required (filtered). */
+/** Header capability chips — no hover popovers; click opens capability side panel when handler is set. */
 export function AccountDetailHeaderStatusButtons({
   showPayouts,
   showPayments,
   showBilling,
   extraActiveCapabilityChips = [],
   status,
-  onOpenSettingsSection,
   onOpenActionsModal,
-  onOpenAccountDrawer,
-  pillRowRef,
+  onOpenCapabilityPanel,
 }: {
   showPayouts: boolean
   showPayments: boolean
@@ -187,13 +237,8 @@ export function AccountDetailHeaderStatusButtons({
    */
   extraActiveCapabilityChips?: CapabilityGroupId[]
   status?: 'enabled' | 'restricted' | 'restricted_soon' | undefined
-  onOpenSettingsSection?: (sectionId: string) => void
-  /** When restricted, status buttons open Actions required modal with this filter. */
   onOpenActionsModal?: (filter?: ActionsRequiredFilter, initialSegment?: 'blocking' | 'actions') => void
-  /** Opens Profile drawer (e.g. Capabilities tab from payments overflow). */
-  onOpenAccountDrawer?: (opts?: { profileTab?: ProfileDrawerTabId }) => void
-  /** Inner `header/signal-group-row` ref — shared popover Y + outside-click guard. */
-  pillRowRef: RefObject<HTMLDivElement | null>
+  onOpenCapabilityPanel?: (panelId: string) => void
 }) {
   const prototype = usePrototypeOptional()
   const isRestricted = status === 'restricted' || status === 'restricted_soon'
@@ -207,91 +252,6 @@ export function AccountDetailHeaderStatusButtons({
     return null
   }
 
-  const [openPopoverId, setOpenPopoverId] = useState<string | null>(null)
-  const [popoverX, setPopoverX] = useState(0)
-  const [popoverTop, setPopoverTop] = useState(0)
-  const paymentsRef = useRef<HTMLButtonElement>(null)
-  const payoutsRef = useRef<HTMLButtonElement>(null)
-  const billingRef = useRef<HTMLButtonElement>(null)
-  const extraRefs = useRef(new Map<CapabilityGroupId, HTMLButtonElement | null>())
-  const hoverCloseTimerRef = useRef<number | null>(null)
-
-  const HOVER_CLOSE_MS = 150
-
-  useEffect(() => {
-    return () => {
-      if (hoverCloseTimerRef.current != null) window.clearTimeout(hoverCloseTimerRef.current)
-    }
-  }, [])
-
-  const clearPopoverHoverCloseTimer = useCallback(() => {
-    if (hoverCloseTimerRef.current != null) {
-      window.clearTimeout(hoverCloseTimerRef.current)
-      hoverCloseTimerRef.current = null
-    }
-  }, [])
-
-  const schedulePopoverClose = () => {
-    clearPopoverHoverCloseTimer()
-    hoverCloseTimerRef.current = window.setTimeout(() => {
-      hoverCloseTimerRef.current = null
-      setOpenPopoverId(null)
-    }, HOVER_CLOSE_MS)
-  }
-
-  const updatePopoverPlacementForId = useCallback(
-    (id: string) => {
-      let el: HTMLElement | null = null
-      if (id === 'payments') el = paymentsRef.current
-      else if (id === 'payouts') el = payoutsRef.current
-      else if (id === 'billing') el = billingRef.current
-      else if (id.startsWith('extra:')) {
-        el = extraRefs.current.get(id.slice('extra:'.length) as CapabilityGroupId) ?? null
-      }
-      if (el) setPopoverX(el.getBoundingClientRect().left)
-      if (pillRowRef.current) {
-        setPopoverTop(
-          pillRowRef.current.getBoundingClientRect().bottom + SIGNAL_GROUP_POPOVER_ANCHOR_GAP_PX
-        )
-      }
-    },
-    [pillRowRef]
-  )
-
-  const openPopoverOnHover = (id: string) => {
-    clearPopoverHoverCloseTimer()
-    updatePopoverPlacementForId(id)
-    setOpenPopoverId(id)
-  }
-
-  useLayoutEffect(() => {
-    if (openPopoverId == null) return
-    updatePopoverPlacementForId(openPopoverId)
-  }, [
-    openPopoverId,
-    showPayments,
-    showPayouts,
-    showBillingChip,
-    extraActiveCapabilityChips,
-    updatePopoverPlacementForId,
-  ])
-
-  useEffect(() => {
-    if (openPopoverId == null) return
-    const sync = () => updatePopoverPlacementForId(openPopoverId)
-    window.addEventListener('resize', sync)
-    window.addEventListener('scroll', sync, true)
-    return () => {
-      window.removeEventListener('resize', sync)
-      window.removeEventListener('scroll', sync, true)
-    }
-  }, [openPopoverId, updatePopoverPlacementForId])
-
-  const isTargetInsidePillRow = useCallback(
-    (node: Node) => pillRowRef.current?.contains(node) ?? false,
-    [pillRowRef]
-  )
-
   const payoutsCapability = prototype?.capabilityStatuses.payouts
   const paymentsCapability = prototype?.capabilityStatuses.payments
 
@@ -300,17 +260,10 @@ export function AccountDetailHeaderStatusButtons({
     c != null ? c !== 'active' : isRestricted
 
   const payoutsNeedsAttention = signalClickOpensActionsModal(payoutsCapability)
+  /** Expired default PM does not surface as a Payments chip dot — only under Needs Attention → Blocking issues. */
   const paymentsNeedsAttention = signalClickOpensActionsModal(paymentsCapability)
-  const paymentsExpiredDot = prototype?.relationship?.expiredPaymentMethod === true
 
   const billingUsesFlavors = prototype?.billingFlavors ?? new Set<BillingFlavor>()
-  const showBillingSubscriptionsWell =
-    billingUsesFlavors.has('subscriptions') ||
-    (prototype?.relationship?.hasActiveSubscriptions ?? false)
-  /** Uses billing off but subscriptions well still on — popover is well-only (no status / product line). */
-  const billingOmitCapabilitySection =
-    !(prototype?.hasBilling ?? false) && showBillingSubscriptionsWell
-
   const billingCapability = prototype?.capabilityStatuses.billing
   const billingNeedsComplianceClick = signalClickOpensActionsModal(billingCapability)
 
@@ -325,262 +278,64 @@ export function AccountDetailHeaderStatusButtons({
   /** Customer-only or Connect recipient-only: billing chip reads “Subscriptions”; grey-well-only popover chrome. */
   const billingMinimalPopover = paymentsCustomerOnly || recipientOnly
 
-  const renderSignalPopoverBody = useCallback(
-    (id: string) => {
-      const r = prototype?.activeRoles
-      const payoutsWellFromRoles = r != null ? payoutsPopoverLowerWellForRoles(r) : undefined
-      const resolvedPayoutsLower: 'payoutInformation' | 'external' =
-        payoutsWellFromRoles === 'external'
-          ? 'external'
-          : (prototype?.hasPayoutSchedule ?? false)
-            ? 'payoutInformation'
-            : 'external'
-      const transfersShowPaymentsBalanceWell = resolvedPayoutsLower === 'external'
-
-      switch (id) {
-        case 'payments':
-          return (
-            <PaymentsPopoverPanel
-              status={prototype?.capabilityStatuses.payments ?? 'active'}
-              paymentsCustomerOnly={paymentsCustomerOnly}
-              hasPaymentMethodOnFile={prototype?.hasPaymentMethodOnFile ?? false}
-              defaultPaymentMethodExpired={prototype?.relationship?.expiredPaymentMethod ?? false}
-              paymentMethodsPlatformLabel="Shopify"
-              onViewAllCapabilities={
-                onOpenAccountDrawer
-                  ? () => {
-                      clearPopoverHoverCloseTimer()
-                      setOpenPopoverId(null)
-                      onOpenAccountDrawer({ profileTab: 'capabilities' })
-                    }
-                  : undefined
-              }
-              onEditCapabilities={
-                onOpenSettingsSection
-                  ? () => {
-                      clearPopoverHoverCloseTimer()
-                      setOpenPopoverId(null)
-                      onOpenSettingsSection('capabilities')
-                    }
-                  : undefined
-              }
-            />
-          )
-        case 'payouts':
-          return (
-            <PaymentsPopoverPanel
-              variant="payouts"
-              status={prototype?.capabilityStatuses.payouts ?? 'active'}
-              hasPayoutSchedule={prototype?.hasPayoutSchedule ?? false}
-              payoutsLowerWell={
-                prototype?.activeRoles != null
-                  ? payoutsPopoverLowerWellForRoles(prototype.activeRoles)
-                  : undefined
-              }
-              onEditCapabilities={
-                onOpenSettingsSection
-                  ? () => {
-                      clearPopoverHoverCloseTimer()
-                      setOpenPopoverId(null)
-                      onOpenSettingsSection('capabilities')
-                    }
-                  : undefined
-              }
-            />
-          )
-        case 'extra:treasury':
-          return (
-            <PaymentsPopoverPanel
-              variant="financialAccounts"
-              status={prototype?.capabilityStatuses.treasury ?? 'active'}
-              hasFinancialAccounts={prototype?.hasFinancialAccounts ?? false}
-              financialAccountsPlatformLabel="Shopify"
-              onEditCapabilities={
-                onOpenSettingsSection
-                  ? () => {
-                      clearPopoverHoverCloseTimer()
-                      setOpenPopoverId(null)
-                      onOpenSettingsSection('capabilities')
-                    }
-                  : undefined
-              }
-            />
-          )
-        case 'extra:capital':
-          return (
-            <PaymentsPopoverPanel
-              variant="financing"
-              financingProducts={prototype?.financingProducts ?? DEFAULT_FINANCING_POPOVER}
-              financingPlatformLabel="Shopify"
-              status={prototype?.capabilityStatuses.capital ?? 'active'}
-              onEditCapabilities={
-                onOpenSettingsSection
-                  ? () => {
-                      clearPopoverHoverCloseTimer()
-                      setOpenPopoverId(null)
-                      onOpenSettingsSection('capabilities')
-                    }
-                  : undefined
-              }
-            />
-          )
-        case 'extra:transfers':
-          return (
-            <PaymentsPopoverPanel
-              variant="transfers"
-              status={prototype?.capabilityStatuses.transfers ?? 'active'}
-              transfersShowPaymentsBalanceWell={transfersShowPaymentsBalanceWell}
-              onEditCapabilities={
-                onOpenSettingsSection
-                  ? () => {
-                      clearPopoverHoverCloseTimer()
-                      setOpenPopoverId(null)
-                      onOpenSettingsSection('capabilities')
-                    }
-                  : undefined
-              }
-            />
-          )
-        case 'extra:issuing':
-          return (
-            <PaymentsPopoverPanel
-              variant="cardIssuing"
-              cardIssuingPlatformLabel="Shopify"
-              status={prototype?.capabilityStatuses.issuing ?? 'active'}
-              onEditCapabilities={
-                onOpenSettingsSection
-                  ? () => {
-                      clearPopoverHoverCloseTimer()
-                      setOpenPopoverId(null)
-                      onOpenSettingsSection('capabilities')
-                    }
-                  : undefined
-              }
-            />
-          )
-        case 'billing':
-          return (
-            <PaymentsPopoverPanel
-              variant="billing"
-              status={prototype?.capabilityStatuses.billing ?? 'active'}
-              billingFlavors={billingUsesFlavors}
-              showBillingSubscriptionsWell={showBillingSubscriptionsWell}
-              billingOmitCapabilitySection={billingOmitCapabilitySection}
-              billingCustomerOnly={billingMinimalPopover}
-              billingSubscriptionsPlatformLabel="Shopify"
-            />
-          )
-        default:
-          if (id.startsWith('extra:')) {
-            const heading = signalPopoverHeading(id)
-            return (
-              <div className={SIGNAL_GROUP_POPOVER_SHELL_CLASS}>
-                <div className={SIGNAL_GROUP_POPOVER_INNER_CLASS}>
-                  <h3 className="m-0 font-label-medium text-[14px] leading-5 text-default">{heading}</h3>
-                  <p className="m-0 mt-1 font-label-small leading-4 text-[#50617a]">Popover content coming soon</p>
-                </div>
-              </div>
-            )
-          }
-          return null
-      }
-    },
-    [
-      paymentsCustomerOnly,
-      billingMinimalPopover,
-      recipientOnly,
-      prototype?.activeRoles,
-      prototype?.capabilityStatuses,
-      prototype?.financingProducts,
-      prototype?.hasPaymentMethodOnFile,
-      prototype?.hasPayoutSchedule,
-      prototype?.activeRoles,
-      prototype?.hasFinancialAccounts,
-      prototype?.billingFlavors,
-      prototype?.relationship?.hasActiveSubscriptions,
-      prototype?.relationship?.expiredPaymentMethod,
-      prototype?.hasBilling,
-      showBillingSubscriptionsWell,
-      billingOmitCapabilitySection,
-      onOpenAccountDrawer,
-      onOpenSettingsSection,
-      clearPopoverHoverCloseTimer,
-    ]
-  )
+  const openCapabilityOrFallback = (panelId: string, openModal: () => void) => {
+    if (onOpenCapabilityPanel) {
+      onOpenCapabilityPanel(panelId)
+      return
+    }
+    openModal()
+  }
 
   return (
     <>
       {showPayments && (
-        <span className="relative inline-flex shrink-0">
-          <HeaderSignalGroupButton
-            ref={paymentsRef}
-            tooltipLabel={
-              paymentsCapability != null
-                ? PAYMENTS_TOOLTIP_BY_CAPABILITY[paymentsCapability]
-                : isRestricted
-                  ? 'Payments paused — view actions required'
-                  : 'Payments are active for this account.'
-            }
-            tooltipId="payments-tooltip"
-            aria-expanded={openPopoverId === 'payments'}
-            onMouseEnter={() => openPopoverOnHover('payments')}
-            onMouseLeave={schedulePopoverClose}
-            onClick={
-              paymentsNeedsAttention
-                ? () => {
-                    setOpenPopoverId(null)
-                    onOpenActionsModal?.('payments', 'actions')
-                  }
-                : paymentsExpiredDot
-                  ? () => {
-                      setOpenPopoverId(null)
-                      onOpenActionsModal?.('payments')
-                    }
-                  : undefined
-            }
-            leading={
-              paymentsCapability != null ? (
-                <CapabilityStatusIcon status={paymentsCapability} />
-              ) : isRestricted ? (
-                <PausedCircleIcon size={12} />
-              ) : (
-                <CapabilityStatusIcon status="active" />
-              )
-            }
-          >
-            Payments
-          </HeaderSignalGroupButton>
-          {paymentsExpiredDot ? (
-            <span
-              className="pointer-events-none absolute -right-0.5 -top-0.5 size-2 rounded-full bg-[var(--color-icon-feedback-critical)] ring-2 ring-surface"
-              aria-hidden
-            />
-          ) : null}
-        </span>
+        <ViewChip
+          visualVariant="headerCard"
+          label="Payments"
+          subtitle={capabilityHeaderSubtitle(
+            paymentsCapability,
+            isRestricted && paymentsCapability == null
+          )}
+          active={false}
+          accessibilityLabel={
+            paymentsCapability != null
+              ? PAYMENTS_TOOLTIP_BY_CAPABILITY[paymentsCapability]
+              : isRestricted
+                ? 'Payments paused — view actions required'
+                : 'Payments are active for this account.'
+          }
+          statusIcon={
+            paymentsCapability != null ? (
+              <CapabilityStatusIcon status={paymentsCapability} />
+            ) : isRestricted ? (
+              <PausedCircleIcon size={12} />
+            ) : (
+              <CapabilityStatusIcon status="active" />
+            )
+          }
+          onClick={() =>
+            openCapabilityOrFallback('payments', () => {
+              if (paymentsNeedsAttention) {
+                onOpenActionsModal?.('payments', 'actions')
+              }
+            })
+          }
+        />
       )}
       {showPayouts && (
-        <HeaderSignalGroupButton
-          ref={payoutsRef}
-          tooltipLabel={
+        <ViewChip
+          visualVariant="headerCard"
+          label="Payouts"
+          subtitle={capabilityHeaderSubtitle(payoutsCapability, isRestricted && payoutsCapability == null)}
+          active={false}
+          accessibilityLabel={
             payoutsCapability != null
               ? PAYOUTS_TOOLTIP_BY_CAPABILITY[payoutsCapability]
               : isRestricted
                 ? 'Payouts paused — view actions required'
                 : 'Payouts are active for this account.'
           }
-          tooltipId="payouts-tooltip"
-          aria-expanded={openPopoverId === 'payouts'}
-          onMouseEnter={() => openPopoverOnHover('payouts')}
-          onMouseLeave={schedulePopoverClose}
-          onClick={
-            payoutsNeedsAttention
-              ? () => {
-                  setOpenPopoverId(null)
-                  onOpenActionsModal?.('payouts', 'actions')
-                }
-              : undefined
-          }
-          leading={
+          statusIcon={
             payoutsCapability != null ? (
               <CapabilityStatusIcon status={payoutsCapability} />
             ) : isRestricted ? (
@@ -589,95 +344,63 @@ export function AccountDetailHeaderStatusButtons({
               <CapabilityStatusIcon status="active" />
             )
           }
-        >
-          Payouts
-        </HeaderSignalGroupButton>
+          onClick={() =>
+            openCapabilityOrFallback('payouts', () => {
+              if (payoutsNeedsAttention) onOpenActionsModal?.('payouts', 'actions')
+            })
+          }
+        />
       )}
       {showBillingChip && (
-        <HeaderSignalGroupButton
-          ref={billingRef}
-          tooltipLabel={formatBillingProductsTooltip(billingUsesFlavors)}
-          tooltipId="billing-products-tooltip"
-          aria-expanded={openPopoverId === 'billing'}
-          onMouseEnter={() => openPopoverOnHover('billing')}
-          onMouseLeave={schedulePopoverClose}
-          onClick={
-            billingNeedsComplianceClick
-              ? () => {
-                  setOpenPopoverId(null)
-                  onOpenActionsModal?.('all', 'actions')
-                }
-              : undefined
-          }
-          leading={
+        <ViewChip
+          visualVariant="headerCard"
+          label={billingMinimalPopover ? 'Subscriptions' : 'Billing'}
+          subtitle={capabilityHeaderSubtitle(
+            prototype?.capabilityStatuses.billing,
+            false
+          )}
+          active={false}
+          accessibilityLabel={formatBillingProductsTooltip(billingUsesFlavors)}
+          statusIcon={
             <CapabilityStatusIcon
               status={prototype?.capabilityStatuses.billing ?? 'active'}
             />
           }
-        >
-          {billingMinimalPopover ? 'Subscriptions' : 'Billing'}
-        </HeaderSignalGroupButton>
+          onClick={() =>
+            openCapabilityOrFallback('billing', () => {
+              if (billingNeedsComplianceClick) onOpenActionsModal?.('all', 'actions')
+            })
+          }
+        />
       )}
       {extraActiveCapabilityChips.map((groupId) => {
-        const popoverKey = `extra:${groupId}`
+        const panelId = `extra:${groupId}`
         const extraCapability = prototype?.capabilityStatuses[groupId]
         const extraNeedsAttention = signalClickOpensActionsModal(extraCapability)
         const tooltip =
           HEADER_CAPABILITY_ACTIVE_TOOLTIP[groupId] ??
           `${CAPABILITY_GROUP_DISPLAY_LABELS[groupId]} are active for this account.`
         return (
-          <HeaderSignalGroupButton
+          <ViewChip
             key={groupId}
-            ref={(el) => {
-              if (el) extraRefs.current.set(groupId, el)
-              else extraRefs.current.delete(groupId)
-            }}
-            tooltipLabel={tooltip}
-            tooltipId={`header-cap-${groupId}-tooltip`}
-            aria-expanded={openPopoverId === popoverKey}
-            onMouseEnter={() => openPopoverOnHover(popoverKey)}
-            onMouseLeave={schedulePopoverClose}
-            onClick={
-              extraNeedsAttention
-                ? () => {
-                    setOpenPopoverId(null)
-                    onOpenActionsModal?.('all', 'actions')
-                  }
-                : undefined
-            }
-            leading={
+            visualVariant="headerCard"
+            label={CAPABILITY_GROUP_DISPLAY_LABELS[groupId]}
+            subtitle={capabilityHeaderSubtitle(extraCapability, false)}
+            active={false}
+            accessibilityLabel={tooltip}
+            statusIcon={
               <CapabilityStatusIcon
                 status={prototype?.capabilityStatuses[groupId] ?? 'active'}
               />
             }
-          >
-            {CAPABILITY_GROUP_DISPLAY_LABELS[groupId]}
-          </HeaderSignalGroupButton>
+            onClick={() =>
+              openCapabilityOrFallback(panelId, () => {
+                if (extraNeedsAttention) onOpenActionsModal?.('all', 'actions')
+              })
+            }
+          />
         )
       })}
-      <SignalGroupPopover
-        open={openPopoverId != null}
-        onClose={() => {
-          clearPopoverHoverCloseTimer()
-          setOpenPopoverId(null)
-        }}
-        onPointerEnter={clearPopoverHoverCloseTimer}
-        onPointerLeave={schedulePopoverClose}
-        title={
-          openPopoverId != null
-            ? signalPopoverHeading(
-                openPopoverId,
-                billingMinimalPopover && openPopoverId === 'billing'
-              )
-            : ''
-        }
-        activeContentId={openPopoverId}
-        renderBody={renderSignalPopoverBody}
-        sharedPlacement={
-          openPopoverId != null ? { translateX: popoverX, top: popoverTop } : null
-        }
-        isTargetInsidePillRow={isTargetInsidePillRow}
-      />
     </>
   )
 }
@@ -695,22 +418,53 @@ function useVisibility(visibility: ActionBarVisibility | undefined) {
   }
 }
 
-/** Move money, Settings, More, Expand — for use in header trailing (swapped placement). */
+/** Move money, Settings, Profile, More — Figma 250:142685; for header trailing. */
 export function AccountDetailMainActions({
   visibility,
   onOpenAccountDrawer,
   accountId,
   onOpenSettings: onOpenSettingsProp,
+  merchantNameForMenu,
+  /** When false, overflow renders as non-interactive chrome (non-merchant hubs). Default true. */
+  overflowInteractive = true,
+  /** When set (e.g. customer-only mock without floatie), drives header actions without prototype. */
+  headerChromeOverride,
 }: {
   visibility?: ActionBarVisibility
   onOpenAccountDrawer?: (opts?: { profileTab?: ProfileDrawerTabId }) => void
   accountId?: string
   onOpenSettings?: () => void
+  /** Shown after “View dashboard as ” in More actions menu (Figma 252:142762). */
+  merchantNameForMenu?: string
+  overflowInteractive?: boolean
+  headerChromeOverride?: ReturnType<typeof deriveAccountHeaderMainChrome>
 }) {
   const navigate = useNavigate()
+  const prototype = usePrototypeOptional()
   const v = useVisibility(visibility)
+  const activeRolesKey = prototype ? [...prototype.activeRoles].sort().join(',') : ''
+  const headerChrome = useMemo(() => {
+    if (prototype) return deriveAccountHeaderMainChrome(prototype.activeRoles)
+    return headerChromeOverride ?? null
+  }, [prototype, activeRolesKey, headerChromeOverride])
+
+  const showMoveMoneyRegion =
+    headerChrome != null
+      ? headerChrome.showMoveMoney
+      : v.showMoveMoney
+  const moveMoneyMenuItems =
+    headerChrome != null ? headerChrome.moveMoneyItems : [...MOVE_MONEY_MENU_ITEMS]
+
+  const moreMenuInteractive = overflowInteractive && (headerChrome?.moreMenuInteractive ?? true)
+
+  const showSettingsRegion =
+    headerChrome != null ? headerChrome.showSettings : v.showSettings
+
   const [moveMoneyOpen, setMoveMoneyOpen] = useState(false)
   const moveMoneyRef = useRef<HTMLDivElement>(null)
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+  const moreMenuRef = useRef<HTMLDivElement>(null)
+  const dashboardAsName = merchantNameForMenu ?? 'this merchant'
   const openSettings =
     onOpenSettingsProp ?? (accountId ? () => navigate(`/network/${accountId}/settings`) : () => {})
 
@@ -732,13 +486,89 @@ export function AccountDetailMainActions({
     }
   }, [moveMoneyOpen])
 
+  useEffect(() => {
+    if (!moveMoneyOpen) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMoveMoneyOpen(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [moveMoneyOpen])
+
+  useEffect(() => {
+    if (!moreMenuOpen) return
+    function handleClickOutside(e: MouseEvent) {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setMoreMenuOpen(false)
+      }
+    }
+    const t = window.setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside)
+    }, 0)
+    return () => {
+      clearTimeout(t)
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [moreMenuOpen])
+
+  useEffect(() => {
+    if (!moreMenuOpen) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMoreMenuOpen(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [moreMenuOpen])
+
   return (
     <div
-      className="flex flex-wrap items-center gap-2"
-      data-name="Home actions"
-      data-node-id="145:61890"
+      className="flex flex-wrap items-center justify-end gap-2"
+      data-name="Buttons"
+      data-node-id="6269:112625"
     >
-      {v.showMoveMoney && (
+      {headerChrome?.showCreate && (
+        <ActionButton
+          label="Create"
+          tooltipId="actionbar-create-tooltip"
+          variant="standard"
+          className={`${HEADER_MAIN_ACTION_PILL} ${HEADER_MAIN_ACTION_PILL_INSET}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <AccountHubIconWell12>
+            <Icon name="add" size={12} fill="currentColor" className="shrink-0" aria-hidden />
+          </AccountHubIconWell12>
+          Create
+        </ActionButton>
+      )}
+      {headerChrome?.showRefundStandalone && (
+        <ActionButton
+          label="Refund"
+          tooltipId="actionbar-refund-standalone-tooltip"
+          variant="standard"
+          className={`${HEADER_MAIN_ACTION_PILL} ${HEADER_MAIN_ACTION_PILL_INSET}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <AccountHubIconWell12>
+            <Icon name="refund" size={12} fill="currentColor" className="shrink-0" aria-hidden />
+          </AccountHubIconWell12>
+          Refund
+        </ActionButton>
+      )}
+      {headerChrome?.showSendMoneyStandalone && (
+        <ActionButton
+          label="Send money"
+          tooltipId="actionbar-send-money-tooltip"
+          variant="standard"
+          className={`${HEADER_MAIN_ACTION_PILL} ${HEADER_MAIN_ACTION_PILL_INSET}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <AccountHubIconWell12>
+            <Icon name="send" size={12} fill="currentColor" className="shrink-0" aria-hidden />
+          </AccountHubIconWell12>
+          Send money
+        </ActionButton>
+      )}
+      {showMoveMoneyRegion && (
         <div
           className={moveMoneyOpen ? 'relative z-[200]' : 'relative'}
           ref={moveMoneyRef}
@@ -747,7 +577,7 @@ export function AccountDetailMainActions({
             label="Move money"
             tooltipId="actionbar-move-money-tooltip"
             variant="standard"
-            className="h-8 gap-1 border-0 !bg-[#f4f7fa] !px-2 !py-0 !text-[#273951] shadow-none hover:!bg-neutral-50"
+            className={`${HEADER_MAIN_ACTION_PILL} ${HEADER_MAIN_ACTION_PILL_INSET}`}
             onClick={(e) => {
               e.stopPropagation()
               setMoveMoneyOpen((o) => !o)
@@ -755,63 +585,117 @@ export function AccountDetailMainActions({
             aria-haspopup="menu"
             aria-expanded={moveMoneyOpen}
           >
-            <ConvertIcon size={12} fill={iconDefault} />
+            <AccountHubIconWell12>
+              <AccountHubMoveMoneyIcon />
+            </AccountHubIconWell12>
             Move money
           </ActionButton>
           {moveMoneyOpen && (
-            <ul
-              className="absolute left-0 top-full z-[200] mt-1 min-w-[180px] rounded-[length:var(--radius-small)] border border-neutral-100 bg-surface py-1 shadow-[0_2px_5px_rgba(64,68,82,0.08),0_3px_9px_rgba(64,68,82,0.08)]"
+            <div
+              className={`absolute left-0 top-full z-[200] mt-1 flex min-w-[272px] max-w-[min(100vw-2rem,320px)] flex-col gap-0 rounded-[12px] border border-neutral-100 bg-surface p-1 ${MOVE_MONEY_MENU_SHADOW}`}
               role="menu"
+              data-name=".action-menu-create"
+              data-node-id="6244:79297"
             >
-              {MOVE_MONEY_OPTIONS.map((option) => (
-                <li key={option} role="none">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="w-full px-3 py-2 text-left font-label-medium text-default hover:bg-offset focus:bg-offset focus:outline-none"
-                    onMouseDown={(e) => {
-                      e.preventDefault()
-                      setMoveMoneyOpen(false)
-                    }}
+              {moveMoneyMenuItems.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  role="menuitem"
+                  className="group flex w-full shrink-0 items-center gap-2 rounded-[8px] p-2 text-left font-label-medium-emphasized text-default transition-colors hover:bg-brand-25 focus:bg-brand-25 focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary focus-visible:ring-inset"
+                  data-name=".action-list-item"
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    setMoveMoneyOpen(false)
+                  }}
+                >
+                  <span
+                    className="flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-xsmall)] bg-offset text-icon-default transition-colors group-hover:bg-brand-100 group-hover:text-icon-action"
+                    aria-hidden
                   >
-                    {option}
-                  </button>
-                </li>
+                    <Icon
+                      name={item.iconName}
+                      size={16}
+                      fill="currentColor"
+                      className="shrink-0"
+                    />
+                  </span>
+                  <span className="flex min-w-0 max-h-8 flex-1 flex-col justify-center leading-5 tracking-[-0.15px] transition-colors group-hover:text-action-primary">
+                    {item.label}
+                  </span>
+                </button>
               ))}
-            </ul>
+            </div>
           )}
         </div>
       )}
-      {v.showSettings && (
+      {showSettingsRegion && (
         <ActionButton
-          label="Settings"
+          label="Manage settings"
           tooltipId="actionbar-settings-tooltip"
-          variant="iconOnly"
-          className="!rounded-2xl !bg-[#f4f7fa] hover:!bg-neutral-50"
+          variant="standard"
+          className={`${HEADER_MAIN_ACTION_PILL} ${HEADER_MAIN_ACTION_PILL_INSET}`}
           onClick={openSettings}
         >
-          <Icon name="settings" size={12} fill={iconDefault} />
+          <AccountHubIconWell12>
+            <AccountHubSettingsIcon />
+          </AccountHubIconWell12>
+          Settings
         </ActionButton>
       )}
-      {v.showMore && (
-        <IconButton
-          label="More actions"
-          tooltipId="actionbar-more-tooltip"
-          className="!rounded-2xl !bg-[#f4f7fa] hover:!bg-neutral-50"
-        >
-          <Icon name="more" size={12} fill={iconDefault} />
-        </IconButton>
-      )}
       {v.showExpand && (
-        <IconButton
-          label="View account details"
+        <ActionButton
+          label="View profile"
           tooltipId="actionbar-account-drawer-tooltip"
-          className="!rounded-2xl !bg-[#f4f7fa] hover:!bg-neutral-50"
+          variant="standard"
+          className={`${HEADER_MAIN_ACTION_PILL} ${HEADER_MAIN_ACTION_PILL_INSET}`}
           onClick={() => onOpenAccountDrawer?.({ profileTab: 'details' })}
         >
-          <Icon name="identityVerification" size={12} fill={iconDefault} />
-        </IconButton>
+          <AccountHubIconWell12>
+            <AccountHubProfileIcon />
+          </AccountHubIconWell12>
+          View profile
+        </ActionButton>
       )}
+      {v.showMore &&
+        (moreMenuInteractive ? (
+          <div className={moreMenuOpen ? 'relative z-[200]' : 'relative'} ref={moreMenuRef}>
+            <IconButton
+              label="More actions"
+              tooltipId="actionbar-more-tooltip"
+              roundedFull
+              className={`${HEADER_MAIN_ACTION_PILL} !px-2`}
+              onClick={(e) => {
+                e.stopPropagation()
+                setMoreMenuOpen((open) => !open)
+              }}
+              aria-haspopup="menu"
+              aria-expanded={moreMenuOpen}
+            >
+              <span className="inline-flex size-4 shrink-0 items-center justify-center text-icon-default" aria-hidden>
+                <AccountHubMoreIcon />
+              </span>
+            </IconButton>
+            {moreMenuOpen && (
+              <AccountHeaderMoreActionsMenu
+                merchantName={dashboardAsName}
+                onClose={() => setMoreMenuOpen(false)}
+              />
+            )}
+          </div>
+        ) : (
+          <IconButton
+            label="More actions (preview)"
+            tooltipId="actionbar-more-display-tooltip"
+            variant="display"
+            roundedFull
+            className={`${HEADER_MAIN_ACTION_PILL} !px-2`}
+          >
+            <span className="inline-flex size-4 shrink-0 items-center justify-center text-icon-subdued" aria-hidden>
+              <AccountHubMoreIcon />
+            </span>
+          </IconButton>
+        ))}
     </div>
   )
 }
@@ -831,7 +715,9 @@ export default function AccountDetailActionBar({
   onCloseActionsModal: controlledOnClose,
   onOpenSettings: _onOpenSettings,
   onOpenSettingsSection,
+  onOpenCapabilityPanel,
   signalRowBorderBleedClassName,
+  embedInHubHeader = false,
 }: AccountDetailActionBarProps) {
   const prototype = usePrototypeOptional()
   const v = useVisibility(visibility)
@@ -849,7 +735,7 @@ export default function AccountDetailActionBar({
   )
 
   const activeRolesKey = prototype ? [...prototype.activeRoles].sort().join(',') : ''
-  /** Prototype roles: Payments / Payouts chips intersect `resolveCapabilityGroups` (GP + Customer without Merchant → no Payments). */
+  /** Prototype roles: Payments / Payouts chips intersect `resolveCapabilityGroups` (Customer does not add groups). */
   const signalChipsFromRoles = useMemo(() => {
     if (!prototype) {
       return { payments: v.showPayments, payouts: v.showPayouts }
@@ -899,11 +785,10 @@ export default function AccountDetailActionBar({
         showPayouts={signalChipsFromRoles.payouts}
         showPayments={signalChipsFromRoles.payments}
         showBilling={false}
+        extraActiveCapabilityChips={extraActiveCapabilityChips}
         status={status}
-        onOpenSettingsSection={onOpenSettingsSection}
         onOpenActionsModal={openActionsModal}
-        onOpenAccountDrawer={onOpenAccountDrawer}
-        pillRowRef={signalPillRowRef}
+        onOpenCapabilityPanel={onOpenCapabilityPanel}
       />
     </SignalGroup>
   )
@@ -915,7 +800,9 @@ export default function AccountDetailActionBar({
         Home actions frame 2:6375 — same token as TabBar divider (`border-neutral-50` / `bg-neutral-50`).
       */}
       {showStatus &&
-        (signalRowBleed ? (
+        (embedInHubHeader ? (
+          <div data-name="header/signal-group-row">{signalRowWithDivider}</div>
+        ) : signalRowBleed ? (
           <div className={signalRowBleed.marginClass}>
             <div
               className={`border-b border-neutral-50 py-4 ${signalRowBleed.paddingClass}`}

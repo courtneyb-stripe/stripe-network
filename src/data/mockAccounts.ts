@@ -24,6 +24,11 @@ export type MockAccount = {
   riskLevel?: RiskLevel
   email: string
   configurations: string
+  /**
+   * Public URL (under `/public`) for the account hub header logo tile — Figma 6269:112624, 68×68, 8px radius.
+   * When omitted, {@link AccountDetailHeader} uses initials.
+   */
+  headerLogoSrc?: string
 }
 
 export const MOCK_ACCOUNTS: MockAccount[] = [
@@ -34,6 +39,7 @@ export const MOCK_ACCOUNTS: MockAccount[] = [
     configType: 'merchant',
     email: 'contact@example.com',
     configurations: 'Merchant, Customer',
+    headerLogoSrc: '/logos/the-woolpot.png',
   },
   {
     id: 'acme-corp',

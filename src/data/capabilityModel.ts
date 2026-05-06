@@ -39,7 +39,7 @@
  *
  *     Config               →  Signal group                     Relationship    Network
  *     merchant             →  Payments + Payouts               distributes     platform
- *     customer             →  Payments                         direct          platform (no compliance)
+ *     customer             →  (none)                           direct          platform (no compliance)
  *     recipient            →  Transfers + Payouts              direct          platform
  *     storer               →  Financial accounts + Transfers   direct          platform
  *                             + Payouts (Transfers always
@@ -911,12 +911,12 @@ export const configurations: Configuration[] = [
     direction: 'direct',
     platformNetwork: true,
     hasCompliance: false,
-    signals: ['payments'],
+    signals: [],
     capabilityGroups: [],
     note:
       'Pays the platform/operator. Direct relationship but no compliance — ' +
       'the only platform-network config without compliance requirements. ' +
-      'Has no backing capability groups; surfaces in UAD only via relationship.',
+      'No UAD header status signals; relationship-only (aligns with capability explorer).',
   },
   {
     id: 'recipient',

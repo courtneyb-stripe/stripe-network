@@ -6,7 +6,10 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import AccountDetailHeader from '../components/AccountDetailHeader'
-import AccountDetailActionBar, { AccountDetailMainActions, getActionBarVisibility } from '../components/AccountDetailActionBar'
+import AccountDetailActionBar, {
+  AccountDetailMainActions,
+  getActionBarVisibility,
+} from '../components/AccountDetailActionBar'
 import AccountDrawer from '../components/AccountDrawer'
 import { PillBadge } from '../components/PillBadge'
 import { getAccountById } from '../data/mockAccounts'
@@ -15,6 +18,7 @@ import type { AccountStatusKind } from '../components/AccountDetailsSidebar'
 import { slugToDisplayName } from '../utils/string'
 import { usePrototypeOptional } from '../context/PrototypeContext'
 import { deriveAccountStatus, resolveCapabilityGroups } from '../data/uadVisibility'
+import { buildCapabilityDrawerGroupRows } from '../data/capabilityDrawerModel'
 
 type RouteStateStatus = 'enabled' | 'restricted' | 'restricted_soon' | null
 
@@ -26,6 +30,20 @@ export default function RiskAnalysis() {
   const [accountDrawerOpen, setAccountDrawerOpen] = useState(false)
   const [actionsModalOpen, setActionsModalOpen] = useState(false)
   const [actionsModalFilter, setActionsModalFilter] = useState<'all' | 'payouts' | 'payments'>('all')
+  const [capabilityDrawerOpen, setCapabilityDrawerOpen] = useState(false)
+  const [capabilityDrawerPanelId, setCapabilityDrawerPanelId] = useState<string | null>(null)
+
+  const openAccountDrawer = () => {
+    setCapabilityDrawerOpen(false)
+    setCapabilityDrawerPanelId(null)
+    setAccountDrawerOpen(true)
+  }
+
+  const openCapabilityPanel = (panelId: string) => {
+    setAccountDrawerOpen(false)
+    setCapabilityDrawerPanelId(panelId)
+    setCapabilityDrawerOpen(true)
+  }
 
   const mockAccount = getAccountById(id)
   const routeState = location.state as { status?: RouteStateStatus; accountName?: string } | null
@@ -55,14 +73,14 @@ export default function RiskAnalysis() {
 
   const prototypeRiskHeaderBadge =
     prototype?.riskLevel === 'high' ? (
-      <PillBadge label="High risk" variant="critical" />
+      <PillBadge label="High risk" variant="critical" dense />
     ) : prototype?.riskLevel === 'elevated' ? (
-      <PillBadge label="Elevated risk" variant="attention" />
+      <PillBadge label="Elevated risk" variant="attention" dense />
     ) : null
 
   const radarOnlyRiskHeaderBadge =
     prototype == null && (mockAccount?.isRadarRuleMatch ?? false) ? (
-      <PillBadge label="High risk" variant="critical" />
+      <PillBadge label="High risk" variant="critical" dense />
     ) : null
 
   const riskHeaderBadge = prototypeRiskHeaderBadge ?? radarOnlyRiskHeaderBadge
@@ -73,6 +91,11 @@ export default function RiskAnalysis() {
     isRadarRuleMatch: mockAccount?.isRadarRuleMatch,
   })
 
+  const capabilityDrawerGroups = useMemo(() => {
+    if (prototype == null) return []
+    return buildCapabilityDrawerGroupRows(prototype, visibility)
+  }, [prototype, visibility])
+
   const breadcrumbs = [
     { label: 'Network', href: '/network' },
     { label: accountName, href: id ? `/network/${id}` : null },
@@ -81,11 +104,11 @@ export default function RiskAnalysis() {
 
   const headerStatusBadge =
     status === 'restricted'
-      ? <PillBadge label="Restricted" variant="critical" />
+      ? <PillBadge label="Restricted" variant="critical" dense />
       : status === 'restricted_soon'
-        ? <PillBadge label="Restricted soon" variant="attention" />
+        ? <PillBadge label="Restricted soon" variant="attention" dense />
         : status === 'enabled'
-          ? <PillBadge label="Enabled" variant="success" />
+          ? <PillBadge label="Enabled" variant="success" dense />
           : undefined
   const headerBadge =
     headerStatusBadge != null || riskHeaderBadge != null ? (
@@ -102,15 +125,17 @@ export default function RiskAnalysis() {
           <div>
             <AccountDetailHeader
               accountName={accountName}
+              accountLogoSrc={mockAccount?.headerLogoSrc}
               breadcrumbs={breadcrumbs}
               badge={headerBadge}
               identityBleedClassName="-mx-10 px-10"
               trailing={
                 <AccountDetailMainActions
                   visibility={visibility}
-                  onOpenAccountDrawer={() => setAccountDrawerOpen(true)}
+                  onOpenAccountDrawer={openAccountDrawer}
                   accountId={id}
                   onOpenSettings={id ? () => navigate(`/network/${id}/settings`) : undefined}
+                  merchantNameForMenu={accountName}
                 />
               }
             />
@@ -119,7 +144,7 @@ export default function RiskAnalysis() {
             <AccountDetailActionBar
               status={status}
               visibility={visibility}
-              onOpenAccountDrawer={() => setAccountDrawerOpen(true)}
+              onOpenAccountDrawer={openAccountDrawer}
               accountId={id}
               accountName={accountName}
               actionsModalOpen={actionsModalOpen}
@@ -131,7 +156,10 @@ export default function RiskAnalysis() {
               }}
               onCloseActionsModal={() => setActionsModalOpen(false)}
               onOpenSettings={() => id && navigate(`/network/${id}/settings`)}
-              onOpenSettingsSection={(sectionId) => id && navigate(`/network/${id}/settings`, { state: { sectionId } })}
+              onOpenSettingsSection={(sectionId) =>
+                id && navigate(`/network/${id}/settings`, { state: { sectionId } })
+              }
+              onOpenCapabilityPanel={openCapabilityPanel}
             />
           </div>
         </div>
@@ -152,6 +180,19 @@ export default function RiskAnalysis() {
         showAccountRisk={showHighRiskUi}
         accountId={id}
         variant="account"
+      />
+      <AccountDrawer
+        open={capabilityDrawerOpen}
+        onClose={() => {
+          setCapabilityDrawerOpen(false)
+          setCapabilityDrawerPanelId(null)
+        }}
+        variant="capability-group"
+        capabilityDrawerGroups={capabilityDrawerGroups}
+        capabilityDrawerFocusedPanelId={capabilityDrawerPanelId}
+        onOpenCapabilitiesEdit={() => {
+          id && navigate(`/network/${id}/settings`, { state: { sectionId: 'capabilities' } })
+        }}
       />
     </div>
   )

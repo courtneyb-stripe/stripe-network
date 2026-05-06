@@ -1,6 +1,6 @@
 /**
  * Products section — Figma 214:28398.
- * ViewChips (Sold by Shopify / Sold by Toybox Labs), section header "Products" with View all,
+ * ViewChips (Sold by Shopify / Sold by Toybox Labs), section header "Products",
  * skeleton table (10 rows), row click opens product details drawer.
  */
 
@@ -10,6 +10,10 @@ import { ViewChip } from '../NetworkFilterGroup'
 import { usePrototypeOptional } from '../../context/PrototypeContext'
 import SectionHeader from '../SectionHeader'
 import TableSkeleton from '../TableSkeleton'
+import InlineListPagination from '../InlineListPagination'
+import { INLINE_LIST_TOTALS } from '../../constants/inlineListMocks'
+
+const PRODUCT_TABLE_ROWS = 10
 
 const PRODUCT_CHIPS = [
   { id: 'shopify', label: 'Sold by Shopify' },
@@ -22,6 +26,8 @@ export default function Products() {
   const [activeChipId, setActiveChipId] = useState<string>(PRODUCT_CHIPS[0].id)
   const [productDrawerOpen, setProductDrawerOpen] = useState(false)
 
+  const productsListPath = '/network'
+
   return (
     <div className="flex flex-col gap-6" data-node-id="214:28398">
       {/* ViewChips — above Products section header; hidden when Activity filter is Universal toggle */}
@@ -30,26 +36,26 @@ export default function Products() {
           {PRODUCT_CHIPS.map((chip) => (
             <ViewChip
               key={chip.id}
+              visualVariant="list"
               label={chip.label}
               active={activeChipId === chip.id}
               onClick={() => setActiveChipId(chip.id)}
-              size="compact"
             />
           ))}
         </div>
       )}
-      <div className="flex flex-col gap-3">
-        <SectionHeader
-          title="Products"
-          size="small"
-          onAction={() => {}}
-          onAdd={() => {}}
-          actionLabel="View all"
-        />
+      <div className="flex flex-col gap-4">
+        <SectionHeader title="Products" size="small" />
         <TableSkeleton
-          rowCount={10}
+          rowCount={PRODUCT_TABLE_ROWS}
           showCheckboxColumn={false}
           onRowClick={() => setProductDrawerOpen(true)}
+        />
+        <InlineListPagination
+          pageStart={1}
+          pageEnd={PRODUCT_TABLE_ROWS}
+          totalResults={INLINE_LIST_TOTALS.products}
+          to={productsListPath}
         />
       </div>
       <AccountDrawer

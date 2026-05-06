@@ -6,7 +6,12 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import AccountDetailHeader from '../components/AccountDetailHeader'
-import AccountDetailActionBar, { AccountDetailMainActions, getActionBarVisibility } from '../components/AccountDetailActionBar'
+import { AccountHubHeaderChrome } from '../components/listView/AccountHubHeaderChrome'
+import AccountDetailActionBar, {
+  AccountDetailMainActions,
+  applyPrototypeActionBarVisibility,
+  getActionBarVisibility,
+} from '../components/AccountDetailActionBar'
 import { PillBadge } from '../components/PillBadge'
 import type { ActionsRequiredFilter } from '../components/ActionsRequiredModal'
 import AccountDrawer, { type ProfileDrawerTabId } from '../components/AccountDrawer'
@@ -26,10 +31,12 @@ import {
   V2_SECTION_LABELS,
   type ConfigType,
 } from '../data/accountConfigs'
+import { deriveAccountHeaderMainChrome } from '../data/accountHeaderActions'
 
 const V2_SECTION_IDS = new Set(V2_SECTIONS)
 import { getAccountById } from '../data/mockAccounts'
 import { deriveAccountStatus, resolveCapabilityGroups } from '../data/uadVisibility'
+import { buildCapabilityDrawerGroupRows } from '../data/capabilityDrawerModel'
 import { slugToDisplayName } from '../utils/string'
 import PrototypeFloatie from '../components/PrototypeFloatie'
 import PrototypeWorkbenchBar from '../components/PrototypeWorkbenchBar'
@@ -49,11 +56,8 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
   const location = useLocation()
   const [accountDrawerOpen, setAccountDrawerOpen] = useState(false)
   const [accountDrawerProfileTab, setAccountDrawerProfileTab] = useState<ProfileDrawerTabId>('details')
-
-  const openAccountDrawer = (opts?: { profileTab?: ProfileDrawerTabId }) => {
-    setAccountDrawerProfileTab(opts?.profileTab ?? 'details')
-    setAccountDrawerOpen(true)
-  }
+  const [capabilityDrawerOpen, setCapabilityDrawerOpen] = useState(false)
+  const [capabilityDrawerPanelId, setCapabilityDrawerPanelId] = useState<string | null>(null)
   const [actionsModalOpen, setActionsModalOpen] = useState(false)
   const [actionsModalInitialFilter, setActionsModalInitialFilter] = useState<ActionsRequiredFilter>('all')
   const [actionsModalInitialSegment, setActionsModalInitialSegment] = useState<'blocking' | 'actions' | undefined>(undefined)
@@ -63,6 +67,20 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
   const navigate = useNavigate()
   const prototype = usePrototypeOptional()
   const activityFilter = prototype?.activityFilter ?? 'viewChip'
+
+  const openAccountDrawer = (opts?: { profileTab?: ProfileDrawerTabId }) => {
+    setCapabilityDrawerOpen(false)
+    setCapabilityDrawerPanelId(null)
+    setAccountDrawerProfileTab(opts?.profileTab ?? 'details')
+    setAccountDrawerOpen(true)
+  }
+
+  const openCapabilityPanel = (panelId: string) => {
+    setAccountDrawerOpen(false)
+    setPaymentDrawerOpen(false)
+    setCapabilityDrawerPanelId(panelId)
+    setCapabilityDrawerOpen(true)
+  }
 
   const mockAccount = getAccountById(id)
   const routeState = location.state as { status?: RouteStateStatus; accountName?: string } | null
@@ -93,14 +111,14 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
 
   const prototypeRiskHeaderBadge =
     prototype?.riskLevel === 'high' ? (
-      <PillBadge label="High risk" variant="critical" />
+      <PillBadge label="High risk" variant="critical" dense />
     ) : prototype?.riskLevel === 'elevated' ? (
-      <PillBadge label="Elevated risk" variant="attention" />
+      <PillBadge label="Elevated risk" variant="attention" dense />
     ) : null
 
   const radarOnlyRiskHeaderBadge =
     prototype == null && (mockAccount?.isRadarRuleMatch ?? false) ? (
-      <PillBadge label="High risk" variant="critical" />
+      <PillBadge label="High risk" variant="critical" dense />
     ) : null
 
   const riskHeaderBadge = prototypeRiskHeaderBadge ?? radarOnlyRiskHeaderBadge
@@ -147,15 +165,37 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
     : firstSectionId
 
   const breadcrumbs = [{ label: 'Network', href: '/network' }]
-  const actionBarVisibility = getActionBarVisibility(config, { hasMerchantConfig: hasMerchantConfig ?? false, isRadarRuleMatch: mockAccount?.isRadarRuleMatch })
+  const actionBarVisibility = useMemo(() => {
+    const base = getActionBarVisibility(config, {
+      hasMerchantConfig: hasMerchantConfig ?? false,
+      isRadarRuleMatch: mockAccount?.isRadarRuleMatch,
+    })
+    return applyPrototypeActionBarVisibility(base, prototype)
+  }, [config, hasMerchantConfig, mockAccount?.isRadarRuleMatch, prototype])
+
+  const headerChromeOverride = useMemo(() => {
+    if (prototype != null) return undefined
+    if (configType === 'customer' && !hasMerchantConfig) {
+      return deriveAccountHeaderMainChrome(new Set(['customer']))
+    }
+    return undefined
+  }, [prototype, configType, hasMerchantConfig])
+
+  const overflowInteractive =
+    prototype != null ? prototype.activeRoles.has('merchant') : (hasMerchantConfig ?? false)
+
+  const capabilityDrawerGroups = useMemo(() => {
+    if (prototype == null) return []
+    return buildCapabilityDrawerGroupRows(prototype, actionBarVisibility)
+  }, [prototype, actionBarVisibility])
 
   const headerStatusBadge =
     status === 'restricted'
-      ? <PillBadge label="Restricted" variant="critical" />
+      ? <PillBadge label="Restricted" variant="critical" dense />
       : status === 'restricted_soon'
-        ? <PillBadge label="Restricted soon" variant="attention" />
+        ? <PillBadge label="Restricted soon" variant="attention" dense />
         : status === 'enabled'
-          ? <PillBadge label="Enabled" variant="success" />
+          ? <PillBadge label="Enabled" variant="success" dense />
           : undefined
   const headerBadge =
     headerStatusBadge != null || riskHeaderBadge != null ? (
@@ -167,29 +207,36 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
 
   return (
     <div className="flex h-full w-full min-w-0 flex-col px-6" data-name="AccountDetail">
-      {/* Header + action bar — flush under shell global bar; horizontal gutter px-6. Identity card keeps internal top padding. */}
+      {/* Header + action bar — Figma account hub 6269:112612 (offset header); gutter via identity bleed. */}
       <div className="relative z-30 flex w-full min-w-0 shrink-0 flex-col">
-        <AccountDetailHeader
-          accountName={accountName}
-          breadcrumbs={breadcrumbs}
-          badge={headerBadge}
-          accountEmail={mockAccount?.email}
-          showAccountAvatar={hasMerchantConfig}
-          identityBleedClassName="-mx-6 px-6"
-          trailing={
-            <AccountDetailMainActions
-              visibility={actionBarVisibility}
-              onOpenAccountDrawer={openAccountDrawer}
-              accountId={id}
-              onOpenSettings={id ? () => navigate(`/network/${id}/settings`) : undefined}
+        <AccountHubHeaderChrome
+          identity={
+            <AccountDetailHeader
+              chrome="bare"
+              accountName={accountName}
+              accountLogoSrc={mockAccount?.headerLogoSrc}
+              breadcrumbs={breadcrumbs}
+              badge={headerBadge}
+              accountEmail={mockAccount?.email}
+              showAccountAvatar={hasMerchantConfig}
+              trailing={
+                <AccountDetailMainActions
+                  visibility={actionBarVisibility}
+                  onOpenAccountDrawer={openAccountDrawer}
+                  accountId={id}
+                  onOpenSettings={id ? () => navigate(`/network/${id}/settings`) : undefined}
+                  merchantNameForMenu={accountName}
+                  overflowInteractive={overflowInteractive}
+                  headerChromeOverride={headerChromeOverride}
+                />
+              }
             />
           }
-        />
-        <div className="relative z-0 w-full">
-          <AccountDetailActionBar
+          capabilityCards={
+            <AccountDetailActionBar
+              embedInHubHeader
               status={status}
               visibility={actionBarVisibility}
-              signalRowBorderBleedClassName="-mx-6 px-6"
               onOpenAccountDrawer={openAccountDrawer}
               accountId={id}
               accountName={accountName}
@@ -205,9 +252,13 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
               }}
               onCloseActionsModal={() => setActionsModalOpen(false)}
               onOpenSettings={() => id && navigate(`/network/${id}/settings`)}
-              onOpenSettingsSection={(sectionId) => id && navigate(`/network/${id}/settings`, { state: { sectionId } })}
+              onOpenSettingsSection={(sectionId) =>
+                id && navigate(`/network/${id}/settings`, { state: { sectionId } })
+              }
+              onOpenCapabilityPanel={openCapabilityPanel}
             />
-        </div>
+          }
+        />
       </div>
       {/* Tab row: full-width tab bar; toggle floats above on the right so tab bottom border extends beneath it. */}
       <div className="relative w-full min-w-0 shrink-0 pt-2" data-name="Tabs">
@@ -225,7 +276,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
         )}
       </div>
       {/* Content: 24px below tab bar; gutter matches header (px-6 on page root). */}
-      <div className="min-h-0 flex-1 pb-6 pt-6">
+      <div className="min-h-0 flex-1 pb-9 pt-9">
         {effectiveSectionId === 'overview' && (
           <div className="flex w-full items-stretch gap-10">
             <div className="flex min-w-0 flex-1 flex-col gap-6">
@@ -251,7 +302,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                 )
               })()}
             </div>
-            <div className="min-w-[320px] w-[30%] shrink-0">
+            <div className="w-[30%] max-w-[285px] shrink-0 min-w-0">
                 <AccountDetailsSidebar
                 status={status}
                 accountDrawerOpen={accountDrawerOpen}
@@ -265,6 +316,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                 }}
                 onOpenSettings={() => id && navigate(`/network/${id}/settings`)}
                 accountId={id}
+                accountName={accountName}
                 />
             </div>
           </div>
@@ -321,7 +373,11 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                   accountId: id,
                 }
               : effectiveSectionId === 'myRevenue' || effectiveSectionId === 'toyboxRevenue'
-                ? { onRowClick: () => setPaymentDrawerOpen(true), accountName }
+                ? {
+                    onRowClick: () => setPaymentDrawerOpen(true),
+                    accountName,
+                    accountId: id,
+                  }
                 : { onRowClick: () => setPaymentDrawerOpen(true) }
           return (
             <div className="flex w-full items-stretch gap-10">
@@ -329,7 +385,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                 {isFirstV2Tab && showHighRiskUi && <RadarHighRiskCard accountId={id} />}
                 <SectionComponent {...sectionProps} />
               </div>
-              <div className="min-w-[320px] w-[30%] shrink-0">
+              <div className="w-[30%] max-w-[285px] shrink-0 min-w-0">
                 <AccountDetailsSidebar
                   status={status}
                   accountDrawerOpen={accountDrawerOpen}
@@ -342,6 +398,7 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
                   }}
                   onOpenSettings={() => id && navigate(`/network/${id}/settings`)}
                   accountId={id}
+                  accountName={accountName}
                 />
               </div>
             </div>
@@ -362,6 +419,8 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
               return (
                 <SectionComponent
                   onRowClick={() => setPaymentDrawerOpen(true)}
+                  accountId={id}
+                  accountName={accountName}
                 />
               )
             }
@@ -385,9 +444,17 @@ export default function AccountDetail({ status: statusProp }: AccountDetailProps
         }}
       />
       <AccountDrawer
-        open={paymentDrawerOpen}
-        onClose={() => setPaymentDrawerOpen(false)}
-        variant="payment-details"
+        open={capabilityDrawerOpen}
+        onClose={() => {
+          setCapabilityDrawerOpen(false)
+          setCapabilityDrawerPanelId(null)
+        }}
+        variant="capability-group"
+        capabilityDrawerGroups={capabilityDrawerGroups}
+        capabilityDrawerFocusedPanelId={capabilityDrawerPanelId}
+        onOpenCapabilitiesEdit={() => {
+          id && navigate(`/network/${id}/settings`, { state: { sectionId: 'capabilities' } })
+        }}
       />
       <PrototypeWorkbenchBar onConfigureClick={() => setConfigureModalOpen(true)} />
       <PrototypeFloatie open={configureModalOpen} onClose={() => setConfigureModalOpen(false)} />

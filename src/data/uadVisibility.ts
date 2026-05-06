@@ -3,8 +3,7 @@
  * - `resolveCapabilityGroups` feeds account badge, Actions required, and (with prototype) which header
  *   chips show: `AccountDetailActionBar` intersects config `getActionBarVisibility` with groups from here.
  * - `signalGroupsForConfigureModal` mirrors the same ordering for Configure account.
- * - Customer + `gp_recipient` without `merchant`: skip Customer’s Payments (see loop in `resolveCapabilityGroups`
- *   and `paymentsFromCustomer` in `signalGroupsForConfigureModal`).
+ * - Customer does not contribute capability groups (relationship-only); Payments come from Merchant only.
  */
 
 import {
@@ -21,19 +20,11 @@ export function resolveCapabilityGroups(
   billingEnabled: boolean
 ): CapabilityGroupId[] {
   const hasComplianceRole = [...activeRoles].some((r) => COMPLIANCE_ROLES.includes(r))
-  /** Customer-only still maps to Payments (`ROLE_TO_CAPABILITY_GROUPS.customer`); `customer` is not in `COMPLIANCE_ROLES`. */
-  if (!hasComplianceRole && !activeRoles.has('customer')) return []
+  /** Relationship-only accounts (e.g. Customer alone) have no compliance capability groups on the header. */
+  if (!hasComplianceRole) return []
 
   const groups = new Set<CapabilityGroupId>()
   for (const role of activeRoles) {
-    /** Customer + GP (no merchant): relationship-only — do not surface Payments from `customer`. */
-    if (
-      role === 'customer' &&
-      activeRoles.has('gp_recipient') &&
-      !activeRoles.has('merchant')
-    ) {
-      continue
-    }
     for (const group of ROLE_TO_CAPABILITY_GROUPS[role]) {
       groups.add(group)
     }
@@ -47,17 +38,12 @@ export function resolveCapabilityGroups(
 /**
  * Configure modal section order (and consistent with header “extra” groups). Transfers omitted when
  * Storer is active (folds into Treasury).
- * Billing appears only when Merchant or Customer is among selected roles (alone or combined).
- * Connect Recipient-alone and GP Recipient-alone do not get Billing here.
+ * Billing is omitted from Configure for now (still resolved via `resolveCapabilityGroups` + merchant billing toggle elsewhere).
  */
 export function signalGroupsForConfigureModal(roles: ReadonlySet<AccountRoleId>): CapabilityGroupId[] {
   const out: CapabilityGroupId[] = []
-  const paymentsFromCustomer =
-    roles.has('customer') && !(roles.has('gp_recipient') && !roles.has('merchant'))
-  if (roles.has('merchant') || paymentsFromCustomer) out.push('payments')
+  if (roles.has('merchant')) out.push('payments')
   if (roles.has('recipient') || roles.has('merchant') || roles.has('gp_recipient')) out.push('payouts')
-  if (roles.has('merchant')) out.push('billing')
-  else if (roles.has('customer')) out.push('billing')
   if (roles.has('recipient') && !roles.has('storer')) out.push('transfers')
   if (roles.has('storer')) out.push('treasury')
   if (roles.has('borrower')) out.push('capital')

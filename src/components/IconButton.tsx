@@ -8,9 +8,16 @@
 import type { TooltipPlacement } from './LabelTooltip'
 import LabelTooltip from './LabelTooltip'
 
-export type IconButtonVariant = 'create' | 'standard' | 'ghost' | 'display' | 'floatieTrigger'
+export type IconButtonVariant =
+  | 'create'
+  | 'standard'
+  | 'ghost'
+  /** Figma Stripe Network ’26 section header control (**6232:150998**): 28×28, 6px radius, neutral hairline, surface fill. */
+  | 'sectionHeader'
+  | 'display'
+  | 'floatieTrigger'
 
-/** 8px corner radius for all icon-only buttons across states. */
+/** 8px corner radius for icon-only buttons (default). Section header uses 6px per Figma 6232:150998. */
 const RADIUS_ICON = 'rounded-[8px]'
 
 const VARIANT_CLASSES: Record<IconButtonVariant, string> = {
@@ -18,6 +25,8 @@ const VARIANT_CLASSES: Record<IconButtonVariant, string> = {
     'group bg-[var(--color-brand-25)] text-action-primary hover:bg-[var(--color-brand-50)] [&>svg]:transition-[fill] group-hover:[&>svg_path]:fill-[var(--color-action-primary-hover)]',
   standard: 'bg-offset text-default hover:bg-neutral-50',
   ghost: 'text-default hover:bg-offset',
+  sectionHeader:
+    '!h-7 !min-h-7 !w-7 !min-w-7 border border-solid border-neutral-100 bg-surface text-icon-default hover:bg-offset [&>svg]:shrink-0',
   display: 'bg-neutral-100 text-icon-subdued pointer-events-none',
   floatieTrigger:
     'bg-[#1a1d21] text-white hover:bg-[#262a30] [&>svg]:transition-[fill] [&>svg]:fill-white',
@@ -48,7 +57,8 @@ export function IconButton({
   className = '',
   ...props
 }: IconButtonProps) {
-  const radiusClass = roundedFull ? 'rounded-[999px]' : RADIUS_ICON
+  const radiusClass =
+    roundedFull ? 'rounded-[999px]' : variant === 'sectionHeader' ? 'rounded-[6px]' : RADIUS_ICON
 
   if (variant === 'display') {
     return (

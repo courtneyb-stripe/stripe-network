@@ -10,8 +10,7 @@ SIGNAL GROUPS — header rendering rules
   borrower     → Capital (chip label “Capital”)
 
 RELATIONSHIP ROLE
-  customer     → contributes Payments in the matrix, but see `uadVisibility.resolveCapabilityGroups`:
-                 if GP recipient is on and Merchant is off, Customer does not add Payments (GP-only payout account).
+  customer     → no header capability groups (relationship-only; aligns with capability explorer).
 
 TRANSFERS FOLD RULE
   Recipient alone     → Transfers pill shows
@@ -158,7 +157,7 @@ export const ROLE_METADATA: Record<AccountRoleId, {
 
 export const ROLE_TO_CAPABILITY_GROUPS: Record<AccountRoleId, CapabilityGroupId[]> = {
   merchant:    ['payments', 'payouts'],
-  customer:    ['payments'],
+  customer:    [],
   recipient:   ['transfers', 'payouts'],
   /** Global Payouts recipient: payouts surface only. */
   gp_recipient: ['payouts'],
@@ -171,7 +170,7 @@ export const ROLE_TO_CAPABILITY_GROUPS: Record<AccountRoleId, CapabilityGroupId[
 
 export const SIGNAL_GROUP_DEFAULTS: Record<AccountRoleId, Partial<SignalGroupConfig>> = {
   merchant:    { hasPaymentMethodOnFile: true, hasPayoutSchedule: true },
-  customer:    { hasPaymentMethodOnFile: true },
+  customer:    {},
   recipient:   { hasPayoutSchedule: false },
   gp_recipient: { hasPayoutSchedule: false },
   storer:      { hasFinancialAccounts: true },

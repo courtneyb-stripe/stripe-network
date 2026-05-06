@@ -72,7 +72,7 @@ function mergeCapabilityStatusesForGroups(
   return out
 }
 
-type PrototypeState = {
+export type PrototypeState = {
   activityFilter: ActivityFilterMode
   includeThirdPartyActivity: boolean
   iaVersion: IaVersionId

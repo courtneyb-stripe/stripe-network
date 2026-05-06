@@ -1,34 +1,44 @@
 /**
- * SubscriptionCard — Billing tab subscription summary. Figma 20:9802.
- * Badges (e.g. Active, Update scheduled), plan name, invoice frequency, next invoice with link icon.
+ * SubscriptionCard — **baby/card/subscription** (Figma Stripe Network ’26 **6269:117912**).
+ * Hub carousel + Billing grid: badges (dense), plan title, metadata rows (invoice frequency, next invoice w/ link + dotted underline, optional service period).
  */
 
+import type { ReactNode } from 'react'
 import { Icon } from '../icons/SailIcons'
-import { IconButton } from './IconButton'
-import { PillBadge } from './PillBadge'
+import { PillBadge, type PillBadgeVariant } from './PillBadge'
 
 export type SubscriptionCardBadge = {
   label: string
-  variant: 'success' | 'attention' | 'critical' | 'neutral'
+  variant: PillBadgeVariant
 }
 
 type SubscriptionCardProps = {
-  /** Plan name (e.g. "Basic plan"). */
+  /** Plan name (e.g. "Monthly Plus"). */
   planName: string
-  /** Status badges shown above the plan name (e.g. Active, Update scheduled). */
+  /** Status badges (dense pills). */
   badges?: SubscriptionCardBadge[]
-  /** Label for invoice frequency row. */
   invoiceFrequencyLabel?: string
-  /** Value for invoice frequency (e.g. "Weekly on Tue"). */
   invoiceFrequencyValue?: string
-  /** Label for next invoice row. */
   nextInvoiceLabel?: string
-  /** Value for next invoice (e.g. "Sep 12 for $12.00"). */
   nextInvoiceValue?: string
-  /** Called when the "more" actions icon is clicked. */
-  onMoreClick?: () => void
-  /** Called when the next invoice link/icon is clicked (optional). */
+  servicePeriodLabel?: string
+  servicePeriodValue?: string
   onNextInvoiceClick?: () => void
+  /** Carousel: pass `min-w-[320px] max-w-[422px] shrink-0`. Grid: omit or `min-w-0 w-full`. */
+  className?: string
+}
+
+function MetaRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex min-h-5 w-full items-center justify-between gap-6">
+      <p className="min-w-0 flex-1 truncate font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-subdued">
+        {label}
+      </p>
+      <div className="flex min-w-0 shrink-0 justify-end font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default">
+        {children}
+      </div>
+    </div>
+  )
 }
 
 export default function SubscriptionCard({
@@ -38,75 +48,65 @@ export default function SubscriptionCard({
   invoiceFrequencyValue,
   nextInvoiceLabel = 'Next invoice',
   nextInvoiceValue,
-  onMoreClick,
+  servicePeriodLabel = 'Service period',
+  servicePeriodValue,
   onNextInvoiceClick,
+  className = '',
 }: SubscriptionCardProps) {
+  const rootClass =
+    `flex min-h-[212px] w-full min-w-0 flex-col gap-4 overflow-hidden rounded-[16px] border border-neutral-50 bg-surface px-6 pb-5 pt-6 shadow-[0px_1px_2px_-0.5px_rgba(0,0,0,0.05)] ${className}`.trim()
+
+  const showFooter =
+    invoiceFrequencyValue != null || nextInvoiceValue != null || servicePeriodValue != null
+
+  const nextInvoiceInner = (
+    <span className="inline-flex items-center justify-end gap-1">
+      <Icon name="link" size={10} fill="var(--color-icon-default)" className="shrink-0" aria-hidden />
+      <span className="underline decoration-dotted underline-offset-[3px]">{nextInvoiceValue}</span>
+    </span>
+  )
+
   return (
-    <div
-      className="flex w-full min-w-0 flex-col gap-4 overflow-hidden rounded-[12px] border border-neutral-100 bg-surface p-4 shadow-[0px_1px_2px_-0.5px_rgba(0,0,0,0.05)]"
-      data-name="Subscription Card"
-      data-node-id="20:9802"
-    >
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5">
-        <div className="flex w-full shrink-0 items-start gap-4">
-          <div className="flex min-w-0 flex-1 flex-wrap items-start gap-1">
-            {badges.map((badge) => (
-              <PillBadge key={badge.label} label={badge.label} variant={badge.variant} />
-            ))}
-          </div>
-          {onMoreClick && (
-            <IconButton
-              label="More actions"
-              tooltipId="subscription-card-more-tooltip"
-              onClick={onMoreClick}
-            >
-              <Icon name="more" size={12} fill="var(--color-icon-default)" />
-            </IconButton>
-          )}
+    <div className={rootClass} data-name="baby/card/subscription" data-node-id="6269:117912">
+      <div className="flex min-w-0 flex-1 flex-col gap-5">
+        <div className="flex w-full flex-wrap items-start gap-1">
+          {badges.map((badge) => (
+            <PillBadge key={badge.label} label={badge.label} variant={badge.variant} dense />
+          ))}
         </div>
-        <p className="min-w-0 shrink-0 truncate font-label-medium-emphasized text-[16px] leading-5 tracking-[-0.32px] text-default">
+        <p
+          className="min-w-0 shrink-0 font-semibold text-[16px] leading-5 tracking-[-0.32px] text-default"
+          style={{ fontFeatureSettings: "'lnum' 1, 'pnum' 1" }}
+        >
           {planName}
         </p>
       </div>
-      <div className="flex shrink-0 flex-col gap-1.5">
-        {invoiceFrequencyValue != null && (
-          <div className="flex w-full items-center gap-6">
-            <p className="min-w-0 flex-1 truncate font-label-medium text-[14px] leading-5 text-subdued">
-              {invoiceFrequencyLabel}
-            </p>
-            <p className="shrink-0 font-label-medium text-[14px] leading-5 text-default">
-              {invoiceFrequencyValue}
-            </p>
-          </div>
-        )}
-        {nextInvoiceValue != null && (
-          <div className="flex w-full items-center gap-6">
-            <p className="min-w-0 flex-1 truncate font-label-medium text-[14px] leading-5 text-subdued">
-              {nextInvoiceLabel}
-            </p>
-            <div className="flex shrink-0 items-center justify-end gap-1">
-              {onNextInvoiceClick ? (
+      {showFooter ? (
+        <div className="flex shrink-0 flex-col gap-1.5">
+          {invoiceFrequencyValue != null && (
+            <MetaRow label={invoiceFrequencyLabel}>{invoiceFrequencyValue}</MetaRow>
+          )}
+          {nextInvoiceValue != null && (
+            <MetaRow label={nextInvoiceLabel}>
+              {onNextInvoiceClick != null ? (
                 <button
                   type="button"
                   onClick={onNextInvoiceClick}
-                  className="flex items-center gap-1 rounded-[4px] font-label-medium text-[14px] leading-5 text-default transition-colors hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary"
+                  className="inline-flex max-w-full items-center justify-end gap-1 rounded-[4px] font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default transition-colors hover:bg-offset focus:outline-none focus-visible:ring-2 focus-visible:ring-action-primary"
                   aria-label="View next invoice"
                 >
-                  <Icon name="link" size={10} fill="var(--color-icon-default)" />
-                  <span>{nextInvoiceValue}</span>
+                  {nextInvoiceInner}
                 </button>
               ) : (
-                <>
-                  <Icon name="link" size={10} fill="var(--color-icon-default)" aria-hidden />
-                  <span className="font-label-medium text-[14px] leading-5 text-default">
-                    {nextInvoiceValue}
-                  </span>
-                </>
+                nextInvoiceInner
               )}
-            </div>
-          </div>
-        )}
-      </div>
+            </MetaRow>
+          )}
+          {servicePeriodValue != null && (
+            <MetaRow label={servicePeriodLabel}>{servicePeriodValue}</MetaRow>
+          )}
+        </div>
+      ) : null}
     </div>
   )
 }

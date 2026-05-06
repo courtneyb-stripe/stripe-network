@@ -38,6 +38,11 @@ import { DescriptionTooltipTrigger } from '../components/DescriptionTooltipTrigg
 import { PropertyList, PropertyListItem } from '../components/PropertyList'
 import TransactionListCard from '../components/TransactionListCard'
 import type { TransactionListRow } from '../components/TransactionListCard'
+import { INLINE_LIST_TOTALS } from '../constants/inlineListMocks'
+import {
+  buildTransactionsListPath,
+  transactionsListLinkState,
+} from '../utils/transactionsDeepLinks'
 import { slugToDisplayName } from '../utils/string'
 import { Icon } from '../icons/SailIcons'
 import { PlusIcon } from '../icons/PlusIcon'
@@ -792,10 +797,52 @@ function CompositionVariants(name: string): React.ReactNode {
       return (
         <div className="flex flex-wrap gap-6">
           <div className="w-full min-w-0 max-w-[380px]">
-            <TransactionListCard variant="latest" title="Latest transactions" accountName="Toybox Labs" onViewAll={() => {}} onAdd={() => {}} onRowAction={() => {}} rows={LATEST_ROWS} />
+            <TransactionListCard
+              variant="latest"
+              title="Latest transactions"
+              accountName="Toybox Labs"
+              onAdd={() => {}}
+              onRowAction={() => {}}
+              rows={LATEST_ROWS}
+              listPagination={{
+                pageStart: 1,
+                pageEnd: LATEST_ROWS.length,
+                totalResults: INLINE_LIST_TOTALS.moneyMovement,
+                to: buildTransactionsListPath('payments', {
+                  accountId: 'acct_demo',
+                  accountName: 'Toybox Labs',
+                }),
+                linkState: transactionsListLinkState({
+                  tab: 'payments',
+                  accountId: 'acct_demo',
+                  accountName: 'Toybox Labs',
+                }),
+              }}
+            />
           </div>
           <div className="w-full min-w-0 max-w-[380px]">
-            <TransactionListCard variant="upcoming" title="Upcoming transactions" accountName="Toybox Labs" onViewAll={() => {}} onAdd={() => {}} onRowAction={() => {}} rows={UPCOMING_ROWS} />
+            <TransactionListCard
+              variant="upcoming"
+              title="Upcoming transactions"
+              accountName="Toybox Labs"
+              onAdd={() => {}}
+              onRowAction={() => {}}
+              rows={UPCOMING_ROWS}
+              listPagination={{
+                pageStart: 1,
+                pageEnd: UPCOMING_ROWS.length,
+                totalResults: INLINE_LIST_TOTALS.moneyMovement,
+                to: buildTransactionsListPath('payments', {
+                  accountId: 'acct_demo',
+                  accountName: 'Toybox Labs',
+                }),
+                linkState: transactionsListLinkState({
+                  tab: 'payments',
+                  accountId: 'acct_demo',
+                  accountName: 'Toybox Labs',
+                }),
+              }}
+            />
           </div>
         </div>
       )
@@ -862,21 +909,49 @@ function ComponentVariants({ name, demoState }: { name: string; demoState: DemoS
     case 'SectionHeader':
       return (
         <div className="flex flex-col gap-4">
-          <SectionHeader title="Recent transactions" onAction={() => {}} actionLabel="View all" />
-          <SectionHeader title="Subscriptions" onAction={() => {}} onAdd={() => {}} actionLabel="View all" />
+          <SectionHeader title="Money movement" />
+          <SectionHeader title="Subscriptions" />
           <SectionHeader title="Recent Activity" size="small" />
         </div>
       )
     case 'SubscriptionCard':
       return (
-        <div className="flex flex-col gap-4 max-w-[380px]">
-          <SubscriptionCard
-            planName="Basic plan"
-            badges={[{ label: 'Active', variant: 'success' }, { label: 'Update scheduled', variant: 'attention' }]}
-            invoiceFrequencyValue="Weekly on Tue"
-            nextInvoiceValue="Sep 12 for $12.00"
-            onMoreClick={() => {}}
-          />
+        <div className="flex max-w-[1120px] flex-col gap-8">
+          <div>
+            <p className="mb-2 font-label-small text-subdued">Carousel — As your customer (6269:117627)</p>
+            <div className="flex min-w-0 gap-2 overflow-x-auto pb-2 [scrollbar-width:thin]">
+              <SubscriptionCard
+                className="min-w-[320px] max-w-[422px] shrink-0"
+                planName="Monthly Plus"
+                badges={[
+                  { label: 'Update scheduled', variant: 'neutral' },
+                  { label: 'Active', variant: 'success' },
+                ]}
+                invoiceFrequencyValue="Monthly on day 1"
+                nextInvoiceValue="Sep 28"
+                servicePeriodValue="Sep 15–Oct 14"
+                onNextInvoiceClick={() => {}}
+              />
+              <SubscriptionCard
+                className="min-w-[320px] max-w-[422px] shrink-0"
+                planName="Growth plan"
+                badges={[{ label: 'Trial ending', variant: 'attention' }]}
+                invoiceFrequencyValue="Weekly on Tue"
+                nextInvoiceValue="Sep 12"
+              />
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 font-label-small text-subdued">Billing grid (min-w-0)</p>
+            <div className="grid max-w-[800px] grid-cols-1 gap-2 sm:grid-cols-2">
+              <SubscriptionCard
+                planName="Basic plan"
+                badges={[{ label: 'Active', variant: 'success' }, { label: 'Update scheduled', variant: 'neutral' }]}
+                invoiceFrequencyValue="Weekly on Tue"
+                nextInvoiceValue="Sep 12 for $12.00"
+              />
+            </div>
+          </div>
         </div>
       )
     case 'Badge':

@@ -1,70 +1,110 @@
 /**
  * "As your customer" tab content for V2 (Money movement) account detail.
- * Section headers and placeholders: Subscriptions, Transactions, Invoices, Products.
+ * Sections: Revenue metrics, Subscriptions (Figma **6269:117627**), Money movement, Invoices, Purchases.
  */
 
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useMemo, useEffect } from 'react'
 import AccountDrawer from '../AccountDrawer'
 import MetricCard from '../metrics/MetricCard'
 import { SimpleMetricCardSkeleton } from '../metrics/MetricCard'
 import MetricDropdown from '../metrics/MetricDropdown'
 import { TIME_RANGE_OPTIONS, type TimeRange } from '../metrics/constants'
 import SectionHeader from '../SectionHeader'
-import TabBar from '../TabBar'
 import TableSkeleton from '../TableSkeleton'
+import { MoneyMovementViewChipsRow } from '../MoneyMovementViewChipsRow'
+import InlineListPagination from '../InlineListPagination'
+import SubscriptionCard from '../SubscriptionCard'
+import { IconButton } from '../IconButton'
+import { PlusIcon } from '../../icons/PlusIcon'
 import { usePrototypeOptional } from '../../context/PrototypeContext'
+import {
+  getDefaultMoneyMovementTransactionTabs,
+  getMyRevenueMoneyMovementTabs,
+  MONEY_MOVEMENT_TABLE_SKELETON_ROW_COUNT,
+} from '../../data/moneyMovementTransactionTabs'
+import { isValidMoneyMovementTypeSelection } from '../../data/moneyMovementViewChips'
+import { INLINE_LIST_TOTALS, totalResultsForMoneyMovementChip } from '../../constants/inlineListMocks'
+import { slugToDisplayName } from '../../utils/string'
+import {
+  buildMoneyMovementFullListLink,
+  buildTransactionsListPath,
+  transactionsListLinkState,
+} from '../../utils/transactionsDeepLinks'
 
-const TRANSACTION_TABS = [
-  { id: 'payments', label: 'Payments' },
-  { id: 'collected-fees', label: 'Collected fees' },
-] as const
+const MY_REVENUE_FALLBACK_TABS = getDefaultMoneyMovementTransactionTabs().filter(
+  (t) => t.id === 'payments' || t.id === 'collected-fees'
+)
 
-function PlaceholderBox({ label, dataName }: { label: string; dataName?: string }) {
-  return (
-    <div
-      className="rounded-[12px] bg-offset px-4 py-4 min-h-[80px] flex items-center"
-      data-name={dataName}
-    >
-      <p className="text-[14px] text-subdued">{label}</p>
-    </div>
-  )
-}
+const INVOICE_TABLE_ROWS = 10
+const PURCHASE_TABLE_ROWS = 10
+
+/** Matches subscriptions carousel header “10 of 13 results” (prototype). */
+const MY_REVENUE_SUBSCRIPTION_INLINE = { pageEnd: 10, total: 13 } as const
 
 export type MyRevenueSectionProps = {
-  /** When set, skeleton table rows are clickable and call this (e.g. open preview drawer). */
   onRowClick?: () => void
-  /** Account name for section header "Revenue from [account name]". */
   accountName?: string
+  accountId?: string
 }
 
 const TOYBOX_LABS_ACCOUNT_ID = 'toybox-labs'
 const TOYBOX_LABS_ACCOUNT_NAME = 'Toybox Labs'
 
-export default function MyRevenueSection({ onRowClick, accountName }: MyRevenueSectionProps = {}) {
-  const navigate = useNavigate()
+export default function MyRevenueSection({
+  onRowClick,
+  accountName,
+  accountId,
+}: MyRevenueSectionProps = {}) {
   const prototype = usePrototypeOptional()
   const isLowFidelity = prototype?.fidelity === 'low'
   const [timeRange, setTimeRange] = useState<TimeRange>('Last 30 days')
-  const [transactionsTab, setTransactionsTab] = useState<string>(TRANSACTION_TABS[0].id)
-  const [recentActivityTab, setRecentActivityTab] = useState<string>('activity')
-  const [networkTab, setNetworkTab] = useState<string>('customer')
+  const [moneyMovementTypeId, setMoneyMovementTypeId] = useState('all')
   const [invoiceDrawerOpen, setInvoiceDrawerOpen] = useState(false)
-  const [productDrawerOpen, setProductDrawerOpen] = useState(false)
+  const [purchaseDrawerOpen, setPurchaseDrawerOpen] = useState(false)
 
-  const openTransactionsFilteredByToyboxLabs = () => {
-    navigate('/transactions?tab=payments&savedList=toybox', {
-      state: {
-        tab: 'payments',
-        savedListId: 'toybox',
-        accountId: TOYBOX_LABS_ACCOUNT_ID,
-        accountName: TOYBOX_LABS_ACCOUNT_NAME,
-      },
-    })
-  }
+  const moneyMovementTabs = useMemo(
+    () =>
+      prototype != null
+        ? getMyRevenueMoneyMovementTabs(prototype.activeRoles, prototype.billingEnabled)
+        : MY_REVENUE_FALLBACK_TABS,
+    [prototype]
+  )
+
+  useEffect(() => {
+    if (isValidMoneyMovementTypeSelection(moneyMovementTypeId, moneyMovementTabs)) return
+    setMoneyMovementTypeId('all')
+  }, [moneyMovementTabs, moneyMovementTypeId])
+
+  const mmAccountId = accountId ?? TOYBOX_LABS_ACCOUNT_ID
+  const mmAccountLabel =
+    accountId === TOYBOX_LABS_ACCOUNT_ID
+      ? TOYBOX_LABS_ACCOUNT_NAME
+      : accountId != null
+        ? slugToDisplayName(accountId)
+        : accountName ?? TOYBOX_LABS_ACCOUNT_NAME
+
+  const mmListLink = buildMoneyMovementFullListLink({
+    accountId: mmAccountId,
+    accountName: mmAccountLabel,
+    moneyMovementTypeId,
+    savedListId: 'toybox',
+  })
+
+  const invoicesListPath = buildTransactionsListPath('platform-fees', {
+    accountId: mmAccountId,
+    accountName: mmAccountLabel,
+  })
+  const invoicesListState = transactionsListLinkState({
+    tab: 'platform-fees',
+    accountId: mmAccountId,
+    accountName: mmAccountLabel,
+  })
+
+  const purchasesListPath = '/network'
+
   return (
     <div className="flex min-w-0 max-w-[1120px] flex-1 flex-col" style={{ gap: 40 }}>
-      <div className="flex flex-col gap-0">
+      <div className="flex flex-col gap-4">
         <SectionHeader
           title={accountName ? `Revenue from ${accountName}` : 'Revenue'}
           size="small"
@@ -77,97 +117,129 @@ export default function MyRevenueSection({ onRowClick, accountName }: MyRevenueS
             />
           }
         />
-        {/* Metric cards row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {isLowFidelity ? (
-          <>
-            <SimpleMetricCardSkeleton />
-            <SimpleMetricCardSkeleton />
-            <SimpleMetricCardSkeleton />
-          </>
-        ) : (
-          <>
-            <MetricCard variant="simple" label="Revenue" value="$8.2K" />
-            <MetricCard variant="simple" label="Volume" value="$32.1K" />
-            <MetricCard variant="simple" label="Transactions" value="892" />
-          </>
-        )}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {isLowFidelity ? (
+            <>
+              <SimpleMetricCardSkeleton />
+              <SimpleMetricCardSkeleton />
+              <SimpleMetricCardSkeleton />
+            </>
+          ) : (
+            <>
+              <MetricCard variant="simple" label="Revenue" value="$8.2K" />
+              <MetricCard variant="simple" label="Volume" value="$32.1K" />
+              <MetricCard variant="simple" label="Transactions" value="892" />
+            </>
+          )}
         </div>
       </div>
-      {/* Subscriptions */}
-      <div className="flex flex-col gap-2">
-        <SectionHeader title="Subscriptions" size="small" onAction={() => {}} onAdd={() => {}} actionLabel="View all" />
-        <PlaceholderBox label="Subscriptions content placeholder" dataName="Placeholder: Subscriptions" />
+
+      {/* Subscriptions — Figma Sections/Subscriptions 6269:117627 */}
+      <div className="flex flex-col gap-4" data-node-id="6269:117627" data-name="Sections/Subscriptions">
+        <div className="flex min-h-7 w-full items-center gap-4">
+          <p
+            className="min-w-0 shrink-0 whitespace-pre-wrap text-[20px] font-bold leading-[28px] tracking-0 text-page-header-ink"
+            style={{ fontFeatureSettings: "'lnum' 1, 'pnum' 1" }}
+          >
+            Subscriptions
+          </p>
+          <span className="ml-auto shrink-0 font-label-small leading-4 text-subdued tabular-nums">
+            {MY_REVENUE_SUBSCRIPTION_INLINE.pageEnd} of {MY_REVENUE_SUBSCRIPTION_INLINE.total} results
+          </span>
+          <IconButton
+            label="Add subscription"
+            tooltipId="my-revenue-subscriptions-add"
+            variant="sectionHeader"
+            onClick={() => {}}
+          >
+            <PlusIcon size={12} fill="var(--color-action-primary)" />
+          </IconButton>
+        </div>
+        <div
+          className="-mx-1 flex min-w-0 gap-2 overflow-x-auto pb-1 pt-0 [scrollbar-width:thin]"
+          data-name="Carousel"
+        >
+          <SubscriptionCard
+            className="min-w-[320px] max-w-[422px] shrink-0"
+            planName="Professional plan"
+            badges={[
+              { label: 'Update scheduled', variant: 'neutral' },
+              { label: 'Active', variant: 'success' },
+            ]}
+            invoiceFrequencyValue="Monthly on day 1"
+            nextInvoiceValue="Sep 28"
+            servicePeriodValue="Sep 15–Oct 14"
+            onNextInvoiceClick={() => {}}
+          />
+          <SubscriptionCard
+            className="min-w-[320px] max-w-[422px] shrink-0"
+            planName="Basic plan"
+            badges={[{ label: 'Trial ending', variant: 'attention' }]}
+            invoiceFrequencyValue="Weekly on Tue"
+            nextInvoiceValue="Sep 12 for $12.00"
+            onNextInvoiceClick={() => {}}
+          />
+        </div>
       </div>
 
-      {/* Recent transactions */}
-      <div className="flex flex-col gap-2">
-        <SectionHeader title="Recent transactions" size="small" onAction={openTransactionsFilteredByToyboxLabs} actionLabel="View all" />
-        <TabBar
-          tabs={TRANSACTION_TABS.map((t) => ({ id: t.id, label: t.label }))}
-          activeId={transactionsTab}
-          onChange={setTransactionsTab}
-          variant="secondary"
-          gap={6}
+      <div className="flex flex-col gap-4">
+        <SectionHeader title="Money movement" size="small" />
+        <div className="flex flex-col gap-4" data-mm-type={moneyMovementTypeId}>
+          <MoneyMovementViewChipsRow
+            tabs={moneyMovementTabs}
+            activeTypeId={moneyMovementTypeId}
+            onTypeChange={setMoneyMovementTypeId}
+          />
+          <TableSkeleton
+            rowCount={MONEY_MOVEMENT_TABLE_SKELETON_ROW_COUNT}
+            showCheckboxColumn={false}
+            onRowClick={onRowClick}
+          />
+          {moneyMovementTypeId !== 'all' ? (
+            <InlineListPagination
+              pageStart={1}
+              pageEnd={MONEY_MOVEMENT_TABLE_SKELETON_ROW_COUNT}
+              totalResults={totalResultsForMoneyMovementChip(moneyMovementTypeId)}
+              to={mmListLink.to}
+              linkState={mmListLink.linkState}
+            />
+          ) : null}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <SectionHeader title="Invoices" size="small" />
+        <TableSkeleton
+          rowCount={INVOICE_TABLE_ROWS}
+          showCheckboxColumn={false}
+          onRowClick={() => setInvoiceDrawerOpen(true)}
         />
-        <TableSkeleton rowCount={10} showCheckboxColumn={false} onRowClick={onRowClick} />
-      </div>
-
-      {/* Invoices */}
-      <div className="flex flex-col gap-2">
-        <SectionHeader title="Invoices" size="small" onAction={() => {}} onAdd={() => {}} actionLabel="View all" />
-        <TableSkeleton rowCount={10} showCheckboxColumn={false} onRowClick={() => setInvoiceDrawerOpen(true)} />
-      </div>
-
-      {/* Products */}
-      <div className="flex flex-col gap-2">
-        <SectionHeader title="Products" size="small" onAction={() => {}} onAdd={() => {}} actionLabel="View all" />
-        <TableSkeleton rowCount={10} showCheckboxColumn={false} onRowClick={() => setProductDrawerOpen(true)} />
-      </div>
-
-      {/* Network — Customer and Recipient tabs */}
-      <div className="flex flex-col gap-2">
-        <SectionHeader title="Network" size="small" onAction={() => {}} actionLabel="View all" />
-        <TabBar
-          tabs={[
-            { id: 'customer', label: 'Customer' },
-            { id: 'recipient', label: 'Recipient' },
-          ]}
-          activeId={networkTab}
-          onChange={setNetworkTab}
-          variant="secondary"
-          gap={6}
+        <InlineListPagination
+          pageStart={1}
+          pageEnd={INVOICE_TABLE_ROWS}
+          totalResults={INLINE_LIST_TOTALS.invoices}
+          to={invoicesListPath}
+          linkState={invoicesListState}
         />
-        <TableSkeleton rowCount={10} showCheckboxColumn={false} onRowClick={onRowClick} />
       </div>
 
-      {/* Recent Activity — at the very bottom of Account relationship */}
-      <div className="flex flex-col gap-2">
-        <SectionHeader title="Recent Activity" size="small" onAction={() => {}} actionLabel="View all" />
-        <TabBar
-          tabs={[
-            { id: 'activity', label: 'Activity' },
-            { id: 'events-and-logs', label: 'Events and logs' },
-            { id: 'sent-emails', label: 'Sent emails' },
-          ]}
-          activeId={recentActivityTab}
-          onChange={setRecentActivityTab}
-          variant="secondary"
-          gap={6}
+      <div className="flex flex-col gap-4">
+        <SectionHeader title="Purchases" size="small" />
+        <TableSkeleton
+          rowCount={PURCHASE_TABLE_ROWS}
+          showCheckboxColumn={false}
+          onRowClick={() => setPurchaseDrawerOpen(true)}
         />
-        <TableSkeleton rowCount={7} showCheckboxColumn={false} onRowClick={onRowClick} />
+        <InlineListPagination
+          pageStart={1}
+          pageEnd={PURCHASE_TABLE_ROWS}
+          totalResults={INLINE_LIST_TOTALS.purchases}
+          to={purchasesListPath}
+        />
       </div>
 
-      <AccountDrawer
-        open={invoiceDrawerOpen}
-        onClose={() => setInvoiceDrawerOpen(false)}
-        variant="invoice-details"
-      />
-      <AccountDrawer
-        open={productDrawerOpen}
-        onClose={() => setProductDrawerOpen(false)}
-        variant="product-details"
-      />
+      <AccountDrawer open={invoiceDrawerOpen} onClose={() => setInvoiceDrawerOpen(false)} variant="invoice-details" />
+      <AccountDrawer open={purchaseDrawerOpen} onClose={() => setPurchaseDrawerOpen(false)} variant="product-details" />
     </div>
   )
 }

@@ -12,6 +12,7 @@ import {
   getImpactsDisplayParts,
   getImpactsTooltipLabel,
   getImpactsMoreTooltipLabel,
+  shouldSurfaceExpiredPaymentMethodBlocking,
   type ImpactsFilter,
 } from '../data/actionsRequired'
 import { ActionRequiredDescriptionRow } from './ActionRequiredDescriptionRow'
@@ -177,8 +178,8 @@ export default function ActionsRequiredModal({
       prototype.taxCapabilityStatus
     )
   }, [prototype])
-  const expiredDefaultPm = prototype?.relationship?.expiredPaymentMethod === true
-  const blockingOnlyMode = !hasComplianceRemediation && expiredDefaultPm
+  const expiredPmBlocking = shouldSurfaceExpiredPaymentMethodBlocking(prototype)
+  const blockingOnlyMode = !hasComplianceRemediation && expiredPmBlocking
 
   const [segment, setSegment] = useState<SegmentId>('actions')
   const [impactsFilter, setImpactsFilter] = useState<ActionsRequiredFilter>(initialFilter)
@@ -187,10 +188,11 @@ export default function ActionsRequiredModal({
   /** Blocking issues: no filter (always "all"). Actions required: use impacts dropdown (All / Impacts payments / Impacts payouts). */
   const listFilter = blockingOnlyMode || segment === 'blocking' ? 'all' : impactsFilter
   const filteredList = filterActionsRequired(listFilter)
-  /** With compliance: blocking tab shows first list row only. Blocking-only: single configured row (expired default PM). */
-  const blockingDisplayList = blockingOnlyMode
-    ? [BLOCKING_EXPIRED_DEFAULT_PAYMENT_METHOD]
-    : filteredList.slice(0, 1)
+  /** Blocking tab: expired default PM is always this single row when surfaced; else first preview row. */
+  const blockingDisplayList =
+    blockingOnlyMode || expiredPmBlocking
+      ? [BLOCKING_EXPIRED_DEFAULT_PAYMENT_METHOD]
+      : filteredList.slice(0, 1)
   const displayList = blockingOnlyMode || segment === 'blocking' ? blockingDisplayList : filteredList
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null)
 

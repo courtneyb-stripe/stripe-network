@@ -7,8 +7,9 @@ import { type ReactNode, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { generateNetworkRows } from '../data/networkDummyData'
 import { MOCK_ACCOUNTS } from '../data/mockAccounts'
-import type { NetworkTabId } from './NetworkPageHeader'
+import type { NetworkTabId } from '../data/networkAudience'
 import { Icon } from '../icons/SailIcons'
+import { LIST_VIEW_TABLE_HEADER_ROW_CLASS } from './listView/ListViewTemplates'
 import { PillBadge } from './PillBadge'
 
 const COLUMNS = [
@@ -64,12 +65,28 @@ function filterRowsByTab(rows: Row[], tab: NetworkTabId): Row[] {
   if (tab === 'customers') return rows.filter((row) => row.configurations.includes('Customer'))
   // Recipients = customer-only accounts (no Merchant)
   if (tab === 'recipients') return rows.filter((row) => !row.configurations.includes('Merchant'))
+  // Global recipients — prototype subset of recipient-only rows
+  if (tab === 'global-recipients')
+    return rows.filter(
+      (row, index) => !row.configurations.includes('Merchant') && index % 7 === 1
+    )
+  // Prototype slices for extended audiences (replace with real segmentation later)
+  if (tab === 'storers') return rows.filter((_, index) => index % 11 === 2)
+  if (tab === 'borrowers') return rows.filter((_, index) => index % 11 === 6)
+  if (tab === 'card-issuers')
+    return rows.filter((_, index) => index % 7 === 0 || index % 7 === 3)
   return rows
 }
 
-function filterRowsByStatusView(rows: Row[], viewId: SavedViewId): Row[] {
-  if (viewId === '1') return rows // All
-  if (viewId === '2') return rows.filter((row) => row.status === 'restricted')
+function filterRowsByStatusView(rows: Row[], viewId: SavedViewId, activeTab: NetworkTabId): Row[] {
+  if (viewId === '1') return rows // All / High volume
+  if (viewId === '2') {
+    // All tab: Figma “Actions required” — restricted + restricted soon. Other tabs: status Restricted only.
+    if (activeTab === 'all') {
+      return rows.filter((row) => row.status === 'restricted' || row.status === 'restricted_soon')
+    }
+    return rows.filter((row) => row.status === 'restricted')
+  }
   if (viewId === '3') return rows.filter((row) => row.status === 'restricted_soon')
   if (viewId === '4' || viewId === '5') return [] // In review, Rejected — no data yet
   if (viewId === '6') return rows.filter((row) => row.status === 'enabled')
@@ -145,7 +162,7 @@ export function getFilteredRows(
   const byView =
     activeTab === 'customers'
       ? filterRowsByCustomerView(byTab, customerViewId ?? 'c1')
-      : filterRowsByStatusView(byTab, statusViewId)
+      : filterRowsByStatusView(byTab, statusViewId, activeTab)
   return filterRows(byView, searchQuery)
 }
 
@@ -194,7 +211,7 @@ function TableHeader({
 }) {
   return (
     <div
-      className="group flex w-full shrink-0 items-center overflow-hidden pr-6"
+      className={`group flex w-full shrink-0 items-center overflow-hidden pr-6 ${LIST_VIEW_TABLE_HEADER_ROW_CLASS}`}
       data-name="Table Header"
       style={{ height: ROW_HEIGHT }}
     >
@@ -256,11 +273,9 @@ function TableHeader({
 function TableRow({
   row,
   columns,
-  isAlternate,
 }: {
   row: Row
   columns: readonly Col[]
-  isAlternate: boolean
 }) {
   const cellByKey: Record<string, ReactNode> = {
     account: <span className="truncate font-label-medium-emphasized text-default">{row.account}</span>,
@@ -283,9 +298,7 @@ function TableRow({
         status: row.status,
         accountName: row.account,
       }}
-      className={`group flex w-full shrink-0 cursor-pointer items-center rounded-[length:var(--radius-action)] pr-2 transition-colors ${
-        isAlternate ? 'bg-[#fafbfb] hover:bg-offset' : 'bg-surface hover:bg-offset'
-      }`}
+      className="group flex w-full shrink-0 cursor-pointer items-center rounded-[length:var(--radius-action)] bg-surface pr-2 transition-colors hover:bg-offset"
       data-name="Table Row 2.0"
       style={{ height: ROW_HEIGHT }}
     >
@@ -309,12 +322,10 @@ function TableRow({
   )
 }
 
-function SkeletonRow({ columns, isAlternate }: { columns: readonly Col[]; isAlternate: boolean }) {
+function SkeletonRow({ columns }: { columns: readonly Col[] }) {
   return (
     <div
-      className={`group flex w-full shrink-0 items-center rounded-[length:var(--radius-action)] pr-2 transition-colors ${
-        isAlternate ? 'bg-[#fafbfb] hover:bg-offset' : 'bg-surface hover:bg-offset'
-      }`}
+      className="group flex w-full shrink-0 items-center rounded-[length:var(--radius-action)] bg-surface pr-2 transition-colors hover:bg-offset"
       data-name="Table Row 2.0"
       aria-busy
       style={{ height: ROW_HEIGHT }}
@@ -359,7 +370,7 @@ export default function NetworkTable({
   const rowsForView =
     activeTab === 'customers'
       ? filterRowsByCustomerView(rowsForTab, customerViewId)
-      : filterRowsByStatusView(rowsForTab, statusViewId)
+      : filterRowsByStatusView(rowsForTab, statusViewId, activeTab)
   const filteredBySearch = filterRows(rowsForView, searchQuery)
   const filteredRows =
     ltvSortDirection === 'asc' || ltvSortDirection === 'desc'
@@ -375,7 +386,7 @@ export default function NetworkTable({
 
   return (
     <div
-      className="flex w-full flex-col overflow-auto px-[40px] pt-0 pb-2"
+      className="flex w-full flex-col overflow-auto px-6 pt-0 pb-2"
       data-name="Table 2.0"
       data-node-id="2:10689"
     >
@@ -387,15 +398,11 @@ export default function NetworkTable({
       />
       <div className="flex flex-col">
         {filteredRows.map((row, i) => (
-          <TableRow key={i} row={row} columns={visibleColumns} isAlternate={i % 2 === 0} />
+          <TableRow key={i} row={row} columns={visibleColumns} />
         ))}
         {showSkeletons &&
           Array.from({ length: SKELETON_ROW_COUNT }, (_, i) => (
-            <SkeletonRow
-              key={`skeleton-${i}`}
-              columns={visibleColumns}
-              isAlternate={(filteredRows.length + i) % 2 === 0}
-            />
+            <SkeletonRow key={`skeleton-${i}`} columns={visibleColumns} />
           ))}
       </div>
     </div>

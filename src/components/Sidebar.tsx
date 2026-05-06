@@ -28,6 +28,17 @@ const productGroups = [
   { label: 'More', icon: 'more' as const },
 ]
 
+/** True when `pathname` is in the same left-nav “section” as `to` (exact or nested routes). */
+function isTopLevelNavActive(to: string, pathname: string): boolean {
+  if (to === '/network') {
+    return pathname === '/network' || pathname.startsWith('/network/')
+  }
+  if (to === '/transactions') {
+    return pathname === '/transactions' || pathname.startsWith('/transactions/')
+  }
+  return pathname === to
+}
+
 function NavItem({
   label,
   icon,
@@ -138,7 +149,7 @@ export default function Sidebar() {
               label={item.label}
               icon={item.icon}
               to={'to' in item ? item.to : undefined}
-              active={item.to ? pathname === item.to : false}
+              active={item.to ? isTopLevelNavActive(item.to, pathname) : false}
             />
           ))}
         </div>

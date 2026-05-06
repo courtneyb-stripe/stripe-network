@@ -1,6 +1,6 @@
 /**
  * Edit details — Full-screen modal (same style as Settings).
- * Used when editing a profile section from the drawer (Contact information, Business details).
+ * Used when editing a profile section from the drawer (Account profile, Business representatives).
  * Escape closes only this modal; drawer stays open.
  */
 
@@ -24,8 +24,8 @@ function CloseIcon({ size = 12 }: { size?: number }) {
 }
 
 const SECTION_LABELS: Record<ProfileEditSection, string> = {
-  contact: 'Contact information',
-  business: 'Business details',
+  contact: 'Account profile',
+  business: 'Business representatives',
 }
 
 type EditDetailsModalProps = {
