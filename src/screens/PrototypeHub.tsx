@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import PrototypeHubNetworkArtwork from '../components/PrototypeHubNetworkArtwork'
 import { ROW_HEIGHT } from '../constants/table'
 import { ViewChip } from '../components/NetworkFilterGroup'
@@ -130,6 +131,16 @@ function PrototypeRowLink({
 
   const fullUrl = row.url.startsWith('http') ? row.url : `${window.location.origin}${row.url}`
   const rowClass = 'flex w-full shrink-0 cursor-pointer items-center rounded-[length:var(--radius-action)] px-4 pr-6 transition-colors bg-surface hover:bg-offset'
+  const inner = <div className="flex min-w-0 flex-1 items-center gap-6">{content}</div>
+
+  const isInternalAppPath = row.url.startsWith('/') && !row.url.startsWith('//')
+  if (isInternalAppPath) {
+    return (
+      <Link to={row.url} className={rowClass} style={{ height: ROW_HEIGHT }}>
+        {inner}
+      </Link>
+    )
+  }
 
   return (
     <a
@@ -139,7 +150,7 @@ function PrototypeRowLink({
       className={rowClass}
       style={{ height: ROW_HEIGHT }}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-6">{content}</div>
+      {inner}
     </a>
   )
 }

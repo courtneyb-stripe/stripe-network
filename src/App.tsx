@@ -19,6 +19,7 @@ import AccountSubscriptionsList from './screens/AccountSubscriptionsList'
 import AccountDirectoryList from './screens/AccountDirectoryList'
 import Components from './screens/Components'
 import CapabilityExplorerPage from './screens/CapabilityExplorerPage'
+import GanttPage from './screens/GanttPage'
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
           <Route path="/network/:id" element={<Shell><AccountDetail /></Shell>} />
           <Route path="/transactions" element={<Shell><TransactionsList /></Shell>} />
           <Route path="/components" element={<Shell><Components /></Shell>} />
+          <Route path="/gantt" element={<Shell><GanttPage /></Shell>} />
         </Routes>
       </PrototypeProvider>
     </div>

@@ -22,6 +22,10 @@ export type PrototypeRow = {
   lastUpdated: string
   /** Internal path (e.g. /network) or full URL for branch preview */
   url: string
+  /** Optional Figma file / frame link for hub cards */
+  figmaUrl?: string
+  /** Optional brief / doc link (internal or external) */
+  briefUrl?: string
 }
 
 const PROTOTYPES_ALL: PrototypeRow[] = [
@@ -101,6 +105,17 @@ const PROTOTYPES_ALL: PrototypeRow[] = [
     status: 'In progress',
     lastUpdated: 'May 5, 2026',
     url: 'https://stripe-network-git-account-detail-header.vercelapp.stripe.dev/capability-explorer',
+  },
+  {
+    id: 'gantt-roadmap',
+    category: 'working',
+    name: 'Timeline',
+    description: 'Workstreams and milestones on a 2026 timeline',
+    branch: 'feature/gantt',
+    owner: '@courtneyb',
+    status: 'In progress',
+    lastUpdated: 'May 19, 2026',
+    url: '/gantt',
   },
   // Transactions list hidden for now to avoid confusion; add back when ready.
 ]

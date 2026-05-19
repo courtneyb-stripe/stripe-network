@@ -1,0 +1,31 @@
+/** Design hub + Gantt-aligned dark tokens (single source for hub UI). */
+export const HUB = {
+  pageBg: '#1A1A1A',
+  navBg: '#161616',
+  navBorder: '#2A2A2A',
+  navHeight: 52,
+  navPadX: 32,
+  wordmarkPrimary: '#F0EEE9',
+  wordmarkSecondary: '#555553',
+  linkActive: '#F0EEE9',
+  linkInactive: '#555553',
+  linkHover: '#888780',
+  accent: '#9B8FE8',
+  navGap: 28,
+  title: '#F0EEE9',
+  subtitle: '#555553',
+  contentMax: 1200,
+  contentPadY: 32,
+  contentPadX: 40,
+  cardBg: '#212121',
+  cardBorder: '#2A2A2A',
+  cardHoverBorder: '#3A3A3A',
+  cardHoverBg: '#242424',
+  rowHover: '#222222',
+  archiveCardBg: '#1C1C1C',
+  archiveCardBorder: '#242424',
+  archivePillBg: '#242424',
+  archivePillText: '#555553',
+} as const
+
+export const HUB_FONT = 'Inter, system-ui, sans-serif'
