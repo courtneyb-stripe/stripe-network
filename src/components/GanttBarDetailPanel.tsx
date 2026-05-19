@@ -8,6 +8,7 @@ import { ExternalLinkIcon } from '../icons/ExternalLinkIcon'
 import {
   milestones,
   formatWorkstreamStatusLabel,
+  formatDriLabel,
   type Marker,
   type Phase,
   type Workstream,
@@ -27,7 +28,7 @@ const TEXT_LABEL = '#AAAAAA'
 const LINK_COLOR = '#6366F1'
 /** Key-dates value column: happened (before today). */
 const DATE_VALUE_PAST = '#454542'
-/** Key-dates value column: today and future, or TBD / —. */
+/** Key-dates value column: today and future, or — when unset. */
 const DATE_VALUE_UPCOMING = '#7D7D78'
 const DATE_VALUE_SIZE_PX = 12
 
@@ -245,11 +246,11 @@ export function GanttBarDetailPanel({
     ? '—'
     : firstMilestoneDate
       ? formatDisplayDate(firstMilestoneDate)
-      : 'TBD'
+      : '—'
 
   const gaInvalid = milestoneKeyInvalid(ws.ga_milestone)
   const gaDate = gaInvalid ? null : releaseDateForMilestoneKey(ws.ga_milestone)
-  const gaStr = gaInvalid ? '—' : gaDate ? formatDisplayDate(gaDate) : 'TBD'
+  const gaStr = gaInvalid ? '—' : gaDate ? formatDisplayDate(gaDate) : '—'
 
   const phaseStart = phaseMode ? parseYmd(phase!.start) : null
   const phaseEnd = phaseMode ? parseYmd(phase!.end) : null
@@ -309,7 +310,7 @@ export function GanttBarDetailPanel({
         <PanelAvatar ws={ws} barColor={barColor} />
         {!phaseMode ? (
           <span className="text-[12px]" style={{ color: TEXT_MUTED }}>
-            @{ws.dri.replace(/^@/, '')}
+            {formatDriLabel(ws.dri)}
           </span>
         ) : null}
       </div>

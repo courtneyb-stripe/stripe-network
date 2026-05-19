@@ -197,7 +197,7 @@ export const workstreams: Workstream[] = [
     id: 'network-org-level',
     name: 'Network @ org-level',
     group: 'Identity',
-    dri: 'tbd',
+    dri: '',
     priority: 'P1',
     size: 'S',
     status: 'not started',
@@ -254,6 +254,7 @@ export const markers: Marker[] = [
   { workstream_id: 'uad-header', date: '2026-05-07', label: 'Local crit', type: 'review' },
   { workstream_id: 'uad-header', date: '2026-05-08', label: 'Regional crit', type: 'review' },
   { workstream_id: 'uad-header', date: '2026-06-01', label: 'M1.5 handoff', type: 'handoff' },
+  { workstream_id: 'uad-composition', date: '2026-06-02', label: 'Regional crit', type: 'review' },
   { workstream_id: 'uad-composition', date: '2026-06-16', label: 'Stakeholder review', type: 'review' },
   { workstream_id: 'uad-composition', date: '2026-07-31', label: 'GA handoff', type: 'handoff' },
   { workstream_id: 'network-unified-identity', date: '2026-06-05', label: 'Local crit', type: 'review' },
@@ -264,6 +265,14 @@ export const markers: Marker[] = [
   { workstream_id: 'capability-management', date: '2026-03-31', label: 'Kickoff review', type: 'review' },
   { workstream_id: 'uad-settings', date: '2026-04-27', label: 'Kickoff review', type: 'review' },
 ]
+
+/** DRI column / sidebar: `—` when unset or legacy `tbd`; otherwise `@handle`. */
+export function formatDriLabel(dri: string): string {
+  const core = dri.replace(/^@/, '').trim()
+  if (!core || core.toLowerCase() === 'tbd') return '—'
+  const t = dri.trim()
+  return t.startsWith('@') ? t : `@${core}`
+}
 
 /** Sentence case for UI (e.g. "In progress", "Not started"). */
 export function formatWorkstreamStatusLabel(status: WorkstreamStatus): string {

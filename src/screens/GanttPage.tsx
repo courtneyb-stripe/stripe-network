@@ -22,6 +22,7 @@ import {
   milestones,
   markers,
   formatWorkstreamStatusLabel,
+  formatDriLabel,
   type Phase,
   type Workstream,
   type WorkstreamStatus,
@@ -312,11 +313,11 @@ function groupByStatus(streams: Workstream[]): GroupedSection[] {
   }))
 }
 
-/** Sort keys for View by DRI: TBD last; Tracey above Cameron; else alphabetical. */
+/** Sort keys for View by DRI: unassigned (`unknown`) last; Tracey above Cameron; else alphabetical. */
 function compareDriGroupKeys(a: string, b: string): number {
-  const aTbd = a === 'tbd'
-  const bTbd = b === 'tbd'
-  if (aTbd !== bTbd) return aTbd ? 1 : -1
+  const aUnassigned = a === 'unknown'
+  const bUnassigned = b === 'unknown'
+  if (aUnassigned !== bUnassigned) return aUnassigned ? 1 : -1
   if (a === 'traceyv' && b === 'cameronsagey') return -1
   if (a === 'cameronsagey' && b === 'traceyv') return 1
   return a.localeCompare(b, undefined, { sensitivity: 'base' })
@@ -330,7 +331,7 @@ function groupByDri(streams: Workstream[]): GroupedSection[] {
     map.get(k)!.push(ws)
   }
   const keys = [...map.keys()].sort(compareDriGroupKeys)
-  return keys.map((k) => ({ group: `@${k}`, items: map.get(k)! }))
+  return keys.map((k) => ({ group: k === 'unknown' ? '—' : `@${k}`, items: map.get(k)! }))
 }
 
 function buildGroupedSections(viewBy: ViewBy, streams: Workstream[]): GroupedSection[] {
@@ -422,7 +423,7 @@ function workstreamBar(ws: Workstream): WorkstreamBar {
 
 function driInitials(dri: string): string {
   const t = dri.replace(/^@/, '').trim()
-  if (!t) return '?'
+  if (!t || t.toLowerCase() === 'tbd') return '?'
   const parts = t.split(/[^a-zA-Z0-9]+/).filter(Boolean)
   if (parts.length >= 2) {
     return (parts[0]![0]! + parts[1]![0]!).toUpperCase()
@@ -643,7 +644,7 @@ function Tooltip({ state }: { state: TooltipState | null }) {
             {ws.name}
           </div>
           <div className="mt-1 text-[11px]" style={{ color: SIDEBAR_DRI }}>
-            @{ws.dri.replace(/^@/, '')}
+            {formatDriLabel(ws.dri)}
           </div>
           <div className="mt-2 inline-block">
             <span style={pillStyle}>{formatWorkstreamStatusLabel(ws.status)}</span>
@@ -1306,7 +1307,7 @@ function GanttSidebarWorkstreamRow({
           {ws.name}
         </div>
         <div className="truncate text-[11px]" style={{ color: SIDEBAR_DRI }}>
-          {ws.dri.startsWith('@') ? ws.dri : `@${ws.dri}`}
+          {formatDriLabel(ws.dri)}
         </div>
       </div>
     )
@@ -1349,7 +1350,7 @@ function GanttSidebarWorkstreamRow({
           </div>
           {!exp ? (
             <div className="truncate text-[11px]" style={{ color: SIDEBAR_DRI }}>
-              {ws.dri.startsWith('@') ? ws.dri : `@${ws.dri}`}
+              {formatDriLabel(ws.dri)}
             </div>
           ) : null}
         </div>
@@ -1824,6 +1825,38 @@ export default function GanttPage() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [loading, barDetail])
 
+  /** Vertical mouse wheel pans the timeline horizontally (native deltaX unchanged for trackpads). */
+  useEffect(() => {
+    if (loading) return
+    const el = scrollRef.current
+    if (!el) return
+
+    const onWheel = (e: WheelEvent) => {
+      if (el.scrollWidth <= el.clientWidth + 1) return
+
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
+
+      const dy =
+        e.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? e.deltaY * 16
+          : e.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? e.deltaY * el.clientHeight
+            : e.deltaY
+
+      const maxLeft = Math.max(0, el.scrollWidth - el.clientWidth)
+      const next = el.scrollLeft + dy
+
+      if (dy > 0 && el.scrollLeft >= maxLeft - 0.5) return
+      if (dy < 0 && el.scrollLeft <= 0.5) return
+
+      e.preventDefault()
+      el.scrollLeft = Math.max(0, Math.min(maxLeft, next))
+    }
+
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [loading])
+
   return (
     <div
       className="flex h-full min-h-0 w-full flex-col"
@@ -1834,9 +1867,22 @@ export default function GanttPage() {
       }}
     >
       <div className="shrink-0 px-6 py-4" style={{ backgroundColor: SURFACE }}>
-        <h1 className="text-[22px] font-semibold leading-tight" style={{ color: TEXT_PRIMARY }}>
-          2026 roadmap
-        </h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-[22px] font-semibold leading-tight" style={{ color: TEXT_PRIMARY }}>
+            Design Roadmap to Network GA
+          </h1>
+          <span
+            className="inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
+            style={{
+              color: '#F9BC45',
+              backgroundColor: '#4A3A10',
+              border: '1px solid rgba(249, 188, 69, 0.35)',
+            }}
+            aria-label="Work in progress"
+          >
+            WIP
+          </span>
+        </div>
         <p className="mt-1 text-[13px]" style={{ color: TEXT_MUTED }}>
           Workstreams, releases, and key markers
         </p>
@@ -1903,8 +1949,9 @@ export default function GanttPage() {
 
             <div
               ref={scrollRef}
+              data-gantt-timeline-scroll
               className="min-w-0 flex-1 overflow-x-auto"
-              title="Space: scroll right · Shift+Space: scroll left"
+              title="Scroll wheel: pan timeline · Space: scroll right · Shift+Space: scroll left"
             >
               <div className="relative" style={{ width: '100%', minWidth: trackWidthPx }}>
                 <div className="sticky top-0 z-[6]" style={{ backgroundColor: SURFACE }}>
