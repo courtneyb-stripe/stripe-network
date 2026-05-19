@@ -1,6 +1,6 @@
 /**
  * Shell — App layout: global header + left nav + main content.
- * On /components, /capability-explorer, /network/capability-explorer, and /network/:id/settings, hides header and nav for full-width layout.
+ * On /components, /gantt, /capability-explorer, /network/capability-explorer, and /network/:id/settings, hides header and nav for full-width layout.
  */
 
 import { useLocation } from 'react-router-dom'
@@ -12,10 +12,11 @@ const SETTINGS_PAGE_PATTERN = /^\/network\/[^/]+\/settings$/
 export default function Shell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation()
   const isComponentInventory = pathname === '/components'
+  const isGantt = pathname === '/gantt'
   const isCapabilityExplorer =
     pathname === '/capability-explorer' || pathname === '/network/capability-explorer'
   const isSettingsPage = SETTINGS_PAGE_PATTERN.test(pathname)
-  const hideNav = isComponentInventory || isCapabilityExplorer || isSettingsPage
+  const hideNav = isComponentInventory || isGantt || isCapabilityExplorer || isSettingsPage
 
   if (hideNav) {
     return (

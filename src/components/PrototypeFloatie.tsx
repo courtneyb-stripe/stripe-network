@@ -13,6 +13,8 @@ import {
   CAPABILITY_GROUP_DISPLAY_ORDER,
   CAPABILITY_GROUP_SINGLE_SIGNAL,
   COMPLIANCE_ROLES,
+  CONFIGURE_ROLE_DISPLAY_LABELS,
+  CONFIGURE_ROLE_PILL_ORDER,
   ROLE_AUTO_SELECT,
   SIGNAL_GROUP_DEFAULTS,
   type AccountRoleId,
@@ -34,27 +36,10 @@ import {
   serializePrototypeStateToSearchString,
 } from '../data/prototypeUrlState'
 
-const ROLE_LABELS: Record<AccountRoleId, string> = {
-  merchant: 'Merchant',
-  customer: 'Customer',
-  recipient: 'Recipient',
-  gp_recipient: 'GP recipient',
-  storer: 'Storer',
-  borrower: 'Borrower',
-  issuer: 'Issuer',
-  card_holder: 'Card issuer',
-}
+const ROLE_LABELS = CONFIGURE_ROLE_DISPLAY_LABELS
 
 /** Role pill order */
-const PILL_ROLE_ORDER: AccountRoleId[] = [
-  'merchant',
-  'customer',
-  'recipient',
-  'gp_recipient',
-  'storer',
-  'borrower',
-  'card_holder',
-]
+const PILL_ROLE_ORDER = CONFIGURE_ROLE_PILL_ORDER
 
 /** Real borders only (no inset box-shadow) — same 2px box on every pill; only `border-color` changes. Avoids WebKit/subpixel glitches that can hit one chip in a row. */
 const ROLE_PILL_BASE =

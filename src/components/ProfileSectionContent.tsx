@@ -1,18 +1,44 @@
 /**
  * Profile / Details sidebar card — Figma Sections/Metadata (249:141968).
- * Inner bordered card: account title, skeleton header lines, divider, icon + value rows.
- * Icons are neutral-100 squares until assets are provided. Risk row (checkmark position): elevated/high copy + link; otherwise skeleton.
+ * Inner bordered card: account title, skeleton header lines, divider, icon + value rows,
+ * configuration row driven by Configure account (`PrototypeContext.activeRoles`).
  */
 
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { DescriptionTooltipTrigger } from './DescriptionTooltipTrigger'
 import { usePrototypeOptional } from '../context/PrototypeContext'
-import type { RiskLevel } from '../data/configMatrix'
+import {
+  CONFIGURE_ROLE_DETAILS_TOOLTIPS,
+  CONFIGURE_ROLE_DISPLAY_LABELS,
+  CONFIGURE_ROLE_PILL_ORDER,
+  orderedActiveConfigureRoles,
+  type AccountRoleId,
+  type RiskLevel,
+} from '../data/configMatrix'
+import { getAccountById } from '../data/mockAccounts'
 
 type ProfileSectionContentProps = {
   accountId?: string
   accountName?: string
+}
+
+/** Map Details / network “Merchant, Customer” CSV to role order (when prototype context is absent). */
+const CONFIG_LABEL_LOWER_TO_ROLE: Record<string, AccountRoleId> = Object.fromEntries(
+  Object.entries(CONFIGURE_ROLE_DISPLAY_LABELS).map(([id, label]) => [
+    label.toLowerCase(),
+    id as AccountRoleId,
+  ]),
+) as Record<string, AccountRoleId>
+
+function orderedRolesFromMockConfigurationsString(csv: string | undefined): AccountRoleId[] {
+  if (csv == null || csv.trim() === '') return []
+  const ids = new Set<AccountRoleId>()
+  for (const part of csv.split(',')) {
+    const role = CONFIG_LABEL_LOWER_TO_ROLE[part.trim().toLowerCase()]
+    if (role != null) ids.add(role)
+  }
+  return CONFIGURE_ROLE_PILL_ORDER.filter((id) => ids.has(id))
 }
 
 /** Match skeleton prop bars: 12px height, 3px radius, neutral-100 fill. */
@@ -105,53 +131,33 @@ function RiskAccountCallout({
   return <SkeletonBar className="w-full max-w-[min(100%,14rem)]" />
 }
 
-const CONFIGURATION_LINK_ITEMS = [
-  {
-    label: 'Merchant',
-    tooltipLabel: 'Accounts that can receive payments and pay out to bank accounts.',
-    tooltipId: 'details-config-merchant-tooltip',
-  },
-  {
-    label: 'Customer',
-    tooltipLabel: 'Accounts that can make payments (e.g. pay for products).',
-    tooltipId: 'details-config-customer-tooltip',
-  },
-  {
-    label: 'Recipient',
-    tooltipLabel: 'Accounts that receive payouts from your platform.',
-    tooltipId: 'details-config-recipient-tooltip',
-  },
-  {
-    label: 'Storer',
-    tooltipLabel: 'Accounts that store funds or goods on behalf of others.',
-    tooltipId: 'details-config-storer-tooltip',
-  },
-  {
-    label: 'Borrower',
-    tooltipLabel: 'Accounts that have accessed financing products.',
-    tooltipId: 'details-config-borrower-tooltip',
-  },
-  {
-    label: 'Card issuer',
-    tooltipLabel: 'Accounts enabled for issuing cards.',
-    tooltipId: 'details-config-card-issuer-tooltip',
-  },
-] as const
-
-function ConfigurationsLinksRow() {
+function ConfigurationsLinksRow({ roleIds }: { roleIds: AccountRoleId[] }) {
   const commaClass =
     'mx-[2px] font-label-medium text-[14px] leading-5 tracking-[-0.15px] text-default'
 
+  if (roleIds.length === 0) {
+    return (
+      <span className="font-label-medium text-[14px] leading-5 text-subdued" data-name="Configurations">
+        —
+      </span>
+    )
+  }
+
   return (
-    <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-0 gap-y-0.5">
-      {CONFIGURATION_LINK_ITEMS.map((item, i) => (
-        <span key={item.tooltipId} className="inline-flex items-baseline whitespace-nowrap">
-          <DescriptionTooltipTrigger tooltipLabel={item.tooltipLabel} tooltipId={item.tooltipId}>
-            {item.label}
-          </DescriptionTooltipTrigger>
-          {i < CONFIGURATION_LINK_ITEMS.length - 1 ? <span className={commaClass}>,</span> : null}
-        </span>
-      ))}
+    <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-0 gap-y-0.5" data-name="Configurations">
+      {roleIds.map((id, i) => {
+        const label = CONFIGURE_ROLE_DISPLAY_LABELS[id]
+        const tooltipLabel = CONFIGURE_ROLE_DETAILS_TOOLTIPS[id]
+        const tooltipId = `details-config-${id}-tooltip`
+        return (
+          <span key={id} className="inline-flex items-baseline whitespace-nowrap">
+            <DescriptionTooltipTrigger tooltipLabel={tooltipLabel} tooltipId={tooltipId}>
+              {label}
+            </DescriptionTooltipTrigger>
+            {i < roleIds.length - 1 ? <span className={commaClass}>,</span> : null}
+          </span>
+        )
+      })}
     </div>
   )
 }
@@ -161,7 +167,13 @@ export default function ProfileSectionContent({
   accountName = '—',
 }: ProfileSectionContentProps) {
   const prototype = usePrototypeOptional()
-  const riskLevel = prototype?.riskLevel
+  const mockAccount = getAccountById(accountId)
+  const riskLevel = prototype?.riskLevel ?? mockAccount?.riskLevel
+
+  const configurationRoleIds =
+    prototype != null
+      ? orderedActiveConfigureRoles(prototype.activeRoles)
+      : orderedRolesFromMockConfigurationsString(mockAccount?.configurations)
 
   return (
     <div
@@ -217,7 +229,7 @@ export default function ProfileSectionContent({
             <SkeletonBar className="w-full max-w-[min(100%,14rem)]" />
           </MetadataRow>
           <MetadataRow icon={<MetadataIconPlaceholder />} align="start">
-            <ConfigurationsLinksRow />
+            <ConfigurationsLinksRow roleIds={configurationRoleIds} />
           </MetadataRow>
           <MetadataRow icon={<MetadataIconPlaceholder />} align="start">
             <div className="flex flex-wrap gap-1">

@@ -55,6 +55,56 @@ export type AccountRoleId =
   | 'merchant' | 'customer' | 'recipient' | 'gp_recipient'
   | 'storer' | 'borrower' | 'issuer' | 'card_holder'
 
+/**
+ * Human-readable labels — same strings as Configure account role pills ({@link PrototypeFloatie}).
+ */
+export const CONFIGURE_ROLE_DISPLAY_LABELS: Record<AccountRoleId, string> = {
+  merchant: 'Merchant',
+  customer: 'Customer',
+  recipient: 'Recipient',
+  gp_recipient: 'GP recipient',
+  storer: 'Storer',
+  borrower: 'Borrower',
+  issuer: 'Issuer',
+  card_holder: 'Card issuer',
+}
+
+/**
+ * Role pill order in Configure and the Details card configuration row.
+ * Omits `issuer` from the list — not selectable; card programs use the `card_holder` pill (“Card issuer”).
+ */
+export const CONFIGURE_ROLE_PILL_ORDER: AccountRoleId[] = [
+  'merchant',
+  'customer',
+  'recipient',
+  'gp_recipient',
+  'storer',
+  'borrower',
+  'card_holder',
+]
+
+/** Tooltips for the Details card configuration row (aligned with Configure semantics). */
+export const CONFIGURE_ROLE_DETAILS_TOOLTIPS: Record<AccountRoleId, string> = {
+  merchant: 'Accounts that can receive payments and pay out to bank accounts.',
+  customer: 'Accounts that can make payments (e.g. pay for products).',
+  recipient: 'Accounts that receive payouts from your platform.',
+  gp_recipient: 'Accounts that receive global payouts from your platform.',
+  storer: 'Accounts that store funds or goods on behalf of others.',
+  borrower: 'Accounts that have accessed financing products.',
+  issuer: 'Issuing program on the platform.',
+  card_holder: 'Accounts enabled for issuing cards.',
+}
+
+/**
+ * Match Configure UI normalization (`PrototypeFloatie` / `rolesForPrototypeUi`), then list active roles in pill order.
+ */
+export function orderedActiveConfigureRoles(roles: ReadonlySet<AccountRoleId>): AccountRoleId[] {
+  const next = new Set(roles)
+  next.delete('issuer')
+  if (next.has('storer')) next.add('recipient')
+  return CONFIGURE_ROLE_PILL_ORDER.filter((id) => next.has(id))
+}
+
 export type CapabilityGroupId =
   | 'payments' | 'payouts' | 'transfers'
   | 'billing' | 'treasury' | 'capital' | 'issuing'
