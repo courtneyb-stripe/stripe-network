@@ -21,7 +21,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   if (hideNav) {
     return (
       <div
-        className="relative h-screen w-full overflow-hidden rounded-[20px] bg-surface"
+        className="relative h-screen w-full overflow-hidden bg-surface"
         data-name="Shell"
       >
         <main

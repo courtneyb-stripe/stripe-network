@@ -44,8 +44,8 @@ const CURATED: HubResourceGroup[] = [
       },
       {
         id: 'gantt',
-        title: '2026 roadmap',
-        description: 'Workstreams, milestones, and markers',
+        title: 'Design Roadmap to Network GA',
+        description: 'Workstreams, milestones, and markers on the path to Network GA',
         href: '/gantt',
         external: false,
       },
