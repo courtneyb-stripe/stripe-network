@@ -18,7 +18,6 @@ import {
 } from 'react'
 import { GanttDrawers, type GanttDetailDrawerState, type GanttOverlayMode } from '../components/GanttDrawer'
 import { GanttWorkstreamAvatar } from '../components/GanttWorkstreamAvatar'
-import { CalendarOutlineIcon } from '../icons/CalendarOutlineIcon'
 import {
   workstreams,
   milestones,
@@ -69,7 +68,7 @@ const TOOLBAR_BORDER = '#2A2A2A'
 const TOOLBAR_HEIGHT = 44
 const PILL_INACTIVE_BG = '#2A2A2A'
 
-/** Timeline header (zoom controls live in toolbar above). */
+/** Timeline header (zoom / week nav live in sticky toolbar above). */
 const HEADER_H_DETAIL = 40
 const HEADER_H_YEAR = 28
 const ROW_HEIGHT = 52
@@ -668,7 +667,7 @@ function GanttToolbar({
   onZoom,
   weekNav,
   milestonesDrawerActive,
-  onMilestonesToolbarClick,
+  onMilestonesClick,
 }: {
   viewBy: ViewBy
   onViewBy: (v: ViewBy) => void
@@ -681,7 +680,7 @@ function GanttToolbar({
     canNext: boolean
   }
   milestonesDrawerActive: boolean
-  onMilestonesToolbarClick: () => void
+  onMilestonesClick: () => void
 }) {
   const views: { id: ViewBy; label: string }[] = [
     { id: 'group', label: 'Group' },
@@ -695,77 +694,83 @@ function GanttToolbar({
   ]
   return (
     <div
-      className="flex w-full shrink-0 items-center justify-between gap-4"
+      className="grid w-full shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2"
       style={{
-        height: TOOLBAR_HEIGHT,
         minHeight: TOOLBAR_HEIGHT,
         padding: '10px 20px',
         backgroundColor: TOOLBAR_BG,
         borderBottom: `1px solid ${TOOLBAR_BORDER}`,
+        rowGap: 8,
       }}
       role="toolbar"
       aria-label="Roadmap toolbar"
     >
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-        <span className="shrink-0 text-[11px] font-normal" style={{ color: ZOOM_INACTIVE_TEXT }}>
-          View by
-        </span>
-        <div className="flex flex-wrap items-center gap-1" role="tablist" aria-label="View by">
-          {views.map((v) => (
-            <ToolbarPill key={v.id} active={viewBy === v.id} onClick={() => onViewBy(v.id)}>
-              {v.label}
-            </ToolbarPill>
-          ))}
+      <div className="flex min-h-0 min-w-0 flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="shrink-0 text-[11px] font-normal" style={{ color: ZOOM_INACTIVE_TEXT }}>
+            View by
+          </span>
+          <div className="flex flex-wrap items-center gap-1" role="tablist" aria-label="View by">
+            {views.map((v) => (
+              <ToolbarPill key={v.id} active={viewBy === v.id} onClick={() => onViewBy(v.id)}>
+                {v.label}
+              </ToolbarPill>
+            ))}
+          </div>
+        </div>
+
+        <div
+          className="mx-1 w-px shrink-0 self-stretch min-h-[20px] sm:mx-3"
+          aria-hidden="true"
+          style={{ backgroundColor: TOOLBAR_BORDER }}
+        />
+
+        <div className="flex flex-wrap items-center gap-2">
+          {zoom === 'week' ? (
+            <>
+              <button
+                type="button"
+                aria-label="Previous week"
+                disabled={!weekNav.canPrev}
+                onClick={weekNav.onPrev}
+                className="shrink-0 rounded-[20px] border-0 px-2 py-1 text-[12px] font-medium transition-colors hover:bg-[#333333] disabled:opacity-30"
+                style={{ color: ZOOM_INACTIVE_TEXT, backgroundColor: PILL_INACTIVE_BG }}
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                aria-label="Next week"
+                disabled={!weekNav.canNext}
+                onClick={weekNav.onNext}
+                className="shrink-0 rounded-[20px] border-0 px-2 py-1 text-[12px] font-medium transition-colors hover:bg-[#333333] disabled:opacity-30"
+                style={{ color: ZOOM_INACTIVE_TEXT, backgroundColor: PILL_INACTIVE_BG }}
+              >
+                ›
+              </button>
+            </>
+          ) : null}
+          <div className="flex items-center gap-1" role="tablist" aria-label="Zoom level">
+            {zooms.map((z) => (
+              <ToolbarPill key={z.id} active={zoom === z.id} onClick={() => onZoom(z.id)}>
+                {z.label}
+              </ToolbarPill>
+            ))}
+          </div>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {zoom === 'week' ? (
-          <>
-            <button
-              type="button"
-              aria-label="Previous week"
-              disabled={!weekNav.canPrev}
-              onClick={weekNav.onPrev}
-              className="shrink-0 rounded-[20px] border-0 px-2 py-1 text-[12px] font-medium transition-colors hover:bg-[#333333] disabled:opacity-30"
-              style={{ color: ZOOM_INACTIVE_TEXT, backgroundColor: PILL_INACTIVE_BG }}
-            >
-              ‹
-            </button>
-            <button
-              type="button"
-              aria-label="Next week"
-              disabled={!weekNav.canNext}
-              onClick={weekNav.onNext}
-              className="shrink-0 rounded-[20px] border-0 px-2 py-1 text-[12px] font-medium transition-colors hover:bg-[#333333] disabled:opacity-30"
-              style={{ color: ZOOM_INACTIVE_TEXT, backgroundColor: PILL_INACTIVE_BG }}
-            >
-              ›
-            </button>
-          </>
-        ) : null}
-        <button
-          type="button"
-          className="flex shrink-0 items-center gap-1.5 rounded-[20px] border-0 px-3 py-1 text-[11px] font-medium transition-colors hover:bg-[#333333]"
-          style={{
-            color: milestonesDrawerActive ? ZOOM_ACTIVE_TEXT : ZOOM_INACTIVE_TEXT,
-            backgroundColor: milestonesDrawerActive ? ZOOM_ACTIVE_BG : PILL_INACTIVE_BG,
-          }}
-          onClick={onMilestonesToolbarClick}
-        >
-          <CalendarOutlineIcon
-            size={16}
-            color={milestonesDrawerActive ? ZOOM_ACTIVE_TEXT : ZOOM_INACTIVE_TEXT}
-          />
-          Milestones
-        </button>
-        <div className="flex items-center gap-1" role="tablist" aria-label="Zoom level">
-          {zooms.map((z) => (
-            <ToolbarPill key={z.id} active={zoom === z.id} onClick={() => onZoom(z.id)}>
-              {z.label}
-            </ToolbarPill>
-          ))}
-        </div>
-      </div>
+
+      <button
+        type="button"
+        className="m-0 shrink-0 justify-self-end border-0 bg-transparent p-0 text-[13px] font-medium underline decoration-1 underline-offset-[3px] transition-opacity hover:opacity-80"
+        style={{
+          color: milestonesDrawerActive ? ZOOM_ACTIVE_TEXT : TEXT_MUTED,
+        }}
+        aria-expanded={milestonesDrawerActive}
+        onClick={onMilestonesClick}
+      >
+        View milestones
+      </button>
     </div>
   )
 }
@@ -2091,7 +2096,7 @@ export default function GanttPage() {
           onZoom={onZoom}
           weekNav={weekNav}
           milestonesDrawerActive={drawerOverlay === 'milestones'}
-          onMilestonesToolbarClick={openMilestonesFromToolbar}
+          onMilestonesClick={openMilestonesFromToolbar}
         />
       </div>
 
