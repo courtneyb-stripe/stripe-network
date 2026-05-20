@@ -21,6 +21,12 @@ import {
   getPhaseMilestones,
   workstreamsForMilestoneRowIndex,
   workstreamMilestoneSpan,
+  milestonesInWorkstreamSpan,
+  parseYmd,
+  sortMarkers,
+  markersForWorkstream,
+  phaseDateRange,
+  markersInDateRange,
   type Marker,
   type Phase,
   type Workstream,
@@ -29,7 +35,7 @@ import {
 import { statusPillColors } from '../data/statusPill'
 
 /** Milestone plan: wide enough for table + padding, capped to viewport (no horizontal drawer scroll). */
-const MILESTONE_DRAWER_WIDTH = 'min(1040px, calc(100vw - 32px))'
+const MILESTONE_DRAWER_WIDTH = 'min(1120px, calc(100vw - 32px))'
 
 const SHELL = {
   right: 16,
@@ -91,14 +97,6 @@ export type GanttOverlayMode = 'milestones'
 
 type StatusTones = { bar: string; track: string; stop: string; pill: string }
 
-function parseYmd(ymd: string): Date | null {
-  const t = ymd.trim()
-  if (!t) return null
-  const [y, m, d] = t.split('-').map(Number)
-  if (!y || !m || !d) return null
-  return new Date(y, m - 1, d, 12, 0, 0, 0)
-}
-
 function startOfTodayLocal(): Date {
   const n = new Date()
   return new Date(n.getFullYear(), n.getMonth(), n.getDate(), 0, 0, 0, 0)
@@ -125,39 +123,6 @@ function releaseDateForMilestoneKey(key: string): Date | null {
   return parseYmd(row.release_date)
 }
 
-function markersForWorkstream(wsId: string): Marker[] {
-  return markers.filter((m) => m.workstream_id === wsId)
-}
-
-function sortMarkers(ms: Marker[]): Marker[] {
-  const rows = ms.slice()
-  rows.sort((a, b) => {
-    const da = parseYmd(a.date)?.getTime() ?? 0
-    const db = parseYmd(b.date)?.getTime() ?? 0
-    if (da !== db) return da - db
-    if (a.type === b.type) return 0
-    return a.type === 'review' ? -1 : 1
-  })
-  return rows
-}
-
-function phaseDateRange(phase: Phase): { start: Date; end: Date } | null {
-  const a = parseYmd(phase.start)
-  const b = parseYmd(phase.end)
-  if (!a || !b) return null
-  return a.getTime() <= b.getTime() ? { start: a, end: b } : { start: b, end: a }
-}
-
-function markersInDateRange(ms: Marker[], rangeStart: Date, rangeEnd: Date): Marker[] {
-  return ms.filter((m) => {
-    const d = parseYmd(m.date)
-    if (!d) return false
-    const t = d.getTime()
-    return t >= rangeStart.getTime() && t <= rangeEnd.getTime()
-  })
-}
-
-/** Milestone key from labels like `M0 handoff` / `GA handoff` (case-insensitive). */
 function milestoneKeyFromHandoffLabel(label: string): string | null {
   const t = label.trim()
   const m = /^(.+?)\s+handoff$/i.exec(t)
@@ -742,6 +707,11 @@ function GanttDetailDrawerContent({
   const phaseStartStr = phaseStartDate ? formatDisplayDate(phaseStartDate) : '—'
   const phaseEndStr = phaseEndDate ? formatDisplayDate(phaseEndDate) : '—'
 
+  /**
+   * Phased workstreams (`ws.phases?.length`): parent DATES are phase-only (kickoff, each phase
+   * start + handoff end) plus review markers — no milestone gate/handoff rows. Parent omits the
+   * MILESTONES strip (`milestoneRows` empty). Non-phased parents keep milestone strip + gate rows.
+   */
   const workstreamChronologicalDateEntries = useMemo(() => {
     if (phaseMode) return []
     const FAR_FUTURE = new Date(2512, 0, 1, 12, 0, 0, 0)
@@ -773,9 +743,7 @@ function GanttDetailDrawerContent({
     }
 
     if (hasPhases) {
-      const explicitKickoff = ws.kickoff.trim()
-      const fromExplicit = explicitKickoff ? parseYmd(explicitKickoff) : null
-      const kickDate = fromExplicit ?? parseYmd(phases[0]!.start)
+      const kickDate = parseYmd(resolveKickoff(ws))
       if (kickDate) {
         entries.push({
           kind: 'row',
@@ -786,9 +754,19 @@ function GanttDetailDrawerContent({
         })
       }
       phases.forEach((ph, idx) => {
+        const brief = phaseAbbrevLabel(ph, idx)
+        const startD = parseYmd(ph.start)
+        if (startD) {
+          entries.push({
+            kind: 'row',
+            key: `ph-s-${idx}`,
+            label: `${brief} start`,
+            value: formatDisplayDate(startD),
+            valueDate: startD,
+          })
+        }
         const endD = parseYmd(ph.end)
         if (!endD) return
-        const brief = phaseAbbrevLabel(ph, idx)
         entries.push({
           kind: 'row',
           key: `ph-h-${idx}`,
@@ -801,14 +779,19 @@ function GanttDetailDrawerContent({
       for (const m of wsMarkersAll) {
         const d = parseYmd(m.date)
         if (!d) continue
+        if (m.type === 'handoff') continue
         entries.push({ kind: 'marker', key: `${m.date}-${m.label}-${m.type}`, m })
       }
 
       const phasedKindRank = (e: Entry): number => {
         if (e.kind === 'row' && e.key === 'ko') return 0
+        if (e.kind === 'row' && e.key.startsWith('ph-s-')) {
+          const n = Number(e.key.slice('ph-s-'.length))
+          return 10 + (Number.isFinite(n) ? n * 2 : 0)
+        }
         if (e.kind === 'row' && e.key.startsWith('ph-h-')) {
           const n = Number(e.key.slice('ph-h-'.length))
-          return 1 + (Number.isFinite(n) ? n : 0)
+          return 11 + (Number.isFinite(n) ? n * 2 : 0)
         }
         if (e.kind === 'marker') return 1000
         return 500
@@ -849,9 +832,7 @@ function GanttDetailDrawerContent({
       entries.push({ kind: 'gate', key: `gate-g-${gk}`, milestoneKey: gk, sortDate: rd })
     }
     if (span) {
-      for (let i = span.lo; i <= span.hi; i++) {
-        const row = milestones[i]
-        if (!row) continue
+      for (const row of milestonesInWorkstreamSpan(ws)) {
         const mk = row.milestone.trim()
         const hd = handoffDateForMilestoneKey(mk, wsMarkersAll)
         const release = parseYmd(row.release_date)
@@ -914,20 +895,10 @@ function GanttDetailDrawerContent({
 
   const milestoneRows = useMemo(() => {
     if (phaseMode) return []
-    const firstInv = milestoneKeyInvalid(ws.first_milestone)
-    const gaInv = milestoneKeyInvalid(ws.ga_milestone)
-    if (firstInv && gaInv) return []
-    const fk = ws.first_milestone.trim()
-    const gk = ws.ga_milestone.trim()
-    const keys: string[] = []
-    if (!firstInv) keys.push(fk)
-    if (!gaInv) {
-      if (!keys.includes(gk)) keys.push(gk)
-    }
-    keys.sort((a, b) => milestoneSortIndex(a) - milestoneSortIndex(b))
-    return keys.map((key) => {
-      const row = milestones.find((m) => m.milestone.trim() === key.trim())
-      const d = row ? parseYmd(row.release_date) : null
+    if ((ws.phases ?? []).length > 0) return []
+    return milestonesInWorkstreamSpan(ws).map((row) => {
+      const key = row.milestone.trim()
+      const d = parseYmd(row.release_date)
       return {
         key: `${ws.id}-strip-${key}`,
         label: milestoneDisplayLabel(key),
@@ -951,22 +922,12 @@ function GanttDetailDrawerContent({
         }
       })
     }
-    // Match parent workstream milestone strip (first + GA keys), not program copy labels.
-    const firstInv = milestoneKeyInvalid(ws.first_milestone)
-    const gaInv = milestoneKeyInvalid(ws.ga_milestone)
-    if (firstInv && gaInv) return []
-    const fk = ws.first_milestone.trim()
-    const gk = ws.ga_milestone.trim()
-    const keys: string[] = []
-    if (!firstInv) keys.push(fk)
-    if (!gaInv && !keys.includes(gk)) keys.push(gk)
-    keys.sort((a, b) => milestoneSortIndex(a) - milestoneSortIndex(b))
-    return keys.map((key) => {
-      const row = milestones.find((m) => m.milestone.trim() === key.trim())
-      const d = row ? parseYmd(row.release_date) : null
+    // Parent workstream milestone span (same strip logic as workstream detail when phase dates hit no gates).
+    return milestonesInWorkstreamSpan(ws).map((m) => {
+      const d = parseYmd(m.release_date)
       return {
-        key: `${ws.id}-phase-${phase.id}-strip-${key}`,
-        label: milestoneDisplayLabel(key),
+        key: `${ws.id}-phase-${phase.id}-strip-${m.milestone.trim()}`,
+        label: milestoneDisplayLabel(m.milestone),
         dateStr: d ? formatDisplayDate(d) : '—',
       }
     })
@@ -1152,8 +1113,14 @@ function GanttDetailDrawerContent({
   )
 }
 
+function milestoneMapStatusLabel(status: WorkstreamStatus): string {
+  if (status === 'completed') return 'Complete'
+  return formatWorkstreamStatusLabel(status)
+}
+
 function GanttMilestoneDrawerBody() {
   const rows = useMemo(() => {
+    // Per-row workstreams are derived in ganttData from each stream’s first_milestone…ga_milestone span only.
     return milestones.map((m, rowIndex) => {
       const key = m.milestone.trim()
       const streams = workstreamsForMilestoneRowIndex(rowIndex)
@@ -1188,13 +1155,13 @@ function GanttMilestoneDrawerBody() {
               Milestone
             </th>
             <th className="text-left font-medium" style={{ minWidth: 112, fontSize: 10, color: '#555553', padding: '0 8px 8px 0' }}>
-              Date
+              Release date
             </th>
             <th className="text-left font-medium" style={{ minWidth: 220, fontSize: 10, color: '#555553', padding: '0 8px 8px 0' }}>
-              Configs
+              Supported configs
             </th>
             <th className="text-left font-medium" style={{ minWidth: 108, fontSize: 10, color: '#555553', padding: '0 8px 8px 0' }}>
-              Status
+              Design status
             </th>
             <th className="text-left font-medium" style={{ minWidth: 200, fontSize: 10, color: '#555553', padding: '0 0 8px 0' }}>
               Design workstreams
@@ -1218,14 +1185,14 @@ function GanttMilestoneDrawerBody() {
                 {row.dateStr}
               </td>
               <td className="align-middle" style={{ fontSize: 12, color: '#888780', paddingRight: 8, wordBreak: 'break-word' }}>
-                {row.configs}
+                {row.configs.trim() ? row.configs : '—'}
               </td>
               <td className="align-middle" style={{ paddingRight: 8 }}>
                 <span
                   className="inline-flex max-w-full items-center rounded-[20px] px-2 py-0.5 text-[10px] font-medium leading-none"
                   style={milestoneDrawerPillStyle(row.status)}
                 >
-                  {formatWorkstreamStatusLabel(row.status)}
+                  {milestoneMapStatusLabel(row.status)}
                 </span>
               </td>
               <td className="align-middle" style={{ paddingRight: 0 }}>

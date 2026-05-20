@@ -28,7 +28,11 @@ import {
   milestoneDisplayLabel,
   markerDisplayLabel,
   resolveKickoff,
-  workstreamMilestoneSpan,
+  milestonesInWorkstreamSpan,
+  parseYmd,
+  phaseDateRange,
+  markersForWorkstream,
+  markersInDateRange,
   type Phase,
   type Workstream,
   type WorkstreamStatus,
@@ -96,7 +100,7 @@ const ZOOM_ACTIVE_BG = '#3D3660'
 const ZOOM_INACTIVE_TEXT = '#555553'
 
 type ZoomLevel = 'year' | 'quarter' | 'week'
-type ViewBy = 'group' | 'milestone' | 'status' | 'dri'
+type ViewBy = 'group' | 'status' | 'dri'
 
 const STATUS_VIEW_ORDER: WorkstreamStatus[] = [
   'in progress',
@@ -125,14 +129,6 @@ function percentAlongBar(d: Date, barStart: Date, barEnd: Date): number {
   if (b <= a) return 0
   const t = d.getTime()
   return Math.min(100, Math.max(0, ((t - a) / (b - a)) * 100))
-}
-
-function parseYmd(ymd: string): Date | null {
-  const t = ymd.trim()
-  if (!t) return null
-  const [y, m, d] = t.split('-').map(Number)
-  if (!y || !m || !d) return null
-  return new Date(y, m - 1, d, 12, 0, 0, 0)
 }
 
 function clampDate(d: Date): Date {
@@ -269,7 +265,6 @@ type GroupedSection = { group: string; items: Workstream[] }
 
 /** Sidebar section title; data `group` keys unchanged (e.g. `UAD` → display only here). */
 function groupSectionHeaderLabel(group: string, viewBy: ViewBy): string {
-  if (viewBy === 'milestone') return milestoneDisplayLabel(group)
   if (viewBy === 'group' && group === 'UAD') return 'Account detail'
   return group
 }
@@ -289,36 +284,6 @@ function groupWorkstreams(streams: Workstream[]): GroupedSection[] {
 
 function driNorm(dri: string): string {
   return dri.replace(/^@/, '').trim().toLowerCase() || 'unknown'
-}
-
-function groupByMilestone(streams: Workstream[]): GroupedSection[] {
-  const roadmapKeys = milestones.map((m) => m.milestone.trim())
-  const map = new Map<string, Workstream[]>()
-  for (const mk of roadmapKeys) {
-    map.set(mk, [])
-  }
-  map.set('__unscheduled__', [])
-  for (const ws of streams) {
-    const span = workstreamMilestoneSpan(ws)
-    if (!span) {
-      map.get('__unscheduled__')!.push(ws)
-      continue
-    }
-    for (let i = span.lo; i <= span.hi; i++) {
-      const mk = roadmapKeys[i]!
-      map.get(mk)!.push(ws)
-    }
-  }
-  const out: GroupedSection[] = []
-  for (const mk of roadmapKeys) {
-    const items = map.get(mk)
-    if (items?.length) {
-      out.push({ group: mk, items })
-    }
-  }
-  const uns = map.get('__unscheduled__')
-  if (uns?.length) out.push({ group: 'Unscheduled', items: uns })
-  return out
 }
 
 function groupByStatus(streams: Workstream[]): GroupedSection[] {
@@ -361,29 +326,8 @@ function groupByDri(streams: Workstream[]): GroupedSection[] {
 
 function buildGroupedSections(viewBy: ViewBy, streams: Workstream[]): GroupedSection[] {
   if (viewBy === 'group') return groupWorkstreams(streams)
-  if (viewBy === 'milestone') return groupByMilestone(streams)
   if (viewBy === 'status') return groupByStatus(streams)
   return groupByDri(streams)
-}
-
-function markersForWorkstream(wsId: string): Marker[] {
-  return markers.filter((m) => m.workstream_id === wsId)
-}
-
-function phaseDateRange(phase: Phase): { start: Date; end: Date } | null {
-  const a = parseYmd(phase.start)
-  const b = parseYmd(phase.end)
-  if (!a || !b) return null
-  return a.getTime() <= b.getTime() ? { start: a, end: b } : { start: b, end: a }
-}
-
-function markersInDateRange(ms: Marker[], rangeStart: Date, rangeEnd: Date): Marker[] {
-  return ms.filter((m) => {
-    const d = parseYmd(m.date)
-    if (!d) return false
-    const t = d.getTime()
-    return t >= rangeStart.getTime() && t <= rangeEnd.getTime()
-  })
 }
 
 function workstreamTimelineHeight(ws: Workstream, expandedByWs: Record<string, boolean>): number {
@@ -407,7 +351,7 @@ function readStoredSidebarWidth(): number {
   }
 }
 
-/** Default span for `not started` workstream bars until real dates exist. */
+/** Fallback span when a `not started` stream has no kickoff and no derived kick from milestones. */
 function notStartedPlaceholderRange(): { start: Date; end: Date } {
   return {
     start: new Date(RANGE_YEAR, 2, 1, 0, 0, 0, 0),
@@ -415,9 +359,8 @@ function notStartedPlaceholderRange(): { start: Date; end: Date } {
   }
 }
 
-function startedSolidRange(ws: Workstream): { start: Date; end: Date } | null {
-  const kick = parseYmd(resolveKickoff(ws))
-  if (!kick) return null
+/** Bar end from markers / timeline cap / year end; shared by solid and not-started planned bars. */
+function barEndFromPlanning(ws: Workstream, kick: Date): { start: Date; end: Date } {
   const wsMarkers = markersForWorkstream(ws.id)
     .map((m) => parseYmd(m.date))
     .filter((d): d is Date => d !== null)
@@ -431,6 +374,12 @@ function startedSolidRange(ws: Workstream): { start: Date; end: Date } | null {
   return { start: kick, end: barEnd }
 }
 
+function startedSolidRange(ws: Workstream): { start: Date; end: Date } | null {
+  const kick = parseYmd(resolveKickoff(ws))
+  if (!kick) return null
+  return barEndFromPlanning(ws, kick)
+}
+
 type WorkstreamBar =
   | { kind: 'none' }
   | { kind: 'placeholder'; start: Date; end: Date; fill: string }
@@ -438,6 +387,11 @@ type WorkstreamBar =
 
 function workstreamBar(ws: Workstream): WorkstreamBar {
   if (ws.status === 'not started') {
+    const kick = parseYmd(resolveKickoff(ws))
+    if (kick) {
+      const { start, end } = barEndFromPlanning(ws, kick)
+      return { kind: 'placeholder', start, end, fill: STATUS_TONES['not started'].bar }
+    }
     const { start, end } = notStartedPlaceholderRange()
     return { kind: 'placeholder', start, end, fill: STATUS_TONES['not started'].bar }
   }
@@ -642,6 +596,15 @@ function Tooltip({ state }: { state: TooltipState | null }) {
             <span style={pillStyle}>{formatWorkstreamStatusLabel(ws.status)}</span>
           </div>
           {(() => {
+            const ms = milestonesInWorkstreamSpan(ws)
+            if (!ms.length) return null
+            return (
+              <div className="mt-2 text-[10px] leading-snug break-words" style={{ color: TEXT_MUTED }}>
+                {ms.map((m) => milestoneDisplayLabel(m.milestone)).join(' · ')}
+              </div>
+            )
+          })()}
+          {(() => {
             const k = resolveKickoff(ws).trim()
             if (!k) return null
             const kd = parseYmd(k)
@@ -722,7 +685,6 @@ function GanttToolbar({
 }) {
   const views: { id: ViewBy; label: string }[] = [
     { id: 'group', label: 'Group' },
-    { id: 'milestone', label: 'Milestone' },
     { id: 'status', label: 'Status' },
     { id: 'dri', label: 'DRI' },
   ]
@@ -1358,6 +1320,8 @@ function GanttPhasedWorkstreamGroup({
     ['--sidebar-width' as string]: `${sidebarWidthPx}px`,
   } as CSSProperties
 
+  const parentBarMuted = bar.kind === 'placeholder'
+
   const parentBarEl =
     barLayout && (bar.kind === 'solid' || bar.kind === 'placeholder') ? (
       <button
@@ -1384,7 +1348,9 @@ function GanttPhasedWorkstreamGroup({
       >
         {showBarName ? (
           <div className="bar-top-row">
-            <span className="bar-name">{ws.name}</span>
+            <span className="bar-name" style={parentBarMuted ? { color: TEXT_SECTION } : undefined}>
+              {ws.name}
+            </span>
             <span
               role="button"
               tabIndex={0}
@@ -1392,6 +1358,7 @@ function GanttPhasedWorkstreamGroup({
               className="expand-label"
               aria-expanded={exp}
               aria-label={exp ? 'Collapse phases' : `Expand ${n} phases`}
+              style={parentBarMuted ? { color: TEXT_SECTION } : undefined}
               onClick={(e) => {
                 e.stopPropagation()
                 setPhaseExpanded((p) => ({ ...p, [ws.id]: !p[ws.id] }))
@@ -1502,7 +1469,7 @@ function GanttPhasedWorkstreamGroup({
                           width: `${layout.width}%`,
                           minWidth: 4,
                           borderRadius: BAR_RADIUS,
-                          backgroundColor: ghost ? '#2E2E2E' : tones.bar,
+                          backgroundColor: tones.bar,
                         }}
                         aria-label={phase.label}
                         onClick={(e) => {
@@ -1523,7 +1490,9 @@ function GanttPhasedWorkstreamGroup({
                         }}
                       >
                         <div className="bar-top-row">
-                          <span className="bar-name">{phase.label}</span>
+                          <span className="bar-name" style={ghost ? { color: TEXT_SECTION } : undefined}>
+                            {phase.label}
+                          </span>
                         </div>
                         <BarTrackAndStops
                           dense
@@ -1532,7 +1501,7 @@ function GanttPhasedWorkstreamGroup({
                           stopClassName=""
                           trackHeightPx={PHASE_TRACK_HEIGHT_PX}
                           showStops={!ghost && phaseMarkers.length > 0}
-                          trackColor={ghost ? '#252525' : tones.track}
+                          trackColor={tones.track}
                           reviewStopColor={tones.stop}
                           handoffStopColor={tones.bar}
                           markers={phaseMarkers}
