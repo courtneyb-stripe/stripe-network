@@ -2,6 +2,14 @@ import andreyAvatarSrc from '../assets/avatars/andrey.png'
 import courtneyAvatarSrc from '../assets/avatars/courtney.jpeg'
 import traceyAvatarSrc from '../assets/avatars/tracey.jpeg'
 
+/**
+ * Roadmap single source of truth: workstreams, milestone gates, markers, DRI avatars,
+ * and shared Gantt helpers (`parseYmd`, phase/marker queries). Import from here; avoid
+ * duplicating date or marker logic in screens. Milestone plan workstream lists come only
+ * from each workstream’s `first_milestone` / `ga_milestone` span (`workstreamsForMilestoneRowIndex`);
+ * detail strips and tooltips use `milestonesInWorkstreamSpan` for the same inclusive gate list.
+ */
+
 export type WorkstreamStatus =
   | 'not started'
   | 'in progress'
@@ -30,8 +38,19 @@ export interface Workstream {
   priority: string
   size: string
   status: WorkstreamStatus
+  /**
+   * First roadmap gate this workstream participates in (milestone key, e.g. `M0`).
+   * Together with `ga_milestone`, this defines the inclusive span used everywhere:
+   * milestone plan “Design workstreams” column, timeline milestone lines, and drawer helpers —
+   * there is no separate per-milestone list to edit in UI code.
+   */
   first_milestone: string
+  /** Last roadmap gate in the span (inclusive), usually `GA`. */
   ga_milestone: string
+  /**
+   * Planned kickoff (`YYYY-MM-DD`). Primary anchor for Gantt bar start and the detail “Kickoff” row.
+   * When empty, `resolveKickoff` uses the first phase’s `start` (if any), else first gate release minus 30 days.
+   */
   kickoff: string
   doc_url: string
   /**
@@ -41,7 +60,12 @@ export interface Workstream {
   timeline_end?: string
   /** Detail panel copy under the workstream title (max two lines in the panel). */
   description?: string
-  /** Optional delivery phases (Gantt expand demo). */
+  /**
+   * Optional delivery phases (Gantt nested bars). When present, the **parent** workstream
+   * detail drawer uses only these dates (plus kickoff and non–milestone-handoff markers);
+   * it does not list milestone gates or the milestone strip — those stay on phase rows and
+   * the milestone plan (`GanttDrawer` + `milestonesInWorkstreamSpan` for non-parent views).
+   */
   phases?: Phase[]
 }
 
@@ -68,8 +92,15 @@ export function ganttAvatarHandleInitials(dri: string): string {
 export interface Milestone {
   milestone: string
   release_date: string
+  /** Account configurations covered at this gate (milestone map). */
   configs: string
+  /** Design program status for this gate (milestone map). */
   status: WorkstreamStatus
+  /**
+   * Design-complete target (YYYY-MM-DD). When omitted, `milestoneDesignCompleteYmd`
+   * falls back to `release_date` for non–not-started rows (same dates the timeline uses).
+   */
+  design_complete_date?: string
 }
 
 /** UI label for roadmap milestone keys (e.g. sidebar, timeline). */
@@ -82,6 +113,22 @@ export interface Marker {
   date: string
   label: string
   type: MarkerType
+}
+
+/** Parse `YYYY-MM-DD` at local noon — shared by Gantt timeline, drawers, and data helpers. */
+export function parseYmd(ymd: string): Date | null {
+  const t = ymd.trim()
+  if (!t) return null
+  const [y, mo, d] = t.split('-').map(Number)
+  if (!y || !mo || !d) return null
+  return new Date(y, mo - 1, d, 12, 0, 0, 0)
+}
+
+export function phaseDateRange(phase: Phase): { start: Date; end: Date } | null {
+  const a = parseYmd(phase.start)
+  const b = parseYmd(phase.end)
+  if (!a || !b) return null
+  return a.getTime() <= b.getTime() ? { start: a, end: b } : { start: b, end: a }
 }
 
 export const workstreams: Workstream[] = [
@@ -110,7 +157,8 @@ export const workstreams: Workstream[] = [
     priority: 'P0',
     size: 'L',
     status: 'in progress',
-    first_milestone: 'M2.5',
+    /** First gate M0: template + phases ship across the roadmap; M0 handoff exists in `markers`. */
+    first_milestone: 'M0',
     ga_milestone: 'GA',
     kickoff: '2026-02-25',
     doc_url: '',
@@ -149,7 +197,7 @@ export const workstreams: Workstream[] = [
     id: 'uad-settings',
     name: 'UAD — settings',
     description: 'Entry points, IA, and states for Network settings tied to the UAD shell.',
-    group: 'UAD',
+    group: 'Flows',
     dri: 'courtneyb',
     priority: 'P0',
     size: '—',
@@ -170,8 +218,34 @@ export const workstreams: Workstream[] = [
     status: 'in progress',
     first_milestone: 'M0',
     ga_milestone: 'GA',
-    kickoff: '2026-08-01',
+    kickoff: '2026-02-25',
+    timeline_end: '2026-12-30',
     doc_url: '',
+    phases: [
+      {
+        id: 'ual-phase-1',
+        label: 'Phase 1 — Unifying customer list and CAL',
+        start: '2026-02-25',
+        end: '2026-04-13',
+        status: 'completed',
+      },
+      {
+        id: 'ual-phase-2',
+        label: 'Phase 2 — M2+ & Business profiles',
+        start: '2026-07-01',
+        end: '2026-08-31',
+        status: 'not started',
+        description: 'List experience from M2 onward, including support for Business profiles.',
+      },
+      {
+        id: 'ual-phase-3',
+        label: 'Phase 3 — GA',
+        start: '2026-09-01',
+        end: '2026-12-30',
+        status: 'not started',
+        description: 'GA-ready list behavior and polish through general availability.',
+      },
+    ],
   },
   {
     id: 'uad-financial-summary',
@@ -197,7 +271,7 @@ export const workstreams: Workstream[] = [
     priority: 'P0',
     size: 'M',
     status: 'in progress',
-    first_milestone: 'M1',
+    first_milestone: 'M0',
     ga_milestone: 'GA',
     kickoff: '2026-04-13',
     timeline_end: '2026-09-01',
@@ -273,7 +347,7 @@ export const workstreams: Workstream[] = [
     id: 'onboarding-education',
     name: 'Onboarding education',
     description: 'First-run guidance and contextual education for new Network users.',
-    group: 'Onboarding',
+    group: 'Flows',
     dri: 'traceyv',
     priority: 'P0',
     size: '—',
@@ -301,7 +375,7 @@ export const workstreams: Workstream[] = [
     id: 'compliance-remediation',
     name: 'Network — compliance remediation',
     description: 'Risk, restrictions, and remediation flows with Compliance partners.',
-    group: 'Compliance',
+    group: 'Flows',
     dri: 'grabelnikov',
     priority: 'P2+',
     size: 'M',
@@ -315,7 +389,7 @@ export const workstreams: Workstream[] = [
     id: 'capability-management',
     name: 'UAD — capability management',
     description: 'Cross-sell and attach patterns for capabilities from account context.',
-    group: 'UAD',
+    group: 'Flows',
     dri: 'grabelnikov',
     priority: 'P2+',
     size: 'M',
@@ -332,48 +406,48 @@ export const milestones: Milestone[] = [
     milestone: 'M0',
     release_date: '2026-07-15',
     configs: 'Merchant, Customer',
-    status: 'in progress',
+    status: 'completed',
   },
   {
     milestone: 'M0.5',
     release_date: '2026-07-30',
-    configs: 'Merchant, Customer',
-    status: 'not started',
+    configs: '↑',
+    status: 'in progress',
   },
   {
     milestone: 'M1',
     release_date: '2026-08-14',
-    configs: 'Merchant, Customer, Recipient',
-    status: 'not started',
+    configs: '+ Recipient',
+    status: 'in progress',
   },
   {
     milestone: 'M1.5',
     release_date: '2026-08-14',
-    configs: 'Merchant, Customer',
-    status: 'not started',
+    configs: '↑',
+    status: 'in progress',
   },
   {
     milestone: 'M2',
     release_date: '2026-09-29',
-    configs: 'Recipient',
-    status: 'not started',
+    configs: '+ Business Profiles, GP Recipient',
+    status: 'in progress',
   },
   {
     milestone: 'M2.5',
     release_date: '2026-10-15',
-    configs: 'Recipient, Settings',
-    status: 'not started',
+    configs: '↑',
+    status: 'in progress',
   },
   {
     milestone: 'M3',
     release_date: '2026-11-14',
-    configs: 'Storer, Cardholder, Borrower',
-    status: 'not started',
+    configs: '+ Storer, Cardholder, Borrower',
+    status: 'in progress',
   },
   {
     milestone: 'M3.5',
     release_date: '2026-11-29',
-    configs: 'Storer, Cardholder, Borrower',
+    configs: '↑',
     status: 'not started',
   },
   {
@@ -385,10 +459,18 @@ export const milestones: Milestone[] = [
   {
     milestone: 'GA+',
     release_date: '',
-    configs: 'Business Profiles',
+    configs: 'Post-GA capabilities',
     status: 'not started',
   },
 ]
+
+/** YYYY-MM-DD for milestone map design-complete column. Defaults to `release_date` whenever status is not `not started` — same value the Gantt timeline uses for milestone lines (`milestoneDates` in GanttPage). Omit or leave empty to use that default; set only when design complete should differ. */
+export function milestoneDesignCompleteYmd(m: Milestone): string {
+  const dc = m.design_complete_date?.trim()
+  if (dc) return dc
+  if (m.status === 'not started') return ''
+  return m.release_date.trim()
+}
 
 /** Empty, em dash, or whitespace — not a milestone gate on the roadmap. */
 export function milestoneKeyInvalid(key: string): boolean {
@@ -399,14 +481,6 @@ export function milestoneKeyInvalid(key: string): boolean {
 const MILESTONE_ROW_INDEX_BY_KEY: ReadonlyMap<string, number> = new Map(
   milestones.map((row, i) => [row.milestone.trim(), i]),
 )
-
-function parseYmdData(ymd: string): Date | null {
-  const t = ymd.trim()
-  if (!t) return null
-  const [y, mo, d] = t.split('-').map(Number)
-  if (!y || !mo || !d) return null
-  return new Date(y, mo - 1, d, 12, 0, 0, 0)
-}
 
 function formatDisplayDateData(d: Date): string {
   return d.toLocaleDateString(undefined, {
@@ -426,21 +500,27 @@ export function formatMilestoneKeyWithRelease(milestoneKey: string): string {
   const row = milestoneRowForKey(milestoneKey)
   if (!row) return milestoneDisplayLabel(milestoneKey)
   const label = row.milestone.trim()
-  const d = parseYmdData(row.release_date)
+  const d = parseYmd(row.release_date)
   if (!d) return label
   return `${label} · ${formatDisplayDateData(d)}`
 }
 
 /**
- * When `kickoff` is empty, derive YYYY-MM-DD as first milestone release minus 30 days (local calendar).
- * Does not overwrite a non-empty `kickoff`.
+ * Kickoff date for timeline bars, tooltips, and panels when `kickoff` is blank.
+ * Precedence: non-empty `workstream.kickoff` → `phases[0].start` (first phase begins work) →
+ * first milestone gate `release_date` minus 30 calendar days → empty string.
  */
 export function resolveKickoff(ws: Workstream): string {
   if (ws.kickoff.trim()) return ws.kickoff
+  const phases = ws.phases
+  if (phases?.length) {
+    const s = phases[0]!.start?.trim()
+    if (s) return s
+  }
   if (milestoneKeyInvalid(ws.first_milestone)) return ''
   const row = milestoneRowForKey(ws.first_milestone.trim())
   if (!row?.release_date?.trim()) return ''
-  const base = parseYmdData(row.release_date)
+  const base = parseYmd(row.release_date)
   if (!base) return ''
   const d = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 12, 0, 0, 0)
   d.setDate(d.getDate() - 30)
@@ -455,19 +535,11 @@ export function milestoneSortIndex(key: string): number {
   return i === -1 ? 999 : i
 }
 
-/** Milestone plan table: streams whose first gate is this milestone row. */
-export function workstreamsWithFirstMilestoneKey(milestoneKey: string): Workstream[] {
-  const k = milestoneKey.trim()
-  return workstreams
-    .filter((ws) => ws.first_milestone.trim() === k)
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
-}
-
 /**
  * Inclusive [first_milestone … ga_milestone] row indices in `milestones` order.
- * Used by the milestone plan drawer and “view by milestone” so streams that span
- * multiple gates appear under every column they touch (aligned to planning fields,
- * same keys as timeline milestone lines).
+ * Used by the milestone plan drawer (“Design workstreams” per row) so streams that span
+ * multiple gates appear under every column they touch. Same keys as timeline milestone lines —
+ * edit `first_milestone` / `ga_milestone` on the workstream only.
  */
 export function workstreamMilestoneSpan(ws: Workstream): { lo: number; hi: number } | null {
   const last = milestones.length - 1
@@ -494,6 +566,19 @@ export function workstreamTouchesMilestoneAtRowIndex(ws: Workstream, rowIndex: n
   return rowIndex >= s.lo && rowIndex <= s.hi
 }
 
+/** All roadmap gate rows from `first_milestone` through `ga_milestone` (inclusive), in `milestones` table order. */
+export function milestonesInWorkstreamSpan(ws: Workstream): Milestone[] {
+  const span = workstreamMilestoneSpan(ws)
+  if (!span) return []
+  const out: Milestone[] = []
+  for (let i = span.lo; i <= span.hi; i++) {
+    const row = milestones[i]
+    if (row) out.push(row)
+  }
+  return out
+}
+
+/** Milestone plan “Design workstreams” column: all streams whose `[first_milestone, ga_milestone]` span includes this row. */
 export function workstreamsForMilestoneRowIndex(rowIndex: number): Workstream[] {
   return workstreams
     .filter((ws) => workstreamTouchesMilestoneAtRowIndex(ws, rowIndex))
@@ -540,6 +625,31 @@ export const markers: Marker[] = [
   { workstream_id: 'uad-financial-summary', date: '2026-06-02', label: 'Regional crit', type: 'review' },
   { workstream_id: 'uad-financial-summary', date: '2026-06-28', label: 'Local crit', type: 'review' },
 ]
+
+export function sortMarkers(ms: Marker[]): Marker[] {
+  const rows = ms.slice()
+  rows.sort((a, b) => {
+    const da = parseYmd(a.date)?.getTime() ?? 0
+    const db = parseYmd(b.date)?.getTime() ?? 0
+    if (da !== db) return da - db
+    if (a.type === b.type) return 0
+    return a.type === 'review' ? -1 : 1
+  })
+  return rows
+}
+
+export function markersForWorkstream(wsId: string): Marker[] {
+  return markers.filter((m) => m.workstream_id === wsId)
+}
+
+export function markersInDateRange(ms: Marker[], rangeStart: Date, rangeEnd: Date): Marker[] {
+  return ms.filter((m) => {
+    const d = parseYmd(m.date)
+    if (!d) return false
+    const t = d.getTime()
+    return t >= rangeStart.getTime() && t <= rangeEnd.getTime()
+  })
+}
 
 /** DRI column / sidebar: `—` when unset or legacy `tbd`; otherwise `@handle`. */
 export function formatDriLabel(dri: string): string {
