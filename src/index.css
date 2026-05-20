@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import "tailwindcss" source(".");
 
 /* ---------------------------------------------------------------------------
    Figma design tokens — Stripe Network H1 '26 (exact from Figma)
