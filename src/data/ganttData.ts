@@ -52,6 +52,10 @@ export interface Workstream {
    * When empty, `resolveKickoff` uses the first phase’s `start` (if any), else first gate release minus 30 days.
    */
   kickoff: string
+  /**
+   * Design brief (external doc URL). Shown in the workstream detail LINKS section as “Design brief”.
+   * Phase rows reuse the **parent** workstream’s `doc_url` in the same drawer (`GanttDetailDrawerContent`).
+   */
   doc_url: string
   /**
    * When set (YYYY-MM-DD), ends the in-progress solid bar on this date instead of the last marker
@@ -145,7 +149,8 @@ export const workstreams: Workstream[] = [
     first_milestone: 'M1.5',
     ga_milestone: 'GA',
     kickoff: '2026-04-06',
-    doc_url: '',
+    doc_url:
+      'https://docs.google.com/document/d/1-AJWeTz4_xdV0Z87WidO0V22ctgVAlJAujZszlrit7k/edit?tab=t.439ytwlk41ex#bookmark=id.h6zjfjosdzgc',
   },
   {
     id: 'uad-composition',
@@ -161,7 +166,8 @@ export const workstreams: Workstream[] = [
     first_milestone: 'M0',
     ga_milestone: 'GA',
     kickoff: '2026-02-25',
-    doc_url: '',
+    doc_url:
+      'https://docs.google.com/document/d/1-AJWeTz4_xdV0Z87WidO0V22ctgVAlJAujZszlrit7k/edit?tab=t.f7zgosv9c2vx#bookmark=id.nvgi5mxb4ty8',
     phases: [
       {
         id: 'uad-phase-1',
@@ -205,7 +211,8 @@ export const workstreams: Workstream[] = [
     first_milestone: 'M2.5',
     ga_milestone: 'GA',
     kickoff: '2026-07-01',
-    doc_url: '',
+    doc_url:
+      'https://docs.google.com/document/d/1-AJWeTz4_xdV0Z87WidO0V22ctgVAlJAujZszlrit7k/edit?tab=t.w1dnl1rz3owb#bookmark=id.ai9b3mpvwqog',
   },
   {
     id: 'unified-account-list',
@@ -220,7 +227,8 @@ export const workstreams: Workstream[] = [
     ga_milestone: 'GA',
     kickoff: '2026-02-25',
     timeline_end: '2026-12-30',
-    doc_url: '',
+    doc_url:
+      'https://docs.google.com/document/d/1-AJWeTz4_xdV0Z87WidO0V22ctgVAlJAujZszlrit7k/edit?tab=t.28crj522urtr#bookmark=id.5y1gvky4nz0d',
     phases: [
       {
         id: 'ual-phase-1',
@@ -260,7 +268,8 @@ export const workstreams: Workstream[] = [
     ga_milestone: 'GA',
     kickoff: '2026-05-08',
     timeline_end: '2026-08-30',
-    doc_url: '',
+    doc_url:
+      'https://docs.google.com/document/d/1-AJWeTz4_xdV0Z87WidO0V22ctgVAlJAujZszlrit7k/edit?tab=t.wv4atqy8jw3n#bookmark=id.7meadr757c06',
   },
   {
     id: 'network-unified-identity',
@@ -275,7 +284,8 @@ export const workstreams: Workstream[] = [
     ga_milestone: 'GA',
     kickoff: '2026-04-13',
     timeline_end: '2026-09-01',
-    doc_url: '',
+    doc_url:
+      'https://docs.google.com/document/d/1-AJWeTz4_xdV0Z87WidO0V22ctgVAlJAujZszlrit7k/edit?tab=t.eotoe19m5ibu#bookmark=id.blgxvl56hyrm',
     phases: [
       {
         id: 'nui-phase-1',
@@ -369,7 +379,8 @@ export const workstreams: Workstream[] = [
     first_milestone: 'GA',
     ga_milestone: 'GA',
     kickoff: '2026-09-01',
-    doc_url: '',
+    doc_url:
+      'https://docs.google.com/document/d/1-AJWeTz4_xdV0Z87WidO0V22ctgVAlJAujZszlrit7k/edit?tab=t.f11ku3luhcba#bookmark=id.kune9vvm526j',
   },
   {
     id: 'compliance-remediation',
@@ -383,7 +394,8 @@ export const workstreams: Workstream[] = [
     first_milestone: '—',
     ga_milestone: '—',
     kickoff: '2026-06-01',
-    doc_url: '',
+    doc_url:
+      'https://docs.google.com/document/d/1-AJWeTz4_xdV0Z87WidO0V22ctgVAlJAujZszlrit7k/edit?tab=t.w7kwjn93vtvy#bookmark=id.2cqzok1i7h6m',
   },
   {
     id: 'capability-management',
@@ -397,7 +409,8 @@ export const workstreams: Workstream[] = [
     first_milestone: '—',
     ga_milestone: '—',
     kickoff: '2026-07-01',
-    doc_url: '',
+    doc_url:
+      'https://docs.google.com/document/d/1-AJWeTz4_xdV0Z87WidO0V22ctgVAlJAujZszlrit7k/edit?tab=t.83qz3qe2dcuu#bookmark=id.ef55y8862r6k',
   },
 ]
 
