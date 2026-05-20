@@ -1,5 +1,5 @@
 /**
- * Roadmap Gantt — workstreams, milestones, and markers for 2026 (dark timeline UI).
+ * Network design roadmap — workstreams, milestones, and markers for 2026 (dark timeline UI).
  */
 
 import {
@@ -12,23 +12,30 @@ import {
   type CSSProperties,
   type Dispatch,
   type MouseEvent,
+  type PointerEvent,
+  type ReactNode,
   type SetStateAction,
 } from 'react'
-import { createPortal } from 'react-dom'
-import { GanttBarDetailPanel } from '../components/GanttBarDetailPanel'
+import { GanttDrawers, type GanttDetailDrawerState, type GanttOverlayMode } from '../components/GanttDrawer'
+import { GanttWorkstreamAvatar } from '../components/GanttWorkstreamAvatar'
+import { CalendarOutlineIcon } from '../icons/CalendarOutlineIcon'
 import {
   workstreams,
-  milestoneDisplayLabel,
   milestones,
   markers,
   formatWorkstreamStatusLabel,
   formatDriLabel,
+  milestoneDisplayLabel,
+  markerDisplayLabel,
+  resolveKickoff,
+  workstreamMilestoneSpan,
   type Phase,
   type Workstream,
   type WorkstreamStatus,
   type Marker,
 } from '../data/ganttData'
 import { statusPillColors } from '../data/statusPill'
+import './GanttPhasedWorkstreamGroup.css'
 
 const RANGE_YEAR = 2026
 const RANGE_START = new Date(RANGE_YEAR, 0, 1, 0, 0, 0, 0)
@@ -41,11 +48,16 @@ const ROW_HOVER = '#222222'
 const TEXT_PRIMARY = '#F0EEE9'
 const TEXT_MUTED = '#888780'
 const TEXT_SECTION = '#555553'
-const SIDEBAR_NAME = '#D4D0CA'
-const SIDEBAR_DRI = '#555553'
+/** @handles on dark chrome (light purple); em dash stays subdued. */
+const DRI_HANDLE = '#D4C4FA'
+const DRI_HANDLE_EMPTY = '#555553'
+
+function driHandleColor(label: string): string {
+  return label.trim() === '—' ? DRI_HANDLE_EMPTY : DRI_HANDLE
+}
+
 const CARD_BG = '#2A2A2A'
 const CARD_BORDER = '#3A3A3A'
-const ACCENT_LINK = '#9B8FE8'
 const TODAY_LINE = '#6366F1'
 const MILESTONE_LINE = '#3A3A3A'
 const TOOLBAR_BG = '#212121'
@@ -57,8 +69,8 @@ const PILL_INACTIVE_BG = '#2A2A2A'
 const HEADER_H_DETAIL = 40
 const HEADER_H_YEAR = 28
 const ROW_HEIGHT = 52
-const ROW_HEIGHT_EXPANDED_PARENT = 32
-const PHASE_ROW_HEIGHT = 44
+/** Track height inside phase bars. */
+const PHASE_TRACK_HEIGHT_PX = 10
 const SECTION_HEIGHT = 40
 const BAR_RADIUS = 6
 /** Horizontal inset of the track pill from the bar edges (4px each side). */
@@ -66,12 +78,13 @@ const TRACK_BAR_INSET_X = 4
 /** Gap between stop circle edge and the track pill’s inner left/right edge. */
 const TRACK_STOP_PAD_PX = 4
 const BAR_TRACK_HEIGHT_PX = 12
-/** Parent row track when workstream phases are expanded. */
-const PHASE_PARENT_TRACK_HEIGHT_PX = 10
 const STOP_DIAMETER_PX = 8
 const STOP_MIN_GAP_PX = 16
 const BAR_LABEL_MIN_PX = 40
-const SIDEBAR_W = 220
+const GANTT_SIDEBAR_WIDTH_KEY = 'gantt_sidebar_width'
+const DEFAULT_SIDEBAR_W = 240
+const MIN_SIDEBAR_W = 180
+const MAX_SIDEBAR_W = 360
 const TIMELINE_MIN_W = 960
 const YEAR_COL_MIN = 80
 const QUARTER_WEEK_MIN = 60
@@ -254,6 +267,13 @@ function formatWeekRangeLabelNumericOnly(start: Date, end: Date): string {
 
 type GroupedSection = { group: string; items: Workstream[] }
 
+/** Sidebar section title; data `group` keys unchanged (e.g. `UAD` → display only here). */
+function groupSectionHeaderLabel(group: string, viewBy: ViewBy): string {
+  if (viewBy === 'milestone') return milestoneDisplayLabel(group)
+  if (viewBy === 'group' && group === 'UAD') return 'Account detail'
+  return group
+}
+
 function groupWorkstreams(streams: Workstream[]): GroupedSection[] {
   const order: string[] = []
   const map = new Map<string, Workstream[]>()
@@ -272,29 +292,29 @@ function driNorm(dri: string): string {
 }
 
 function groupByMilestone(streams: Workstream[]): GroupedSection[] {
-  const map = new Map<string, Workstream[]>()
-  for (const ws of streams) {
-    const raw = ws.first_milestone.trim()
-    const key = milestoneKeyInvalid(raw) ? '__unscheduled__' : raw
-    if (!map.has(key)) map.set(key, [])
-    map.get(key)!.push(ws)
-  }
   const roadmapKeys = milestones.map((m) => m.milestone.trim())
-  const seen = new Set<string>()
+  const map = new Map<string, Workstream[]>()
+  for (const mk of roadmapKeys) {
+    map.set(mk, [])
+  }
+  map.set('__unscheduled__', [])
+  for (const ws of streams) {
+    const span = workstreamMilestoneSpan(ws)
+    if (!span) {
+      map.get('__unscheduled__')!.push(ws)
+      continue
+    }
+    for (let i = span.lo; i <= span.hi; i++) {
+      const mk = roadmapKeys[i]!
+      map.get(mk)!.push(ws)
+    }
+  }
   const out: GroupedSection[] = []
   for (const mk of roadmapKeys) {
     const items = map.get(mk)
     if (items?.length) {
       out.push({ group: mk, items })
-      seen.add(mk)
     }
-  }
-  const extras = [...map.keys()]
-    .filter((k) => k !== '__unscheduled__' && !seen.has(k))
-    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
-  for (const k of extras) {
-    const items = map.get(k)!
-    if (items.length) out.push({ group: k, items })
   }
   const uns = map.get('__unscheduled__')
   if (uns?.length) out.push({ group: 'Unscheduled', items: uns })
@@ -313,14 +333,19 @@ function groupByStatus(streams: Workstream[]): GroupedSection[] {
   }))
 }
 
-/** Sort keys for View by DRI: unassigned (`unknown`) last; Tracey above Cameron; else alphabetical. */
-function compareDriGroupKeys(a: string, b: string): number {
-  const aUnassigned = a === 'unknown'
-  const bUnassigned = b === 'unknown'
-  if (aUnassigned !== bUnassigned) return aUnassigned ? 1 : -1
-  if (a === 'traceyv' && b === 'cameronsagey') return -1
-  if (a === 'cameronsagey' && b === 'traceyv') return 1
-  return a.localeCompare(b, undefined, { sensitivity: 'base' })
+/** Sort DRI group keys: alphabetical, `unknown` last, Tracey before Cameron (swap after alpha). */
+function sortDriGroupKeys(keys: string[]): string[] {
+  const unknown = keys.filter((k) => k === 'unknown')
+  const rest = keys.filter((k) => k !== 'unknown')
+  rest.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+  const idxT = rest.indexOf('traceyv')
+  const idxC = rest.findIndex((k) => k === 'cameronsagey' || k === 'cameron')
+  if (idxT !== -1 && idxC !== -1 && idxT > idxC) {
+    const t = rest[idxT]!
+    rest[idxT] = rest[idxC]!
+    rest[idxC] = t
+  }
+  return [...rest, ...unknown]
 }
 
 function groupByDri(streams: Workstream[]): GroupedSection[] {
@@ -330,7 +355,7 @@ function groupByDri(streams: Workstream[]): GroupedSection[] {
     if (!map.has(k)) map.set(k, [])
     map.get(k)!.push(ws)
   }
-  const keys = [...map.keys()].sort(compareDriGroupKeys)
+  const keys = sortDriGroupKeys([...map.keys()])
   return keys.map((k) => ({ group: k === 'unknown' ? '—' : `@${k}`, items: map.get(k)! }))
 }
 
@@ -363,43 +388,43 @@ function markersInDateRange(ms: Marker[], rangeStart: Date, rangeEnd: Date): Mar
 
 function workstreamTimelineHeight(ws: Workstream, expandedByWs: Record<string, boolean>): number {
   if (!ws.phases?.length) return ROW_HEIGHT
-  return expandedByWs[ws.id]
-    ? ROW_HEIGHT_EXPANDED_PARENT + ws.phases.length * PHASE_ROW_HEIGHT
-    : ROW_HEIGHT
+  const n = ws.phases.length
+  if (!expandedByWs[ws.id]) return ROW_HEIGHT
+  /** Matches last expanded phase `.timeline-cell` `padding-bottom: 6px`. */
+  const LAST_PHASE_TIMELINE_PAD = 6
+  return ROW_HEIGHT + n * ROW_HEIGHT + LAST_PHASE_TIMELINE_PAD
 }
 
-function milestoneKeyInvalid(key: string): boolean {
-  const t = key.trim()
-  return !t || t === '—'
-}
-
-function releaseDateForMilestoneKey(key: string): Date | null {
-  if (milestoneKeyInvalid(key)) return null
-  const row = milestones.find((m) => m.milestone.trim() === key.trim())
-  if (!row) return null
-  return parseYmd(row.release_date)
-}
-
-function notStartedPlaceholderRange(ws: Workstream): { start: Date; end: Date } {
-  const dFirst = releaseDateForMilestoneKey(ws.first_milestone)
-  const dGa = releaseDateForMilestoneKey(ws.ga_milestone)
-  if (dFirst && dGa) {
-    const start = dFirst.getTime() <= dGa.getTime() ? dFirst : dGa
-    const end = dFirst.getTime() <= dGa.getTime() ? dGa : dFirst
-    return { start, end }
+function readStoredSidebarWidth(): number {
+  try {
+    const raw = localStorage.getItem(GANTT_SIDEBAR_WIDTH_KEY)
+    if (!raw) return DEFAULT_SIDEBAR_W
+    const n = Number.parseInt(raw, 10)
+    if (!Number.isFinite(n)) return DEFAULT_SIDEBAR_W
+    return Math.min(MAX_SIDEBAR_W, Math.max(MIN_SIDEBAR_W, n))
+  } catch {
+    return DEFAULT_SIDEBAR_W
   }
-  return { start: RANGE_START, end: RANGE_END }
+}
+
+/** Default span for `not started` workstream bars until real dates exist. */
+function notStartedPlaceholderRange(): { start: Date; end: Date } {
+  return {
+    start: new Date(RANGE_YEAR, 2, 1, 0, 0, 0, 0),
+    end: new Date(RANGE_YEAR, 10, 1, 23, 59, 59, 999),
+  }
 }
 
 function startedSolidRange(ws: Workstream): { start: Date; end: Date } | null {
-  const kick = parseYmd(ws.kickoff)
+  const kick = parseYmd(resolveKickoff(ws))
   if (!kick) return null
   const wsMarkers = markersForWorkstream(ws.id)
     .map((m) => parseYmd(m.date))
     .filter((d): d is Date => d !== null)
     .sort((a, b) => a.getTime() - b.getTime())
   const lastMarker = wsMarkers.length ? wsMarkers[wsMarkers.length - 1]! : null
-  const barEnd = lastMarker ?? RANGE_END
+  const capEnd = ws.timeline_end ? parseYmd(ws.timeline_end) : null
+  const barEnd = capEnd ?? lastMarker ?? RANGE_END
   if (barEnd.getTime() < kick.getTime()) {
     return { start: kick, end: kick }
   }
@@ -413,22 +438,12 @@ type WorkstreamBar =
 
 function workstreamBar(ws: Workstream): WorkstreamBar {
   if (ws.status === 'not started') {
-    const { start, end } = notStartedPlaceholderRange(ws)
+    const { start, end } = notStartedPlaceholderRange()
     return { kind: 'placeholder', start, end, fill: STATUS_TONES['not started'].bar }
   }
   const range = startedSolidRange(ws)
   if (!range) return { kind: 'none' }
   return { kind: 'solid', ...range, fill: STATUS_TONES[ws.status].bar }
-}
-
-function driInitials(dri: string): string {
-  const t = dri.replace(/^@/, '').trim()
-  if (!t || t.toLowerCase() === 'tbd') return '?'
-  const parts = t.split(/[^a-zA-Z0-9]+/).filter(Boolean)
-  if (parts.length >= 2) {
-    return (parts[0]![0]! + parts[1]![0]!).toUpperCase()
-  }
-  return t.slice(0, 2).toUpperCase()
 }
 
 type WeekSlot = { label: string; start: Date; end: Date; flex: number }
@@ -557,10 +572,6 @@ type TooltipState =
       date: Date
     }
 
-type BarDetailState =
-  | { kind: 'workstream'; ws: Workstream; anchorX: number; anchorY: number }
-  | { kind: 'phase'; ws: Workstream; phase: Phase; anchorX: number; anchorY: number }
-
 function barTooltipPillStyle(status: WorkstreamStatus): CSSProperties {
   return {
     ...statusPillColors(STATUS_TONES[status]),
@@ -572,27 +583,8 @@ function barTooltipPillStyle(status: WorkstreamStatus): CSSProperties {
 }
 
 function TooltipAvatar({ ws }: { ws: Workstream }) {
-  const [failed, setFailed] = useState(false)
-  if (!ws.avatar || failed) {
-    return (
-      <div
-        className="flex size-[28px] shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
-        style={{
-          backgroundColor: STATUS_TONES[ws.status].bar,
-          color: '#1A1A1A',
-        }}
-      >
-        {driInitials(ws.dri)}
-      </div>
-    )
-  }
   return (
-    <img
-      src={ws.avatar}
-      alt=""
-      className="size-[28px] shrink-0 rounded-full object-cover"
-      onError={() => setFailed(true)}
-    />
+    <GanttWorkstreamAvatar ws={ws} barColor={STATUS_TONES[ws.status].bar} size="tooltip" />
   )
 }
 
@@ -643,45 +635,26 @@ function Tooltip({ state }: { state: TooltipState | null }) {
           <div className="text-[13px] font-medium leading-snug" style={{ color: TEXT_PRIMARY }}>
             {ws.name}
           </div>
-          <div className="mt-1 text-[11px]" style={{ color: SIDEBAR_DRI }}>
+          <div className="mt-1 text-[11px]" style={{ color: driHandleColor(formatDriLabel(ws.dri)) }}>
             {formatDriLabel(ws.dri)}
           </div>
           <div className="mt-2 inline-block">
             <span style={pillStyle}>{formatWorkstreamStatusLabel(ws.status)}</span>
           </div>
-          {ws.kickoff.trim() ? (
-            <div className="mt-2 text-[11px]" style={{ color: TEXT_MUTED }}>
-              Kickoff {formatDisplayDate(parseYmd(ws.kickoff)!)}
-            </div>
-          ) : null}
-          {ws.doc_url.trim() ? (
-            <div className="mt-2">
-              <a
-                href={ws.doc_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[12px] font-medium hover:underline pointer-events-auto"
-                style={{ color: ACCENT_LINK }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                Design brief →
-              </a>
-            </div>
-          ) : null}
+          {(() => {
+            const k = resolveKickoff(ws).trim()
+            if (!k) return null
+            const kd = parseYmd(k)
+            if (!kd) return null
+            return (
+              <div className="mt-2 text-[11px]" style={{ color: TEXT_MUTED }}>
+                Kickoff {formatDisplayDate(kd)}
+              </div>
+            )
+          })()}
         </div>
       </div>
     </div>
-  )
-}
-
-/** Flat timeline body fill — no column banding (today + milestones only). */
-function WeekGridBackground({ bodyHeight }: { bodyHeight: number }) {
-  return (
-    <div
-      className="pointer-events-none absolute inset-x-0 top-0 z-0"
-      style={{ height: bodyHeight, backgroundColor: SURFACE }}
-      aria-hidden
-    />
   )
 }
 
@@ -731,6 +704,8 @@ function GanttToolbar({
   zoom,
   onZoom,
   weekNav,
+  milestonesDrawerActive,
+  onMilestonesToolbarClick,
 }: {
   viewBy: ViewBy
   onViewBy: (v: ViewBy) => void
@@ -742,6 +717,8 @@ function GanttToolbar({
     canPrev: boolean
     canNext: boolean
   }
+  milestonesDrawerActive: boolean
+  onMilestonesToolbarClick: () => void
 }) {
   const views: { id: ViewBy; label: string }[] = [
     { id: 'group', label: 'Group' },
@@ -804,6 +781,21 @@ function GanttToolbar({
             </button>
           </>
         ) : null}
+        <button
+          type="button"
+          className="flex shrink-0 items-center gap-1.5 rounded-[20px] border-0 px-3 py-1 text-[11px] font-medium transition-colors hover:bg-[#333333]"
+          style={{
+            color: milestonesDrawerActive ? ZOOM_ACTIVE_TEXT : ZOOM_INACTIVE_TEXT,
+            backgroundColor: milestonesDrawerActive ? ZOOM_ACTIVE_BG : PILL_INACTIVE_BG,
+          }}
+          onClick={onMilestonesToolbarClick}
+        >
+          <CalendarOutlineIcon
+            size={16}
+            color={milestonesDrawerActive ? ZOOM_ACTIVE_TEXT : ZOOM_INACTIVE_TEXT}
+          />
+          Milestones
+        </button>
         <div className="flex items-center gap-1" role="tablist" aria-label="Zoom level">
           {zooms.map((z) => (
             <ToolbarPill key={z.id} active={zoom === z.id} onClick={() => onZoom(z.id)}>
@@ -950,7 +942,30 @@ function GanttTimelineHeader({
   )
 }
 
-/** Full-height dashed milestone line + top label only. */
+/** Calendar day key (noon local) for grouping milestones on the same release day. */
+function milestoneDayKey(d: Date): number {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0).getTime()
+}
+
+/** One vertical line per calendar day; labels stacked in milestone table order (e.g. M1 then M1.5). */
+function milestoneLineGroups(rows: { milestone: string; date: Date }[]): { date: Date; labels: string[] }[] {
+  const groups: { date: Date; labels: string[] }[] = []
+  const keyToIdx = new Map<number, number>()
+  for (const row of rows) {
+    const k = milestoneDayKey(row.date)
+    const label = milestoneDisplayLabel(row.milestone)
+    const idx = keyToIdx.get(k)
+    if (idx === undefined) {
+      keyToIdx.set(k, groups.length)
+      groups.push({ date: row.date, labels: [label] })
+    } else {
+      groups[idx]!.labels.push(label)
+    }
+  }
+  return groups
+}
+
+/** Full-height dashed milestone lines + labels (same horizontal scale as bars: view window). */
 function MilestoneLines({
   bodyHeight,
   milestoneDates,
@@ -962,31 +977,37 @@ function MilestoneLines({
   viewStart: Date
   viewEnd: Date
 }) {
+  const groups = useMemo(() => milestoneLineGroups(milestoneDates), [milestoneDates])
+
   return (
     <div
-      className="pointer-events-none absolute left-0 right-0 z-[1]"
+      className="pointer-events-none absolute left-0 right-0 z-[2]"
       style={{ top: 0, height: bodyHeight }}
       aria-hidden
     >
-      {milestoneDates.map((m) => {
-        const left = percentInView(m.date, viewStart, viewEnd)
+      {groups.map((g) => {
+        const left = percentInView(g.date, viewStart, viewEnd)
         return (
           <div
-            key={m.milestone}
-            className="absolute top-0 flex h-full flex-col items-center"
+            key={milestoneDayKey(g.date)}
+            className="absolute top-0 flex h-full min-h-0 flex-col items-center"
             style={{ left: `${left}%`, transform: 'translateX(-50%)' }}
           >
-            <span
-              className="max-w-[120px] shrink-0 truncate px-0.5 text-center font-medium leading-none"
-              style={{ fontSize: 10, color: TEXT_SECTION }}
-            >
-              {milestoneDisplayLabel(m.milestone)}
-            </span>
+            <div className="flex shrink-0 flex-col items-center" style={{ gap: 2 }}>
+              {g.labels.map((label, i) => (
+                <span
+                  key={`${milestoneDayKey(g.date)}-${i}-${label}`}
+                  className="max-w-[120px] shrink-0 truncate px-0.5 text-center font-medium leading-none"
+                  style={{ fontSize: 10, color: '#555553' }}
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
             <div
-              className="mt-0 min-h-0 flex-1"
+              className="mt-0 min-h-0 w-0 flex-1"
               style={{
-                width: 0,
-                borderLeft: `1px dashed ${MILESTONE_LINE}`,
+                borderLeft: `1.5px dashed ${MILESTONE_LINE}`,
               }}
             />
           </div>
@@ -1019,7 +1040,7 @@ function TodayColumn({
 
   return (
     <div
-      className="pointer-events-none absolute top-0 z-[12]"
+      className="pointer-events-none absolute top-0 z-[20]"
       style={{
         left: `${left}%`,
         width: `${Math.max(width, 0.35)}%`,
@@ -1084,6 +1105,10 @@ function BarTrackAndStops({
   onMove,
   onLeave,
   trackHeightPx = BAR_TRACK_HEIGHT_PX,
+  dense = false,
+  noTrackInset = false,
+  trackRootClassName,
+  stopClassName,
 }: {
   showStops: boolean
   /** Track pill fill (mid ramp). */
@@ -1099,6 +1124,14 @@ function BarTrackAndStops({
   onMove: (e: MouseEvent) => void
   onLeave: () => void
   trackHeightPx?: number
+  /** When true, omit bottom margin (tight phase bars). */
+  dense?: boolean
+  /** When true, omit horizontal inset (phased `.track` spec). */
+  noTrackInset?: boolean
+  /** Extra class on the track root (e.g. `track` for phased group CSS). */
+  trackRootClassName?: string
+  /** Extra class on each stop control (e.g. `stop`). */
+  stopClassName?: string
 }) {
   const measureRef = useRef<HTMLDivElement>(null)
   const [trackW, setTrackW] = useState(0)
@@ -1155,11 +1188,12 @@ function BarTrackAndStops({
   return (
     <div
       ref={measureRef}
-      className="relative z-[1] mb-1 shrink-0 overflow-visible"
+      className={`track relative z-[1] shrink-0 overflow-visible ${dense ? '' : 'mb-1'} ${trackRootClassName ?? ''}`}
       style={{
         height: trackHeightPx,
-        marginLeft: TRACK_BAR_INSET_X,
-        marginRight: TRACK_BAR_INSET_X,
+        ...(noTrackInset
+          ? {}
+          : { marginLeft: TRACK_BAR_INSET_X, marginRight: TRACK_BAR_INSET_X }),
         borderRadius: 999,
         backgroundColor: trackColor,
       }}
@@ -1169,8 +1203,8 @@ function BarTrackAndStops({
             <button
               key={s.key}
               type="button"
-              aria-label={`${s.marker.label}, ${formatDisplayDate(s.date)}`}
-              className="absolute top-1/2 z-[2] box-border shrink-0 cursor-default rounded-full border-0 p-0 pointer-events-auto outline-none"
+              aria-label={`${markerDisplayLabel(s.marker.label)}, ${formatDisplayDate(s.date)}`}
+              className={`stop absolute top-1/2 z-[2] box-border shrink-0 cursor-default rounded-full border-0 p-0 pointer-events-auto outline-none ${stopClassName ?? ''}`}
               style={{
                 left: `${s.leftPct}%`,
                 width: STOP_DIAMETER_PX,
@@ -1184,7 +1218,7 @@ function BarTrackAndStops({
               }}
               onMouseEnter={(e) => {
                 e.stopPropagation()
-                onEnter(e, s.marker.label, s.date)
+                onEnter(e, markerDisplayLabel(s.marker.label), s.date)
               }}
               onMouseMove={onMove}
               onMouseLeave={onLeave}
@@ -1218,39 +1252,15 @@ function Chevron({ collapsed }: { collapsed: boolean }) {
   )
 }
 
-/** Right-pointing chevron for phase expand; rotates 90° when expanded. */
-function PhaseExpandChevron({ expanded }: { expanded: boolean }) {
-  return (
-    <svg
-      width={10}
-      height={10}
-      viewBox="0 0 16 16"
-      fill="none"
-      className="shrink-0"
-      style={{
-        color: '#555553',
-        transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
-        transition: 'transform 200ms ease',
-      }}
-      aria-hidden
-    >
-      <path
-        d="M6 4 L10 8 L6 12"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-    </svg>
-  )
-}
-
-function LoadingShimmer() {
+function LoadingShimmer({ sidebarWidthPx, trackWidthPx }: { sidebarWidthPx: number; trackWidthPx: number }) {
   const row = (
-    <div className="gantt-shimmer-row flex">
-      <div className="shrink-0" style={{ width: SIDEBAR_W, height: ROW_HEIGHT, backgroundColor: SURFACE }} />
-      <div className="min-w-0 flex-1" style={{ height: ROW_HEIGHT, backgroundColor: SURFACE }} />
+    <div
+      className="gantt-shimmer-row grid"
+      style={{ gridTemplateColumns: `${sidebarWidthPx}px 4px ${trackWidthPx}px` }}
+    >
+      <div className="shrink-0" style={{ height: ROW_HEIGHT, backgroundColor: SURFACE }} />
+      <div className="shrink-0" style={{ height: ROW_HEIGHT, backgroundColor: SURFACE }} />
+      <div className="min-w-0" style={{ height: ROW_HEIGHT, backgroundColor: SURFACE }} />
     </div>
   )
   return (
@@ -1264,17 +1274,7 @@ function LoadingShimmer() {
           animation: ganttShimmer 1.2s ease-in-out infinite;
         }
       `}</style>
-      <div className="flex min-h-0 flex-1 flex-col" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-        <div
-          className="shrink-0"
-          style={{
-            height: TOOLBAR_HEIGHT,
-            minHeight: TOOLBAR_HEIGHT,
-            backgroundColor: TOOLBAR_BG,
-            borderBottom: `1px solid ${TOOLBAR_BORDER}`,
-          }}
-        />
-        <div className="shrink-0" style={{ height: HEADER_H_DETAIL, backgroundColor: SURFACE }} />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
         {row}
         {row}
         {row}
@@ -1283,119 +1283,286 @@ function LoadingShimmer() {
   )
 }
 
-function GanttSidebarWorkstreamRow({
+type GanttRoadmapRow =
+  | { kind: 'section'; group: string; collapsed: boolean }
+  | { kind: 'workstream'; ws: Workstream }
+
+function buildRoadmapRows(
+  grouped: { group: string; items: Workstream[] }[],
+  collapsed: Record<string, boolean>,
+): GanttRoadmapRow[] {
+  const out: GanttRoadmapRow[] = []
+  for (const g of grouped) {
+    const isCollapsed = !!collapsed[g.group]
+    out.push({ kind: 'section', group: g.group, collapsed: isCollapsed })
+    if (!isCollapsed) {
+      for (const ws of g.items) out.push({ kind: 'workstream', ws })
+    }
+  }
+  return out
+}
+
+/** Phased workstream: single full-width group (sidebar + timeline per spec). */
+function GanttPhasedWorkstreamGroup({
   ws,
+  sidebarWidthPx,
+  trackWidthPx,
   phaseExpanded,
   setPhaseExpanded,
+  barDetail,
+  setBarDetail,
+  viewStart,
+  viewEnd,
+  setTip,
+  showBarTip,
+  moveTip,
+  hideTip,
+  showMarkerTip,
+  setHoveredWsId,
 }: {
   ws: Workstream
+  sidebarWidthPx: number
+  trackWidthPx: number
   phaseExpanded: Record<string, boolean>
   setPhaseExpanded: Dispatch<SetStateAction<Record<string, boolean>>>
+  barDetail: GanttDetailDrawerState | null
+  setBarDetail: Dispatch<SetStateAction<GanttDetailDrawerState | null>>
+  viewStart: Date
+  viewEnd: Date
+  setTip: Dispatch<SetStateAction<TooltipState | null>>
+  showBarTip: (e: MouseEvent, w: Workstream) => void
+  moveTip: (e: MouseEvent) => void
+  hideTip: () => void
+  showMarkerTip: (e: MouseEvent, label: string, date: Date) => void
+  setHoveredWsId: Dispatch<SetStateAction<string | null>>
 }) {
-  const hasPh = !!(ws.phases && ws.phases.length > 0)
+  const phases = ws.phases!
+  const n = phases.length
   const exp = !!phaseExpanded[ws.id]
-  if (!hasPh) {
-    return (
-      <div
-        className="flex min-w-0 flex-col justify-center px-3 transition-colors hover:bg-[#222222]"
-        style={{ height: ROW_HEIGHT, backgroundColor: SURFACE }}
-      >
-        <div
-          className="truncate font-medium leading-tight"
-          style={{ fontSize: 13, fontWeight: 500, color: SIDEBAR_NAME }}
-        >
-          {ws.name}
-        </div>
-        <div className="truncate text-[11px]" style={{ color: SIDEBAR_DRI }}>
-          {formatDriLabel(ws.dri)}
-        </div>
-      </div>
-    )
+  const bar = workstreamBar(ws)
+  const wsMarkers = markersForWorkstream(ws.id)
+  const barLayout = bar.kind === 'none' ? null : spanInView(bar.start, bar.end, viewStart, viewEnd)
+  const barWFrac = barLayout ? barLayout.width / 100 : 0
+  const showBarName = barLayout ? barWFrac * trackWidthPx >= BAR_LABEL_MIN_PX : false
+
+  const rowHoverHandlers = {
+    onMouseEnter: () => setHoveredWsId(ws.id),
+    onMouseLeave: (e: MouseEvent<HTMLDivElement>) => {
+      const to = e.relatedTarget
+      if (to instanceof Element && to.closest(`[data-ws-row="${ws.id}"]`)) return
+      setHoveredWsId((h) => (h === ws.id ? null : h))
+    },
   }
-  const rowH = workstreamTimelineHeight(ws, phaseExpanded)
-  const parentH = exp ? ROW_HEIGHT_EXPANDED_PARENT : ROW_HEIGHT
-  return (
-    <div
-      className="min-w-0 shrink-0 transition-colors hover:bg-[#222222]"
-      style={{
-        height: rowH,
-        transition: 'height 150ms ease',
-        backgroundColor: SURFACE,
-      }}
-    >
+
+  const wrapStyle = {
+    ['--sidebar-width' as string]: `${sidebarWidthPx}px`,
+  } as CSSProperties
+
+  const parentBarEl =
+    barLayout && (bar.kind === 'solid' || bar.kind === 'placeholder') ? (
       <button
         type="button"
-        className="flex w-full min-w-0 items-center gap-1 px-2 text-left"
+        data-gantt-bar={ws.id}
+        className={`bar parent-bar${exp ? ' dimmed' : ''}`}
         style={{
-          height: parentH,
-          transition: 'height 150ms ease',
-          backgroundColor: 'transparent',
+          left: `${barLayout.left}%`,
+          width: `${barLayout.width}%`,
+          minWidth: 4,
+          borderRadius: barBorderRadiusCss(bar.start, bar.end, viewStart, viewEnd, BAR_RADIUS),
+          backgroundColor: bar.fill,
         }}
-        onClick={() => setPhaseExpanded((p) => ({ ...p, [ws.id]: !p[ws.id] }))}
-      >
-        <span className="flex w-[10px] shrink-0 justify-center" aria-hidden>
-          <PhaseExpandChevron expanded={exp} />
-        </span>
-        <div className="flex min-w-0 flex-1 flex-col justify-center overflow-hidden">
-          <div
-            className="truncate leading-tight"
-            style={{
-              fontSize: exp ? 11 : 13,
-              fontWeight: exp ? 400 : 500,
-              color: exp ? '#888780' : SIDEBAR_NAME,
-              transition: 'font-size 150ms ease, color 150ms ease',
-            }}
-          >
-            {ws.name}
-          </div>
-          {!exp ? (
-            <div className="truncate text-[11px]" style={{ color: SIDEBAR_DRI }}>
-              {formatDriLabel(ws.dri)}
-            </div>
-          ) : null}
-        </div>
-      </button>
-      <div
-        style={{
-          maxHeight: exp ? ws.phases!.length * PHASE_ROW_HEIGHT : 0,
-          opacity: exp ? 1 : 0,
-          transition: 'max-height 200ms ease-out, opacity 200ms ease-out',
-          overflow: 'hidden',
+        aria-label={`${ws.name}${bar.kind === 'placeholder' ? ' planned window' : ''}`}
+        onMouseEnter={(e) => showBarTip(e, ws)}
+        onMouseMove={moveTip}
+        onMouseLeave={hideTip}
+        onClick={(e) => {
+          e.stopPropagation()
+          setTip(null)
+          setPhaseExpanded((p) => ({ ...p, [ws.id]: !p[ws.id] }))
+          setBarDetail({ kind: 'workstream', ws })
         }}
       >
-        {ws.phases!.map((phase) => (
-          <div
-            key={phase.id}
-            className="flex items-center gap-2"
-            style={{
-              height: PHASE_ROW_HEIGHT,
-              paddingLeft: 24,
-              paddingRight: 12,
-              boxSizing: 'border-box',
-            }}
-          >
+        {showBarName ? (
+          <div className="bar-top-row">
+            <span className="bar-name">{ws.name}</span>
             <span
-              className="shrink-0 rounded-full"
-              style={{
-                width: 6,
-                height: 6,
-                backgroundColor: STATUS_TONES[phase.status].bar,
+              role="button"
+              tabIndex={0}
+              data-gantt-expand-label
+              className="expand-label"
+              aria-expanded={exp}
+              aria-label={exp ? 'Collapse phases' : `Expand ${n} phases`}
+              onClick={(e) => {
+                e.stopPropagation()
+                setPhaseExpanded((p) => ({ ...p, [ws.id]: !p[ws.id] }))
               }}
-              aria-hidden
-            />
-            <span className="min-w-0 flex-1 truncate text-[11px]" style={{ color: '#888780' }}>
-              {phase.label}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter' && e.key !== ' ') return
+                e.preventDefault()
+                e.stopPropagation()
+                setPhaseExpanded((p) => ({ ...p, [ws.id]: !p[ws.id] }))
+              }}
+            >
+              {exp ? '▾ collapse' : `▸ ${n} phase${n === 1 ? '' : 's'}`}
             </span>
           </div>
-        ))}
+        ) : null}
+        <BarTrackAndStops
+          dense
+          noTrackInset
+          trackRootClassName=""
+          stopClassName=""
+          trackHeightPx={PHASE_TRACK_HEIGHT_PX}
+          showStops={bar.kind === 'solid' && ws.status !== 'not started'}
+          trackColor={STATUS_TONES[ws.status].track}
+          reviewStopColor={STATUS_TONES[ws.status].stop}
+          handoffStopColor={STATUS_TONES[ws.status].bar}
+          markers={wsMarkers}
+          barStart={bar.start}
+          barEnd={bar.end}
+          onEnter={showMarkerTip}
+          onMove={moveTip}
+          onLeave={hideTip}
+        />
+      </button>
+    ) : null
+
+  return (
+    <div
+      className={`group-wrap${exp ? ' expanded' : ''}`}
+      data-gantt-sidebar
+      data-ws-row={ws.id}
+      data-expanded={exp ? 'true' : 'false'}
+      style={wrapStyle}
+      {...rowHoverHandlers}
+    >
+      <div className="group-row parent-row">
+        <div
+          className="sidebar-cell ws-sidebar-parent"
+          onClick={(e) => {
+            e.stopPropagation()
+            setPhaseExpanded((p) => ({ ...p, [ws.id]: !p[ws.id] }))
+            setBarDetail({ kind: 'workstream', ws })
+          }}
+        >
+          <div className="ws-sidebar-text-stack">
+            <div className="ws-name-row">
+              <span className="ws-name">{ws.name}</span>
+              <span className="chevron ti-chevron-right" aria-hidden>
+                <svg
+                  className="gantt-chevron-svg"
+                  width={12}
+                  height={12}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <path
+                    d="M9 6l6 6-6 6"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+            </div>
+            <span className="ws-dri">{formatDriLabel(ws.dri)}</span>
+          </div>
+        </div>
+        <div className="timeline-cell">
+          <div className="timeline-cell-inner" style={{ width: trackWidthPx }}>
+            {parentBarEl}
+          </div>
+        </div>
       </div>
+      {exp
+        ? phases.map((phase) => {
+            const pr = phaseDateRange(phase)
+            const tones = STATUS_TONES[phase.status]
+            const ghost = phase.status === 'not started'
+            const layout = pr ? spanInView(pr.start, pr.end, viewStart, viewEnd) : null
+            const phaseMarkers = pr ? markersInDateRange(wsMarkers, pr.start, pr.end) : []
+            return (
+              <div key={phase.id} className="group-row phase-row" onClick={(e) => e.stopPropagation()}>
+                <div className="sidebar-cell phase-sidebar">
+                  <div className="phase-dot" style={{ backgroundColor: tones.bar }} aria-hidden />
+                  <span className="phase-label">{phase.label}</span>
+                </div>
+                <div className="timeline-cell">
+                  <div className="timeline-cell-inner" style={{ width: trackWidthPx }}>
+                    {layout ? (
+                      <button
+                        type="button"
+                        data-gantt-phase-bar
+                        data-workstream-id={ws.id}
+                        data-phase-id={phase.id}
+                        className="bar phase-bar"
+                        style={{
+                          left: `${layout.left}%`,
+                          width: `${layout.width}%`,
+                          minWidth: 4,
+                          borderRadius: BAR_RADIUS,
+                          backgroundColor: ghost ? '#2E2E2E' : tones.bar,
+                        }}
+                        aria-label={phase.label}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setTip(null)
+                          if (
+                            barDetail?.kind === 'phase' &&
+                            barDetail.ws.id === ws.id &&
+                            barDetail.phase.id === phase.id
+                          ) {
+                            return
+                          }
+                          setBarDetail({
+                            kind: 'phase',
+                            ws,
+                            phase,
+                          })
+                        }}
+                      >
+                        <div className="bar-top-row">
+                          <span className="bar-name">{phase.label}</span>
+                        </div>
+                        <BarTrackAndStops
+                          dense
+                          noTrackInset
+                          trackRootClassName=""
+                          stopClassName=""
+                          trackHeightPx={PHASE_TRACK_HEIGHT_PX}
+                          showStops={!ghost && phaseMarkers.length > 0}
+                          trackColor={ghost ? '#252525' : tones.track}
+                          reviewStopColor={tones.stop}
+                          handoffStopColor={tones.bar}
+                          markers={phaseMarkers}
+                          barStart={pr!.start}
+                          barEnd={pr!.end}
+                          onEnter={showMarkerTip}
+                          onMove={moveTip}
+                          onLeave={hideTip}
+                        />
+                      </button>
+                    ) : (
+                      <span className="phase-label" style={{ paddingLeft: 8 }}>
+                        {phase.label}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })
+        : null}
     </div>
   )
 }
 
-function GanttTimelineWorkstreamRow({
+function GanttWorkstreamRow({
   ws,
+  segment,
   phaseExpanded,
+  setPhaseExpanded,
   barDetail,
   setBarDetail,
   viewStart,
@@ -1406,11 +1573,15 @@ function GanttTimelineWorkstreamRow({
   moveTip,
   hideTip,
   showMarkerTip,
+  hoveredWsId,
+  setHoveredWsId,
 }: {
   ws: Workstream
+  segment: 'sidebar' | 'timeline'
   phaseExpanded: Record<string, boolean>
-  barDetail: BarDetailState | null
-  setBarDetail: Dispatch<SetStateAction<BarDetailState | null>>
+  setPhaseExpanded: Dispatch<SetStateAction<Record<string, boolean>>>
+  barDetail: GanttDetailDrawerState | null
+  setBarDetail: Dispatch<SetStateAction<GanttDetailDrawerState | null>>
   viewStart: Date
   viewEnd: Date
   trackWidthPx: number
@@ -1419,226 +1590,126 @@ function GanttTimelineWorkstreamRow({
   moveTip: (e: MouseEvent) => void
   hideTip: () => void
   showMarkerTip: (e: MouseEvent, label: string, date: Date) => void
+  hoveredWsId: string | null
+  setHoveredWsId: Dispatch<SetStateAction<string | null>>
 }) {
-  const hasPh = !!(ws.phases && ws.phases.length > 0)
-  const exp = !!phaseExpanded[ws.id]
-  const rowH = workstreamTimelineHeight(ws, phaseExpanded)
+  void phaseExpanded
+  void setPhaseExpanded
+  void hoveredWsId
+  void setHoveredWsId
+  const rowH = ROW_HEIGHT
   const bar = workstreamBar(ws)
   const wsMarkers = markersForWorkstream(ws.id)
   const barLayout =
     bar.kind === 'none' ? null : spanInView(bar.start, bar.end, viewStart, viewEnd)
   const barWFrac = barLayout ? barLayout.width / 100 : 0
   const showBarName = barLayout ? barWFrac * trackWidthPx >= BAR_LABEL_MIN_PX : false
-  const parentSegH = hasPh ? (exp ? ROW_HEIGHT_EXPANDED_PARENT : ROW_HEIGHT) : ROW_HEIGHT
 
-  return (
-    <div
-      className="group relative shrink-0 overflow-visible transition-colors hover:bg-[#222222]"
-      style={{
-        height: rowH,
-        transition: 'height 150ms ease',
-        backgroundColor: 'transparent',
-      }}
-    >
-      <div
-        className="relative overflow-visible"
+  const sidebarPlain = (
+    <div className="gantt-ws-sidebar-text">
+      <div className="gantt-ws-sidebar-name">{ws.name}</div>
+      <div className="gantt-ws-sidebar-dri">{formatDriLabel(ws.dri)}</div>
+    </div>
+  )
+
+  const timelineParentBar =
+    barLayout && (bar.kind === 'solid' || bar.kind === 'placeholder') ? (
+      <button
+        type="button"
+        data-gantt-bar={ws.id}
+        className="absolute top-1/2 z-[3] flex -translate-y-1/2 cursor-pointer flex-col items-stretch overflow-hidden border-0 p-0 text-left pointer-events-auto hover:brightness-[1.12]"
         style={{
-          height: parentSegH,
-          transition: 'height 150ms ease',
+          left: `${barLayout.left}%`,
+          width: `${barLayout.width}%`,
+          minWidth: 4,
+          borderRadius: barBorderRadiusCss(bar.start, bar.end, viewStart, viewEnd, BAR_RADIUS),
+          backgroundColor: bar.fill,
+          boxSizing: 'border-box',
+        }}
+        aria-label={`${ws.name}${bar.kind === 'placeholder' ? ' planned window' : ''}`}
+        onMouseEnter={(e) => showBarTip(e, ws)}
+        onMouseMove={moveTip}
+        onMouseLeave={hideTip}
+        onClick={(e) => {
+          e.stopPropagation()
+          setTip(null)
+          if (barDetail?.kind === 'workstream' && barDetail.ws.id === ws.id) return
+          setBarDetail({ kind: 'workstream', ws })
         }}
       >
-        {!exp && barLayout && (bar.kind === 'solid' || bar.kind === 'placeholder') ? (
-          <button
-            type="button"
-            data-gantt-bar={ws.id}
-            className="absolute top-1/2 z-[3] flex -translate-y-1/2 cursor-pointer flex-col items-stretch overflow-hidden border-0 p-0 text-left pointer-events-auto"
+        {showBarName ? (
+          <span
+            className="relative z-[3] shrink-0 truncate px-[8px] pt-2 text-[12px] font-medium leading-none"
             style={{
-              left: `${barLayout.left}%`,
-              width: `${barLayout.width}%`,
-              minWidth: 4,
-              borderRadius: barBorderRadiusCss(bar.start, bar.end, viewStart, viewEnd, BAR_RADIUS),
-              backgroundColor: bar.fill,
-              boxSizing: 'border-box',
-            }}
-            aria-label={`${ws.name}${bar.kind === 'placeholder' ? ' planned window' : ''}`}
-            onMouseEnter={(e) => showBarTip(e, ws)}
-            onMouseMove={moveTip}
-            onMouseLeave={hideTip}
-            onClick={(e) => {
-              e.stopPropagation()
-              setTip(null)
-              if (barDetail?.kind === 'workstream' && barDetail.ws.id === ws.id) return
-              setBarDetail({ kind: 'workstream', ws, anchorX: e.clientX, anchorY: e.clientY })
+              color: bar.kind === 'placeholder' ? TEXT_SECTION : SURFACE,
             }}
           >
-            {showBarName ? (
-              <span
-                className="relative z-[3] shrink-0 truncate px-[8px] pt-2 text-[12px] font-medium leading-none"
-                style={{
-                  color: bar.kind === 'placeholder' ? TEXT_SECTION : SURFACE,
-                }}
-              >
-                {ws.name}
-              </span>
-            ) : (
-              <div className="h-1 shrink-0" aria-hidden />
-            )}
-            {showBarName ? <div className="h-1 shrink-0" aria-hidden /> : null}
-            <BarTrackAndStops
-              showStops={bar.kind === 'solid' && ws.status !== 'not started'}
-              trackColor={STATUS_TONES[ws.status].track}
-              reviewStopColor={STATUS_TONES[ws.status].stop}
-              handoffStopColor={STATUS_TONES[ws.status].bar}
-              markers={wsMarkers}
-              barStart={bar.start}
-              barEnd={bar.end}
-              onEnter={showMarkerTip}
-              onMove={moveTip}
-              onLeave={hideTip}
-            />
-          </button>
-        ) : null}
-        {exp && hasPh && barLayout && (bar.kind === 'solid' || bar.kind === 'placeholder') ? (
-          <button
-            type="button"
-            data-gantt-bar={ws.id}
-            className="absolute top-1/2 z-[3] flex -translate-y-1/2 cursor-pointer flex-col justify-center overflow-visible border-0 bg-transparent p-0 text-left pointer-events-auto"
-            style={{
-              left: `${barLayout.left}%`,
-              width: `${barLayout.width}%`,
-              minWidth: 4,
-              height: ROW_HEIGHT_EXPANDED_PARENT,
-              boxSizing: 'border-box',
-            }}
-            aria-label={`${ws.name} — timeline`}
-            onMouseEnter={(e) => showBarTip(e, ws)}
-            onMouseMove={moveTip}
-            onMouseLeave={hideTip}
-            onClick={(e) => {
-              e.stopPropagation()
-              setTip(null)
-              if (barDetail?.kind === 'workstream' && barDetail.ws.id === ws.id) return
-              setBarDetail({ kind: 'workstream', ws, anchorX: e.clientX, anchorY: e.clientY })
-            }}
-          >
-            <BarTrackAndStops
-              trackHeightPx={PHASE_PARENT_TRACK_HEIGHT_PX}
-              showStops={bar.kind === 'solid' && ws.status !== 'not started'}
-              trackColor={STATUS_TONES[ws.status].track}
-              reviewStopColor={STATUS_TONES[ws.status].stop}
-              handoffStopColor={STATUS_TONES[ws.status].bar}
-              markers={wsMarkers}
-              barStart={bar.start}
-              barEnd={bar.end}
-              onEnter={showMarkerTip}
-              onMove={moveTip}
-              onLeave={hideTip}
-            />
-          </button>
-        ) : null}
+            {ws.name}
+          </span>
+        ) : (
+          <div className="h-1 shrink-0" aria-hidden />
+        )}
+        {showBarName ? <div className="h-1 shrink-0" aria-hidden /> : null}
+        <BarTrackAndStops
+          trackHeightPx={BAR_TRACK_HEIGHT_PX}
+          showStops={bar.kind === 'solid' && ws.status !== 'not started'}
+          trackColor={STATUS_TONES[ws.status].track}
+          reviewStopColor={STATUS_TONES[ws.status].stop}
+          handoffStopColor={STATUS_TONES[ws.status].bar}
+          markers={wsMarkers}
+          barStart={bar.start}
+          barEnd={bar.end}
+          onEnter={showMarkerTip}
+          onMove={moveTip}
+          onLeave={hideTip}
+        />
+      </button>
+    ) : null
+
+  const timelineInner = (
+    <div className="relative shrink-0 overflow-visible" style={{ width: trackWidthPx, height: rowH }}>
+      <div className="relative overflow-visible" style={{ height: ROW_HEIGHT }}>
+        {timelineParentBar}
       </div>
-      {hasPh ? (
-        <div
-          style={{
-            maxHeight: exp ? ws.phases!.length * PHASE_ROW_HEIGHT : 0,
-            opacity: exp ? 1 : 0,
-            transition: 'max-height 200ms ease-out, opacity 200ms ease-out',
-            overflow: 'hidden',
-          }}
-        >
-          {ws.phases!.map((phase) => {
-            const pr = phaseDateRange(phase)
-            if (!pr) return null
-            const layout = spanInView(pr.start, pr.end, viewStart, viewEnd)
-            const phaseMarkers = markersInDateRange(wsMarkers, pr.start, pr.end)
-            const tones = STATUS_TONES[phase.status]
-            const ghost = phase.status === 'not started'
-            const showPhaseBarLabel = layout ? layout.width / 100 >= 0.14 : false
-            return (
-              <div key={phase.id} className="relative shrink-0" style={{ height: PHASE_ROW_HEIGHT }}>
-                {layout ? (
-                  <button
-                    type="button"
-                    data-gantt-phase-bar
-                    data-workstream-id={ws.id}
-                    data-phase-id={phase.id}
-                    className="absolute top-1/2 z-[3] flex -translate-y-1/2 cursor-pointer flex-col items-stretch overflow-hidden border-0 p-0 text-left pointer-events-auto"
-                    style={{
-                      left: `${layout.left}%`,
-                      width: `${layout.width}%`,
-                      minWidth: 4,
-                      borderRadius: barBorderRadiusCss(pr.start, pr.end, viewStart, viewEnd, BAR_RADIUS),
-                      backgroundColor: ghost ? '#2E2E2E' : tones.bar,
-                      border: ghost ? '1px solid #3A3A3A' : undefined,
-                      boxSizing: 'border-box',
-                    }}
-                    aria-label={phase.label}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setTip(null)
-                      if (
-                        barDetail?.kind === 'phase' &&
-                        barDetail.ws.id === ws.id &&
-                        barDetail.phase.id === phase.id
-                      ) {
-                        return
-                      }
-                      setBarDetail({
-                        kind: 'phase',
-                        ws,
-                        phase,
-                        anchorX: e.clientX,
-                        anchorY: e.clientY,
-                      })
-                    }}
-                  >
-                    {showPhaseBarLabel ? (
-                      <span
-                        className={`relative z-[3] shrink-0 truncate px-[8px] pt-2 text-[11px] font-medium leading-none ${ghost ? 'pointer-events-none' : ''}`}
-                        style={{ color: ghost ? '#555553' : SURFACE }}
-                      >
-                        {phase.label}
-                      </span>
-                    ) : (
-                      <div className="h-1 shrink-0" aria-hidden />
-                    )}
-                    {showPhaseBarLabel ? <div className="h-0.5 shrink-0" aria-hidden /> : null}
-                    <BarTrackAndStops
-                      showStops={phaseMarkers.length > 0}
-                      trackColor={ghost ? '#252525' : tones.track}
-                      reviewStopColor={tones.stop}
-                      handoffStopColor={tones.bar}
-                      markers={phaseMarkers}
-                      barStart={pr.start}
-                      barEnd={pr.end}
-                      onEnter={showMarkerTip}
-                      onMove={moveTip}
-                      onLeave={hideTip}
-                    />
-                  </button>
-                ) : null}
-              </div>
-            )
-          })}
-        </div>
-      ) : null}
+    </div>
+  )
+
+  if (segment === 'sidebar') {
+    return (
+      <div data-gantt-sidebar data-ws-row={ws.id} className="gantt-ws-sidebar-cell min-w-0 cursor-default">
+        {sidebarPlain}
+      </div>
+    )
+  }
+
+  return (
+    <div data-ws-row={ws.id} className="min-w-0 transition-colors duration-[120ms] hover:bg-[#222222]">
+      {timelineInner}
     </div>
   )
 }
 
 export default function GanttPage() {
   const [tip, setTip] = useState<TooltipState | null>(null)
-  const [barDetail, setBarDetail] = useState<BarDetailState | null>(null)
+  const [barDetail, setBarDetail] = useState<GanttDetailDrawerState | null>(null)
+  const [drawerOverlay, setDrawerOverlay] = useState<GanttOverlayMode | null>(null)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [phaseExpanded, setPhaseExpanded] = useState<Record<string, boolean>>({})
+  const [hoveredWsId, setHoveredWsId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [viewBy, setViewBy] = useState<ViewBy>('group')
   const [zoom, setZoom] = useState<ZoomLevel>('quarter')
   const [weekWindowMonday, setWeekWindowMonday] = useState<Date>(initialWeekWindowMonday)
+  const [sidebarWidthPx, setSidebarWidthPx] = useState(() =>
+    typeof window === 'undefined' ? DEFAULT_SIDEBAR_W : readStoredSidebarWidth(),
+  )
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const didQuarterScrollRef = useRef(false)
   const didWeekScrollRef = useRef(false)
+  const sidebarResizeDragRef = useRef<{ startX: number; startW: number } | null>(null)
+  const drawerOverlayRef = useRef<GanttOverlayMode | null>(null)
+  drawerOverlayRef.current = drawerOverlay
 
   const { start: viewStart, end: viewEnd } = useMemo(
     () => getViewBounds(zoom, weekWindowMonday),
@@ -1686,6 +1757,7 @@ export default function GanttPage() {
   useEffect(() => {
     setCollapsed({})
     setPhaseExpanded({})
+    setHoveredWsId(null)
   }, [viewBy])
 
   useEffect(() => {
@@ -1722,13 +1794,7 @@ export default function GanttPage() {
   }, [loading, zoom, viewStart, viewEnd])
 
   const grouped = useMemo(() => buildGroupedSections(viewBy, workstreams), [viewBy])
-  const detailPanelMarkers = useMemo((): Marker[] => {
-    if (!barDetail) return []
-    if (barDetail.kind === 'workstream') return markersForWorkstream(barDetail.ws.id)
-    const r = phaseDateRange(barDetail.phase)
-    if (!r) return []
-    return markersInDateRange(markersForWorkstream(barDetail.ws.id), r.start, r.end)
-  }, [barDetail])
+  const roadmapRows = useMemo(() => buildRoadmapRows(grouped, collapsed), [grouped, collapsed])
   const milestoneDates = useMemo(
     () =>
       milestones
@@ -1737,7 +1803,7 @@ export default function GanttPage() {
           return d ? { milestone: x.milestone, date: d } : null
         })
         .filter((x): x is { milestone: string; date: Date } => x !== null),
-    [],
+    [milestones],
   )
 
   const bodyHeight = useMemo(() => {
@@ -1771,31 +1837,173 @@ export default function GanttPage() {
 
   const hideTip = useCallback(() => setTip(null), [])
 
+  const ganttInnerScrollWidthPx = sidebarWidthPx + 4 + trackWidthPx
+
+  const ganttRoadmapGridCells = useMemo(() => {
+    const stickyAside: CSSProperties = {
+      position: 'sticky',
+      left: 0,
+      zIndex: 10,
+      backgroundColor: SURFACE,
+      alignSelf: 'stretch',
+      minWidth: 0,
+    }
+    const wsRowProps = {
+      phaseExpanded,
+      setPhaseExpanded,
+      barDetail,
+      setBarDetail,
+      viewStart,
+      viewEnd,
+      trackWidthPx,
+      setTip,
+      showBarTip,
+      moveTip,
+      hideTip,
+      showMarkerTip,
+      hoveredWsId,
+      setHoveredWsId,
+    }
+    const cells: ReactNode[] = []
+    let gridRow = 2
+    for (const row of roadmapRows) {
+      if (row.kind === 'section') {
+        cells.push(
+          <div
+            key={`aside-sec-${row.group}-r${gridRow}`}
+            data-gantt-sidebar
+            style={{ gridColumn: 1, gridRow, ...stickyAside }}
+          >
+            <div className="flex w-full shrink-0 items-center" style={{ height: SECTION_HEIGHT }}>
+              <button
+                type="button"
+                className="flex w-full min-w-0 items-center gap-2 px-2 text-left transition-colors hover:bg-[#222222]"
+                style={{
+                  height: SECTION_HEIGHT,
+                  backgroundColor: 'transparent',
+                  color: TEXT_SECTION,
+                }}
+                onClick={() => toggleGroup(row.group)}
+              >
+                <Chevron collapsed={row.collapsed} />
+                <span
+                  className="min-w-0 flex-1 truncate text-[10px] font-medium uppercase tracking-[0.06em]"
+                  style={{
+                    color: viewBy === 'dri' ? driHandleColor(row.group) : TEXT_SECTION,
+                  }}
+                >
+                  {groupSectionHeaderLabel(row.group, viewBy)}
+                </span>
+              </button>
+            </div>
+          </div>,
+        )
+        cells.push(
+          <div
+            key={`sep-sec-${row.group}-r${gridRow}`}
+            style={{ gridColumn: 2, gridRow, backgroundColor: SURFACE }}
+            aria-hidden
+          />,
+        )
+        cells.push(
+          <div
+            key={`tl-sec-${row.group}-r${gridRow}`}
+            style={{
+              gridColumn: 3,
+              gridRow,
+              minWidth: 0,
+              height: SECTION_HEIGHT,
+              width: '100%',
+              backgroundColor: SECTION_BG,
+            }}
+            aria-hidden
+          />,
+        )
+        gridRow++
+      } else if (row.ws.phases?.length) {
+        cells.push(
+          <div
+            key={`ph-${row.ws.id}-r${gridRow}`}
+            style={{ gridColumn: '1 / -1', gridRow, minWidth: 0, width: '100%', overflow: 'visible' }}
+          >
+            <GanttPhasedWorkstreamGroup
+              ws={row.ws}
+              sidebarWidthPx={sidebarWidthPx}
+              trackWidthPx={trackWidthPx}
+              phaseExpanded={phaseExpanded}
+              setPhaseExpanded={setPhaseExpanded}
+              barDetail={barDetail}
+              setBarDetail={setBarDetail}
+              viewStart={viewStart}
+              viewEnd={viewEnd}
+              setTip={setTip}
+              showBarTip={showBarTip}
+              moveTip={moveTip}
+              hideTip={hideTip}
+              showMarkerTip={showMarkerTip}
+              setHoveredWsId={setHoveredWsId}
+            />
+          </div>,
+        )
+        gridRow++
+      } else {
+        cells.push(
+          <div key={`aside-ws-${row.ws.id}-r${gridRow}`} style={{ gridColumn: 1, gridRow, ...stickyAside }}>
+            <GanttWorkstreamRow segment="sidebar" ws={row.ws} {...wsRowProps} />
+          </div>,
+        )
+        cells.push(
+          <div key={`sep-ws-${row.ws.id}-r${gridRow}`} style={{ gridColumn: 2, gridRow, backgroundColor: SURFACE }} aria-hidden />,
+        )
+        cells.push(
+          <div key={`tl-ws-${row.ws.id}-r${gridRow}`} style={{ gridColumn: 3, gridRow, minWidth: 0 }}>
+            <GanttWorkstreamRow segment="timeline" ws={row.ws} {...wsRowProps} />
+          </div>,
+        )
+        gridRow++
+      }
+    }
+    return cells
+  }, [
+    roadmapRows,
+    sidebarWidthPx,
+    trackWidthPx,
+    phaseExpanded,
+    setPhaseExpanded,
+    barDetail,
+    setBarDetail,
+    viewStart,
+    viewEnd,
+    setTip,
+    showBarTip,
+    moveTip,
+    hideTip,
+    showMarkerTip,
+    hoveredWsId,
+    setHoveredWsId,
+    toggleGroup,
+    viewBy,
+  ])
+
   const closeBarDetail = useCallback(() => setBarDetail(null), [])
 
-  useEffect(() => {
-    if (!barDetail) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeBarDetail()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [barDetail, closeBarDetail])
+  const closeDrawerOverlay = useCallback(() => {
+    setDrawerOverlay(null)
+  }, [])
 
-  useEffect(() => {
-    if (!barDetail) return
-    const onDown = (e: Event) => {
-      const t = e.target
-      if (t instanceof Element) {
-        if (t.closest('[data-gantt-detail-panel]')) return
-        if (t.closest('[data-gantt-bar]')) return
-        if (t.closest('[data-gantt-phase-bar]')) return
-      }
-      closeBarDetail()
+  const openMilestonesFromToolbar = useCallback(() => {
+    if (drawerOverlayRef.current === 'milestones') {
+      setDrawerOverlay(null)
+      return
     }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [barDetail, closeBarDetail])
+    setBarDetail(null)
+    setDrawerOverlay('milestones')
+  }, [])
+
+  const openMilestonesFromDetail = useCallback(() => {
+    setBarDetail(null)
+    setDrawerOverlay('milestones')
+  }, [])
 
   /** Space / Shift+Space: horizontal scroll on the timeline (no trackpad). */
   useEffect(() => {
@@ -1803,16 +2011,18 @@ export default function GanttPage() {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.code !== 'Space' && e.key !== ' ') return
       if (barDetail) return
+      if (drawerOverlay) return
       const t = e.target
       if (!(t instanceof HTMLElement)) return
       const node =
         document.activeElement instanceof HTMLElement ? document.activeElement : t
-      if (node.closest('[data-gantt-detail-panel]')) return
+      if (node.closest('[data-gantt-drawer]')) return
       if (node.closest('input, textarea, select, [contenteditable="true"]')) return
       if (node.closest('[role="toolbar"]')) return
       if (node.closest('[data-gantt-sidebar]')) return
       if (node.closest('[data-gantt-bar]') || node.hasAttribute('data-gantt-bar')) return
       if (node.closest('[data-gantt-phase-bar]') || node.hasAttribute('data-gantt-phase-bar')) return
+      if (node.closest('[data-gantt-expand-label]')) return
 
       const el = scrollRef.current
       if (!el || el.scrollWidth <= el.clientWidth) return
@@ -1823,231 +2033,274 @@ export default function GanttPage() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [loading, barDetail])
+  }, [loading, barDetail, drawerOverlay])
 
-  /** Vertical mouse wheel pans the timeline horizontally (native deltaX unchanged for trackpads). */
+  /** Timeline horizontal wheel: native deltaX, Shift+vertical → horizontal; vertical wheel bubbles to page. */
   useEffect(() => {
     if (loading) return
     const el = scrollRef.current
     if (!el) return
 
+    const PIXEL_PER_LINE = 24
+
     const onWheel = (e: WheelEvent) => {
       if (el.scrollWidth <= el.clientWidth + 1) return
 
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
+      const isHorizontalIntent = Math.abs(e.deltaX) > Math.abs(e.deltaY)
+      const isVerticalIntent = Math.abs(e.deltaY) > Math.abs(e.deltaX)
 
-      const dy =
-        e.deltaMode === WheelEvent.DOM_DELTA_LINE
-          ? e.deltaY * 16
-          : e.deltaMode === WheelEvent.DOM_DELTA_PAGE
-            ? e.deltaY * el.clientHeight
-            : e.deltaY
+      if (isHorizontalIntent) {
+        e.preventDefault()
+        let delta = e.deltaX
+        if (e.deltaMode === WheelEvent.DOM_DELTA_LINE) delta *= PIXEL_PER_LINE
+        if (e.deltaMode === WheelEvent.DOM_DELTA_PAGE) delta *= el.clientWidth
+        el.scrollLeft += delta
+        return
+      }
 
-      const maxLeft = Math.max(0, el.scrollWidth - el.clientWidth)
-      const next = el.scrollLeft + dy
-
-      if (dy > 0 && el.scrollLeft >= maxLeft - 0.5) return
-      if (dy < 0 && el.scrollLeft <= 0.5) return
-
-      e.preventDefault()
-      el.scrollLeft = Math.max(0, Math.min(maxLeft, next))
+      if (isVerticalIntent && e.shiftKey) {
+        e.preventDefault()
+        let delta = e.deltaY
+        if (e.deltaMode === WheelEvent.DOM_DELTA_LINE) delta *= PIXEL_PER_LINE
+        if (e.deltaMode === WheelEvent.DOM_DELTA_PAGE) delta *= el.clientWidth
+        el.scrollLeft += delta
+      }
     }
 
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
   }, [loading])
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(GANTT_SIDEBAR_WIDTH_KEY, String(sidebarWidthPx))
+    } catch {
+      /* ignore */
+    }
+  }, [sidebarWidthPx])
+
+  const onSidebarResizePointerDown = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      if (e.button !== 0) return
+      e.preventDefault()
+      sidebarResizeDragRef.current = { startX: e.clientX, startW: sidebarWidthPx }
+      e.currentTarget.setPointerCapture(e.pointerId)
+    },
+    [sidebarWidthPx],
+  )
+
+  const onSidebarResizePointerMove = useCallback((e: PointerEvent<HTMLDivElement>) => {
+    const d = sidebarResizeDragRef.current
+    if (!d) return
+    const next = Math.min(MAX_SIDEBAR_W, Math.max(MIN_SIDEBAR_W, d.startW + e.clientX - d.startX))
+    setSidebarWidthPx(next)
+  }, [])
+
+  const onSidebarResizePointerUp = useCallback((e: PointerEvent<HTMLDivElement>) => {
+    sidebarResizeDragRef.current = null
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
   return (
     <div
-      className="flex h-full min-h-0 w-full flex-col"
+      className="flex h-full min-h-0 w-full flex-col overflow-hidden"
       data-name="Gantt"
       style={{
         backgroundColor: SURFACE,
         fontFamily: 'Inter, system-ui, sans-serif',
       }}
     >
-      <div className="shrink-0 px-6 py-4" style={{ backgroundColor: SURFACE }}>
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-[22px] font-semibold leading-tight" style={{ color: TEXT_PRIMARY }}>
-            Design Roadmap to Network GA
-          </h1>
-          <span
-            className="inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
-            style={{
-              color: '#F9BC45',
-              backgroundColor: '#4A3A10',
-              border: '1px solid rgba(249, 188, 69, 0.35)',
-            }}
-            aria-label="Work in progress"
-          >
-            WIP
-          </span>
-        </div>
-        <p className="mt-1 text-[13px]" style={{ color: TEXT_MUTED }}>
-          Workstreams, releases, and key markers
-        </p>
+      <div className="sticky top-0 z-[12] shrink-0">
+        <GanttToolbar
+          viewBy={viewBy}
+          onViewBy={setViewBy}
+          zoom={zoom}
+          onZoom={onZoom}
+          weekNav={weekNav}
+          milestonesDrawerActive={drawerOverlay === 'milestones'}
+          onMilestonesToolbarClick={openMilestonesFromToolbar}
+        />
       </div>
 
-      <GanttToolbar
-        viewBy={viewBy}
-        onViewBy={setViewBy}
-        zoom={zoom}
-        onZoom={onZoom}
-        weekNav={weekNav}
-      />
-
-      <div className="min-h-0 flex-1 overflow-auto p-6">
-        {loading ? (
-          <LoadingShimmer />
-        ) : (
-          <div className="flex min-w-0">
-            <div
-              className="sticky left-0 z-[5] flex shrink-0 flex-col"
-              data-gantt-sidebar
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="shrink-0 px-6 pb-4 pt-4" style={{ backgroundColor: SURFACE }}>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-[22px] font-semibold leading-tight" style={{ color: TEXT_PRIMARY }}>
+              Network design roadmap
+            </h1>
+            <span
+              className="inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
               style={{
-                width: SIDEBAR_W,
-                backgroundColor: SURFACE,
+                color: '#F9BC45',
+                backgroundColor: '#4A3A10',
+                border: '1px solid rgba(249, 188, 69, 0.35)',
               }}
+              aria-label="Work in progress"
             >
-              <div className="shrink-0" style={{ height: headerHeight, backgroundColor: SURFACE }} />
-              {grouped.map((g) => {
-                const isCollapsed = !!collapsed[g.group]
-                return (
-                  <div key={g.group}>
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2 px-2 text-left transition-colors hover:bg-[#222222]"
-                      style={{
-                        height: SECTION_HEIGHT,
-                        backgroundColor: 'transparent',
-                        color: TEXT_SECTION,
-                      }}
-                      onClick={() => toggleGroup(g.group)}
-                    >
-                      <Chevron collapsed={isCollapsed} />
-                      <span
-                        className="min-w-0 flex-1 truncate text-[10px] font-medium uppercase tracking-[0.06em]"
-                        style={{ color: TEXT_SECTION }}
-                      >
-                        {viewBy === 'milestone' ? milestoneDisplayLabel(g.group) : g.group}
-                      </span>
-                    </button>
-                    {!isCollapsed
-                      ? g.items.map((ws) => (
-                          <GanttSidebarWorkstreamRow
-                            key={ws.id}
-                            ws={ws}
-                            phaseExpanded={phaseExpanded}
-                            setPhaseExpanded={setPhaseExpanded}
-                          />
-                        ))
-                      : null}
-                  </div>
-                )
-              })}
+              WIP
+            </span>
+          </div>
+          <p className="mt-1 text-[13px]" style={{ color: TEXT_MUTED }}>
+            Workstreams, releases, and key markers
+          </p>
+        </div>
+
+        <div className="min-h-0 flex-1 px-6 pb-6">
+          {loading ? (
+            <div className="min-h-0 min-w-0">
+              <LoadingShimmer sidebarWidthPx={sidebarWidthPx} trackWidthPx={trackWidthPx} />
             </div>
-
-            <div
-              ref={scrollRef}
-              data-gantt-timeline-scroll
-              className="min-w-0 flex-1 overflow-x-auto"
-              title="Scroll wheel: pan timeline · Space: scroll right · Shift+Space: scroll left"
-            >
-              <div className="relative" style={{ width: '100%', minWidth: trackWidthPx }}>
-                <div className="sticky top-0 z-[6]" style={{ backgroundColor: SURFACE }}>
-                  <GanttTimelineHeader
-                    zoom={zoom}
-                    viewStart={viewStart}
-                    viewEnd={viewEnd}
-                    weekSlots={weekSlots}
-                    daySlots={daySlots}
-                    monthSegsFull={monthSegsFull}
-                    headerHeight={headerHeight}
-                  />
+          ) : (
+            <div ref={scrollRef} data-gantt-timeline-scroll className="min-h-0 w-full overflow-x-auto overflow-y-visible" style={{ touchAction: 'pan-y' }}>
+              <div
+                className="relative"
+                style={{
+                  width: ganttInnerScrollWidthPx,
+                  minWidth: ganttInnerScrollWidthPx,
+                  overflow: 'visible',
+                }}
+              >
+                <div
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label="Resize sidebar"
+                  className="pointer-events-auto absolute z-[20] cursor-col-resize border-0 bg-transparent p-0 hover:bg-[#3A3A3A]"
+                  style={{
+                    left: sidebarWidthPx,
+                    top: headerHeight,
+                    bottom: 0,
+                    width: 4,
+                    touchAction: 'none',
+                  }}
+                  onPointerDown={onSidebarResizePointerDown}
+                  onPointerMove={onSidebarResizePointerMove}
+                  onPointerUp={onSidebarResizePointerUp}
+                  onPointerCancel={onSidebarResizePointerUp}
+                />
+                <div
+                  className="pointer-events-none absolute z-0"
+                  style={{
+                    left: sidebarWidthPx + 4,
+                    top: headerHeight,
+                    width: trackWidthPx,
+                    height: bodyHeight,
+                    backgroundColor: SURFACE,
+                  }}
+                  aria-hidden
+                />
+                <div
+                  className="grid min-h-0 w-full"
+                  style={{
+                    gridTemplateColumns: `${sidebarWidthPx}px 4px minmax(0, ${trackWidthPx}px)`,
+                    gridAutoRows: 'auto',
+                    alignItems: 'stretch',
+                    overflow: 'visible',
+                  }}
+                >
+                  <div
+                    style={{
+                      gridColumn: 1,
+                      gridRow: 1,
+                      position: 'sticky',
+                      top: 0,
+                      left: 0,
+                      zIndex: 11,
+                      backgroundColor: SURFACE,
+                      alignSelf: 'start',
+                    }}
+                  >
+                    <div style={{ height: headerHeight, width: sidebarWidthPx }} aria-hidden />
+                  </div>
+                  <div
+                    style={{
+                      gridColumn: 2,
+                      gridRow: 1,
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 11,
+                      backgroundColor: SURFACE,
+                      alignSelf: 'start',
+                    }}
+                    aria-hidden
+                  >
+                    <div style={{ width: 4, height: headerHeight }} />
+                  </div>
+                  <div
+                    style={{
+                      gridColumn: 3,
+                      gridRow: 1,
+                      minWidth: 0,
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 9,
+                      backgroundColor: SURFACE,
+                      alignSelf: 'start',
+                    }}
+                  >
+                    <div style={{ width: trackWidthPx }}>
+                      <GanttTimelineHeader
+                        zoom={zoom}
+                        viewStart={viewStart}
+                        viewEnd={viewEnd}
+                        weekSlots={weekSlots}
+                        daySlots={daySlots}
+                        monthSegsFull={monthSegsFull}
+                        headerHeight={headerHeight}
+                      />
+                    </div>
+                  </div>
+                  {ganttRoadmapGridCells}
                 </div>
-
-                <div className="relative isolate" style={{ minHeight: bodyHeight }}>
-                  <WeekGridBackground bodyHeight={bodyHeight} />
+                <div
+                  className="pointer-events-none absolute z-[2]"
+                  style={{
+                    left: sidebarWidthPx + 4,
+                    top: headerHeight,
+                    width: trackWidthPx,
+                    height: bodyHeight,
+                  }}
+                  aria-hidden
+                >
                   <MilestoneLines
                     bodyHeight={bodyHeight}
                     milestoneDates={milestoneDates}
                     viewStart={viewStart}
                     viewEnd={viewEnd}
                   />
-
-                  {grouped.map((g) => {
-                    const isCollapsed = !!collapsed[g.group]
-                    return (
-                      <div key={g.group}>
-                        <div
-                          style={{
-                            height: SECTION_HEIGHT,
-                            backgroundColor: SECTION_BG,
-                          }}
-                        />
-                        {!isCollapsed
-                          ? g.items.map((ws) => (
-                              <GanttTimelineWorkstreamRow
-                                key={ws.id}
-                                ws={ws}
-                                phaseExpanded={phaseExpanded}
-                                barDetail={barDetail}
-                                setBarDetail={setBarDetail}
-                                viewStart={viewStart}
-                                viewEnd={viewEnd}
-                                trackWidthPx={trackWidthPx}
-                                setTip={setTip}
-                                showBarTip={showBarTip}
-                                moveTip={moveTip}
-                                hideTip={hideTip}
-                                showMarkerTip={showMarkerTip}
-                              />
-                            ))
-                          : null}
-                      </div>
-                    )
-                  })}
                 </div>
-                <TodayColumn
-                  totalHeight={headerHeight + bodyHeight}
-                  viewStart={viewStart}
-                  viewEnd={viewEnd}
-                />
+                <div
+                  className="pointer-events-none absolute z-[20]"
+                  style={{
+                    left: sidebarWidthPx + 4,
+                    top: 0,
+                    width: trackWidthPx,
+                    height: headerHeight + bodyHeight,
+                  }}
+                  aria-hidden
+                >
+                  <TodayColumn totalHeight={headerHeight + bodyHeight} viewStart={viewStart} viewEnd={viewEnd} />
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <Tooltip state={tip} />
 
-      {barDetail
-        ? createPortal(
-            barDetail.kind === 'workstream' ? (
-              <GanttBarDetailPanel
-                key={`ws-${barDetail.ws.id}`}
-                mode="workstream"
-                ws={barDetail.ws}
-                anchorX={barDetail.anchorX}
-                anchorY={barDetail.anchorY}
-                markers={detailPanelMarkers}
-                statusTones={STATUS_TONES}
-              />
-            ) : (
-              <GanttBarDetailPanel
-                key={`ph-${barDetail.ws.id}-${barDetail.phase.id}`}
-                mode="phase"
-                ws={barDetail.ws}
-                phase={barDetail.phase}
-                anchorX={barDetail.anchorX}
-                anchorY={barDetail.anchorY}
-                markers={detailPanelMarkers}
-                statusTones={STATUS_TONES}
-              />
-            ),
-            document.body,
-          )
-        : null}
+      <GanttDrawers
+        detail={barDetail}
+        overlay={drawerOverlay}
+        statusTones={STATUS_TONES}
+        onCloseDetail={closeBarDetail}
+        onCloseOverlay={closeDrawerOverlay}
+        onOpenMilestonesFromDetail={openMilestonesFromDetail}
+        onDetailNavigate={setBarDetail}
+      />
     </div>
   )
 }

@@ -109,8 +109,8 @@ const PROTOTYPES_ALL: PrototypeRow[] = [
   {
     id: 'gantt-roadmap',
     category: 'working',
-    name: 'Design Roadmap to Network GA',
-    description: 'Workstreams and milestones on the path to Network GA',
+    name: 'Network design roadmap',
+    description: 'Workstreams, milestones, and markers for Network design',
     branch: 'feature/gantt',
     owner: '@courtneyb',
     status: 'In progress',
