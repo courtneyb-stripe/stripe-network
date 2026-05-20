@@ -45,6 +45,7 @@ const FILTER_CHIPS: { id: HubFilterId; label: string }[] = [
 
 function statusPillVariant(status: string): PillBadgeVariant {
   if (status === 'Archived') return 'neutral'
+  if (status === 'Complete') return 'success'
   return 'attention'
 }
 
