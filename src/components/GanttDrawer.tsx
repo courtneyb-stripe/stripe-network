@@ -638,6 +638,7 @@ function PhaseDrawerRow({
   )
 }
 
+/** Renders parent `docUrl`; phase detail passes the parent workstream URL so briefs stay in sync. */
 function DetailLinksSection({ docUrl }: { docUrl: string }) {
   const trimmed = docUrl.trim()
   const hasDoc = Boolean(trimmed)
@@ -650,6 +651,13 @@ function DetailLinksSection({ docUrl }: { docUrl: string }) {
             href={trimmed}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => {
+              const ev = e.nativeEvent
+              if (ev.defaultPrevented) return
+              if (ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return
+              e.preventDefault()
+              window.open(trimmed, '_blank', 'noopener,noreferrer')
+            }}
             className="inline-flex cursor-pointer items-center gap-2 bg-transparent no-underline transition-opacity hover:opacity-80"
             style={{ color: LINK_COLOR }}
           >
