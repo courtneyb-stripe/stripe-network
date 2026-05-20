@@ -717,8 +717,9 @@ function GanttDetailDrawerContent({
 
   /**
    * Phased workstreams (`ws.phases?.length`): parent DATES are phase-only (kickoff, each phase
-   * start + handoff end) plus review markers — no milestone gate/handoff rows. Parent omits the
-   * MILESTONES strip (`milestoneRows` empty). Non-phased parents keep milestone strip + gate rows.
+   * start + handoff end) plus review markers — no milestone gate/handoff rows in DATES (noise).
+   * The MILESTONES strip still lists gates for the parent bar. Non-phased parents keep gate rows
+   * in DATES as well as the strip.
    */
   const workstreamChronologicalDateEntries = useMemo(() => {
     if (phaseMode) return []
@@ -903,7 +904,6 @@ function GanttDetailDrawerContent({
 
   const milestoneRows = useMemo(() => {
     if (phaseMode) return []
-    if ((ws.phases ?? []).length > 0) return []
     return milestonesInWorkstreamSpan(ws).map((row) => {
       const key = row.milestone.trim()
       const d = parseYmd(row.release_date)
@@ -1063,6 +1063,8 @@ function GanttDetailDrawerContent({
         </div>
       ) : null}
 
+      <DetailLinksSection docUrl={ws.doc_url} />
+
       {!phaseMode ? (
         <div className="mt-5">
           <DetailSectionHeader label="DATES" />
@@ -1115,8 +1117,6 @@ function GanttDetailDrawerContent({
           </DetailSectionBody>
         </div>
       ) : null}
-
-      <DetailLinksSection docUrl={ws.doc_url} />
     </>
   )
 }
